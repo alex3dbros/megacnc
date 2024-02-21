@@ -1,0 +1,115 @@
+.breadcrumb{
+	font-size: 13px;
+	.breadcrumb-item{
+        a{
+            svg{
+               margin-bottom: 3px;
+			   margin-right: 4px;
+            }
+        }    
+		&.active{
+			a{
+				color:$black;
+			}
+		}
+	}
+}	
+.page-titles {
+	display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.6rem 1.95rem 0.6rem;
+    background: #ffffff;
+    position: relative;
+    z-index: 1;
+	border-bottom:1px solid $border;
+	flex-flow:wrap;
+    @at-root [data-theme-version="dark"] & {
+        background: $dark-card;
+    }
+
+    @include respond('tab-land') {
+		margin-top: 0;
+	}
+    @include respond('phone-land') {
+		// margin-left: -1.25rem;
+		// margin-right: -1.25rem;
+		margin-bottom: 0rem;
+    }
+
+    .justify-content-sm-end{
+        align-items: center;
+    }
+
+    h4 {
+        margin-bottom: 0;
+        margin-top: 0;
+        color: var(--primary);
+        font-size: 1.25rem;
+        span {
+            font-size: 0.875rem;
+            font-weight: 400;
+        }
+    }
+    .breadcrumb {
+        margin-bottom: 0;
+        padding: 0;
+        background: transparent;
+		align-items:center;
+        // font-size: 0.875rem;
+        li {
+            margin-top: 0;
+            margin-bottom: 0;
+
+            a{
+               color: $l-ctl; 
+			   font-size: 13px;
+			  
+
+            }
+
+            &.active{
+                color:var(--primary);
+				font-weight: 500;
+				a{
+					color:var(--primary)!important;
+				}
+            }
+        }
+        
+        .breadcrumb-item + .breadcrumb-item {
+            &:before {
+                //content: "\e606";
+                /* font-family: 'simple-line-icons';
+                font-weight: 400;
+				position:absolute;
+                font-size: 10px; */
+				color:var(--primary);
+            }
+        }
+
+        &-datepicker{
+            font-size: 0.75rem;
+            color: $muted;
+
+            &__icon{
+                font-size: 0.875rem;
+            }
+        }
+    }
+	
+	.bc-title{
+		margin:0;
+		font-size:17px;
+		margin-right: 2rem;
+		color:var(--secondary);
+		@include respond ('phone'){
+			font-size:15px;
+		}
+	}
+    
+}
+
+.select2-selection__arrow{
+	display:none;
+}

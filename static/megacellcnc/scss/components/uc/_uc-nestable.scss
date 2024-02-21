@@ -1,0 +1,35 @@
+ // Variable.scss
+
+.nestable-cart {
+    overflow: hidden;
+}
+
+
+.dd-handle {
+    color: var(--secondary);
+    background: $body-bg;
+    border-radius: 0.3125rem;
+	padding: 0.5rem 1rem;
+	height:auto;
+    border: 1px solid $border-color;
+	cursor:all-scroll;
+}
+.dd-handle:hover {
+    color: var(--secondary);
+    background: $body-bg;
+}
+
+.dd3-content:hover {
+    color: var(--secondary);
+    background: $light;
+}
+.dd3-content {
+    color: $white;
+}
+.dd-item>button{
+	line-height:28px;
+	color:$white;
+}
+.dd-item>button:before{
+	color:var(--secondary);
+}

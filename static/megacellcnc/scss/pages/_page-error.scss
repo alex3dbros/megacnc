@@ -1,0 +1,113 @@
+.error-page{
+	height: 100vh;
+	padding: 50px;
+	position: relative;
+	background-blend-mode: luminosity;
+	background-size: cover;
+	
+	&:before{
+		content: "";
+		position: absolute;
+		opacity: 0.8;
+		left: 0;
+		top: 0;
+		width: 100%;
+		height: 100%;
+		
+	}
+	
+	.error-inner{		
+		z-index: 1;
+		position: absolute;
+		left: 50%;
+		top: 50%;
+		max-width: 600px;
+		transform: translate(-50%, -50%);
+		padding: 20px;
+		width: 100%;
+		
+		@include respond ('phone'){
+			width: 100%;
+		}
+	}
+	.error-head{
+		color: #fff;
+		margin-bottom: 40px;
+		font-size: 30px;
+		line-height: 1.4;
+		font-weight:500;
+		color:#1c1c4e;
+		@include respond ('phone'){
+			font-size: 20px;
+			margin-bottom: 30px;
+		}
+	}
+	
+	.dz-error{
+		position: relative;
+		color: var(--secondary);
+		font-size: 200px;
+		letter-spacing: 0px;
+		animation: dzError 1s infinite linear alternate-reverse;
+		font-weight: 900;
+		line-height: 200px;
+		margin: auto;
+		
+		@include respond ('tab-port'){
+			font-size: 150px;
+			line-height: 150px;
+		}
+		@include respond ('phone'){			
+			font-size: 80px;
+			line-height: 80px;
+			letter-spacing: 5px;
+		}
+		
+		&::before,
+		&::after{
+			content: attr(data-text);
+			position: absolute;
+			top: 0;
+			width: 100%;
+			height: 100%;
+		}
+		&::before {
+			left: 2px;
+			text-shadow: -2px 0 #f7cf47;
+			clip: rect(44px, 450px, 56px, 0);
+			animation: dzError1 5s infinite linear alternate-reverse;
+		}
+		&::after {
+			left: -2px;
+			text-shadow: -2px 0 #f7cf47, 2px 2px #f7cf47;
+			clip: rect(44px, 450px, 56px, 0);
+			animation: dzError2 5s infinite linear alternate-reverse;
+		}
+	}
+}
+@keyframes dzError1 {
+	$dzSteps: 40;
+	@for $i from 0 to $dzSteps {
+		#{percentage($i*(1/$dzSteps))} {
+			clip: rect(random(500) + px, 9999px, random(500) + px, 0);
+			transform: skew((random(500) / 500) + deg);
+		}
+	}
+}
+@keyframes dzError2{
+	$dzSteps: 40;
+	@for $i from 0 to $dzSteps{
+		#{percentage($i*(1/$dzSteps))} {
+			clip: rect(random(500) + px, 9999px, random(500) + px, 0);
+			transform: skew((random(500) / 500) + deg);
+		}
+	}
+}
+@keyframes dzError{
+	$dzSteps: 10;
+	@for $i from 0 to $dzSteps {
+		#{percentage($i*(1/$dzSteps))} {
+			transform: skew((random(10) - 5) + deg);
+		}
+	}
+}

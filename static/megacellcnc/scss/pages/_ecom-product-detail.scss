@@ -1,0 +1,298 @@
+/*
+===================================
+    Product detail
+===================================*/
+
+.produtct-detail-tag {
+    display: inline-block;
+    a {
+        font-style: 0.8125rem;
+        color: $dark;
+    }
+}
+
+.product-detail-content {
+    .item-tag {
+        background: $l-ctl;
+        border-radius: 0.375rem;
+        display: inline-block;
+        font-size: 0.75rem;
+        margin-right: 0.25rem;
+        padding: 0.125rem 0.75rem;
+        color: #fff;
+    }
+}
+
+.filtaring-area {
+    h4 {
+        color: #1d1d1d;
+        font-size: 1rem;
+        font-weight: 400;
+        text-transform: lowercase;
+    }
+}
+
+.plus-minus-input {
+    .input-icon {
+        font-size: 0.8125rem;
+        color: $dark;
+    }
+}
+
+.plus-minus-input {
+    display: flex;
+    width: 7.5rem;
+    .custom-btn {
+        border-radius: 0;
+        height: 2.5rem;
+        padding: 0.75rem 0.5rem;
+        background: $white;
+        border: 0.0625rem solid $border;
+    }
+    .form-control {
+        &:hover,
+        &:focus,
+        &:active {
+            border: 0.0625rem solid $border;
+        }
+    }
+}
+.btn-reveal-trigger .avatar-xl {
+    min-width: 1.875rem;
+}
+.share-view {
+    display: inline-block;
+    ul {
+        li {
+            display: inline-block;
+            a {}
+        }
+    }
+    .share-icon {
+        width: 2.5rem;
+        height: 2.5rem;
+        display: inline-block;
+        border: 0.0625rem solid $border;
+        text-align: center;
+        line-height: 2.5rem;
+        font-style: 1rem;
+        color: $border;
+        margin-right: 0.5rem;
+    }
+}
+
+
+/*--------tab----------*/
+
+.veritical-line {
+    padding: 1.25rem 1.875rem;
+    border-top: 0.0625rem solid $border;
+    border-right: 0.0625rem solid $border;
+    border-bottom: 0.0625rem solid $border;
+    position: relative;
+    &:before {
+        background: $border;
+        bottom: 0;
+        content: "";
+        height: 100%;
+        left: -0.0625rem;
+        max-height: 40%;
+        position: absolute;
+        width: 0.0625rem;
+    }
+}
+
+.tab-content-text {
+    p {
+        color: $dark;
+        font-size: 0.8125rem;
+        font-weight: 400;
+        line-height: 1.5rem;
+        margin-bottom: 1.5625rem;
+    }
+}
+
+.tab-item-list {
+    li {
+        a {
+            background: $white;
+            border-top: 0.0625rem solid $border;
+            border-left: 0.0625rem solid $border;
+            border-right: 0.0625rem solid $border;
+            color: $dark;
+            display: block;
+            font-size: 1rem;
+            padding: 1rem;
+            text-transform: uppercase;
+            &:hover,
+            &:focus {
+                background: $white;
+                color: $dark;
+                border-right: 0rem;
+            }
+        }
+        &:last-child {
+            border-bottom: 0.0625rem solid $border;
+        }
+    }
+}
+
+.tab-list {
+    li {
+        margin-bottom: 0.4375rem;
+        font-size: 0.8125rem;
+        i {
+            font-size: 0.8125rem;
+            margin-right: 0.875rem;
+        }
+    }
+}
+
+.slide-item-list {
+    text-align: center;
+	margin: 0 -0.3125rem;
+	border:0;
+	
+    li {
+        display: inline-block;
+		flex: 0 0 25%;
+		width: 25%;
+		padding: 0 0.3125rem;
+		
+        a {
+            display: inline-block;
+            //      float: left;
+            padding-left: 0;
+            padding-right: 0;
+            padding-top: 0;
+            background: transparent;
+            padding-bottom: 0rem;
+            &:hover,
+            &:focus {
+                background: transparent;
+            }
+            img {
+                width: 100%;
+				border-radius:$radius;
+            }
+        }
+    }
+	.nav-link{
+		border: 0;
+		border-radius:$radius;
+		&.active{
+			border: 0;
+			border-radius:$radius;
+		}
+	}
+}
+
+.product-detail-text {
+    padding-top: 1.75rem;
+    padding-left: 1.875rem;
+    padding-right: 1.875rem;
+    padding-bottom: 4.375rem;
+}
+
+.star-rating {
+    .product-review {
+        font-style: 0.8125rem;
+        color: $dark;
+        font-weight: 400;
+        text-decoration: underline !important;
+    }
+}
+
+.product-detail {
+    .tab-content {
+        img {
+            display: inline-block;
+            width: 100%;
+        }
+    }
+}
+
+.popular-tag ul {
+    margin: 0rem;
+    padding: 0rem;
+    li {
+        display: inline-block;
+        padding: 0.5rem 0.9375rem;
+        background: #f8f8f8;
+        font-size: 0.8125rem;
+        color: #fff;
+        margin-right: 0.625rem;
+        margin-bottom: 0.625rem;
+    }
+}
+
+.size-filter ul li {
+    display: inline-block;
+}
+
+.intro {
+    border: 0.0625rem solid red;
+    color: #1d1d1d;
+}
+
+#listResults {
+    .slider {
+        margin: 1.5625rem 0;
+    }
+    .slider-box {
+        width: 90%;
+        margin: 1.5625rem auto;
+    }
+    input {
+        width: 10%;
+    }
+    label {
+        border: none;
+        display: inline-block;
+        margin-right: -0.25rem;
+        vertical-align: top;
+        width: 30%;
+    }
+}
+
+// input {
+//     border: none;
+//     display: inline-block;
+//     margin-right: -0.25rem;
+//     vertical-align: top;
+//     width: 30%;
+// }
+.plus-minus-input {
+    .input-icon {
+        font-size: 0.8125rem;
+        color: #aaaaaa;
+    }
+    .custom-btn {
+        border-radius: 0;
+        height: 2.5rem;
+        padding: 0.5rem 0.75rem;
+        background: #ffffff;
+        border: 0.0625rem solid #c8c8c8;
+        &:hover,
+        &:focus,
+        &.active {
+            box-shadow: none;
+            outline: none;
+        }
+    }
+    .form-control {
+        height: 2.5rem;
+        border-top: 0.0625rem solid #c8c8c8;
+        border-bottom: 0.0625rem solid #c8c8c8;
+        border-left: 0rem solid #c8c8c8;
+        border-right: 0.0625rem solid #c8c8c8;
+        &:hover,
+        &:focus,
+        &:active {
+            border-top: 0.0625rem solid #c8c8c8;
+            border-bottom: 0.0625rem solid #c8c8c8;
+            border-left: 0rem solid #c8c8c8;
+            border-right: 0rem solid #c8c8c8;
+        }
+    }
+}

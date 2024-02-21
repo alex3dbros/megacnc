@@ -1,0 +1,380 @@
+.chatbox{
+	width:21.25rem;
+	height:100vh;
+	position:fixed;
+	right:-31.25rem;
+	top:0;
+	z-index:999;
+	background:#fff;
+	box-shadow: 0rem 0rem 1.875rem 0rem rgba(82, 63, 105, 0.15) ;
+	@include transitionSlow;
+	@at-root [data-theme-version="dark"] & {
+		background:$dark-card;
+	}	
+	.chatbox-close{
+		position: absolute;
+		@include transitionFast;
+		width: 0;
+		height: 100%;
+		right: 21.25rem;
+		background: #000;
+		z-index: 1;
+		opacity: 0.1;
+		cursor:pointer;
+	}
+	.card-fotter {
+		padding: 0.75rem 1rem;	
+	}
+	.card-body {
+		padding: 1rem;
+	}
+	&.active{
+		right:0;
+		
+		.chatbox-close{
+			width: 100vw;
+		}
+	}
+	.type_msg {
+		padding-top: 0.625rem;
+	}
+	.nav{
+	    padding: 1rem 1rem 0 1rem;
+		background:var(--rgba-primary-1);
+		border: 0;
+		justify-content: space-between;
+			
+		.nav-link{
+			color: var(--primary);
+			opacity: 0.7;
+			text-transform: uppercase;
+			&:hover,	
+			&.active{
+				background:transparent;
+				color: var(--primary);
+				opacity: 1;
+				border-color: var(--primary);
+			}
+		}
+	}
+	.img_cont{
+		width: 2.5rem;
+		border-radius: 2.5rem;
+		margin-right: 0.625rem;
+		position: relative;
+		height: 2.5rem;
+		background: #eee;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		font-weight: 600;
+		font-size: 0.875rem;
+		min-width: 2.5rem;
+		min-height: 2.5rem;
+		
+		.icon{
+			color:#fff;
+		}
+		&.primary{
+			background:var(--rgba-primary-1);
+			color:var(--primary);
+			@at-root [data-theme-version="dark"] & {
+				background:var(--rgba-primary-1);
+			}	
+		}
+		&.warning{
+			background:$warning-light;
+			color:$warning;
+			@at-root [data-theme-version="dark"] & {
+				background:$warning-opacity;
+			}	
+		}
+		&.success{
+			background:$success-light;
+			color:$success;
+			@at-root [data-theme-version="dark"] & {
+				background:$success-opacity;
+			}	
+		}
+		&.info{
+			background:$info-light;
+			color:$info;
+			@at-root [data-theme-version="dark"] & {
+				background:$info-opacity;
+			}	
+		}
+		
+		img{
+			width:100%;
+		}
+		.online_icon{
+			    background: $success;
+				position: absolute;
+				width: 0.75rem;
+				height: 0.75rem;
+				border-radius: 0.9375rem;
+				right: -0.0625rem;
+				bottom: 0rem;
+				border: 0.125rem solid #fff;
+				//box-shadow: 0.3125rem 0.3125rem 0.625rem 0rem rgba($success, 0.3);
+			
+			&.offline{
+				background:$danger;
+				//box-shadow: 0.3125rem 0.3125rem 0.625rem 0rem rgba($danger, 0.3);
+			}
+		}
+		.online_icon{
+		
+			
+		
+		}
+	}
+	.card{
+		box-shadow:none;
+	}
+	.search{
+		height:2.5rem;
+	}
+	.user_info{
+		span{
+			font-size: 0.9375rem;
+			color: #000;
+			display: block;
+			font-weight: 500;
+			line-height: 1.2;
+			margin-bottom: 0.3125rem;
+			text-overflow: ellipsis;
+			white-space: nowrap;
+			overflow: hidden;
+			display: block;
+			max-width: 10.625rem;
+			@at-root [data-theme-version="dark"] & {
+				color: $white;
+			}
+		}	
+		p{
+			font-size:0.8125rem;
+			margin-bottom:0;
+			line-height: 1.2;
+			text-overflow: ellipsis;
+			white-space: nowrap;
+			overflow: hidden;
+			display: block;
+			max-width: 10.625rem;
+		}
+	}
+	.contacts{
+		li{
+			padding: 0.75rem 1rem;
+			border-bottom: 0.0625rem solid #eee;
+			cursor: pointer;
+			@at-root [data-theme-version="dark"] & {
+				border-color: $d-border;
+			}
+			& > div{
+				display:flex;
+				align-items:center;
+			}
+			&:hover{
+				background:var(--rgba-primary-1);
+				@at-root [data-theme-version="dark"] & {
+					background-color: $d-bg;
+				}
+			}
+		}
+		.name-first-letter{
+			background: var(--rgba-primary-1);
+			padding: 0.25rem 1rem;
+			font-weight: 700;
+			color: #000;
+			position: sticky;
+			top: 0;
+			z-index: 1;
+			
+			@at-root [data-theme-version="dark"] & {
+				color: $white;
+				background:$d-bg;
+			}
+		}
+	}
+	.contacts_body{
+		height: calc(100vh - 168px);
+	}
+	.card-header{
+		background:#f4f7ff;
+		padding: 0.9375rem 1.25rem;
+		justify-content: center;
+		h6{
+			font-size:0.9375rem;
+		}
+		p{
+			line-height:1.2;
+			font-size:0.75rem;
+			color: $body-color;
+		}
+	}
+	.chat-list-header{
+		justify-content: space-between;
+		background: #fff;
+		@at-root [data-theme-version="dark"] & {
+			background: $dark-card;
+		}					
+		a{
+			text-align: center;
+			width: 1.875rem;
+			height: 1.875rem;
+			background: var(--rgba-primary-1);
+			border-radius: 0.375rem;
+			line-height: 1.675rem;
+			display: block;
+			@at-root [data-theme-version="dark"] & {
+				background:var(--rgba-primary-1);
+				svg g [fill]{
+					fill:$white;
+				}
+			}	
+		}
+	}
+	.img_cont_msg {
+		width: 1.875rem;
+		height: 1.875rem;
+		display: block;
+		max-width: 1.875rem;
+		min-width: 1.875rem;
+		
+		img{
+			width:100%;
+		}
+	}
+	.msg_cotainer {
+		background: var(--primary);
+		margin-left: 0.625rem;
+		border-radius: 0 $radius $radius $radius;
+		padding: 0.625rem 0.9375rem;
+		color:#fff;
+		position:relative;
+		.msg_time{
+			display: block;
+			font-size: 0.6875rem;
+			color: #fff;
+			margin-top: 0.3125rem;
+			opacity: 0.5;
+		}
+		&:after{
+			content: "";
+			position: absolute;
+			left: -0.625rem;
+			border-right: 0.625rem solid var(--primary);
+			border-bottom: 0.625rem solid transparent;
+			border-top: 0rem solid;
+			top: 0;
+		}
+	}
+	.msg_cotainer_send {
+		background: $body-bg;
+		padding: 0.625rem 0.9375rem;
+		border-radius: 0.375rem 0rem 0.375rem 0.375rem;
+		margin-right: 0.625rem;
+		color: #222;
+		position: relative;
+		text-align: right;
+		
+		@at-root [data-theme-version="dark"] & {
+			background:$d-bg;
+			color:$white;
+		}	
+		
+		.msg_time_send {
+			display: block;
+			font-size: 0.6875rem;
+			text-align: right;
+			margin-top: 0.3125rem;
+			opacity: 0.6;
+		}
+		&:after{
+			content: "";
+			position: absolute;
+			right: -0.625rem;
+			border-left: 0.625rem solid $body-bg;
+			border-bottom: 0.625rem solid transparent;
+			border-top: 0rem solid;
+			top: 0;
+			@at-root [data-theme-version="dark"] & {
+				border-left: 0.625rem solid $d-bg;
+			}	
+		}
+	}
+	.type_msg{
+		.form-control{
+			padding: 0.625rem 0;
+			height: 3.125rem;
+			border: 0;
+			resize: none;
+			&:focus{
+				z-index:0;
+			}
+		}
+		.btn{
+			font-size: 1.125rem;
+			border-radius: 2.375rem !important;
+			width: 2.375rem;
+			height: 2.375rem;
+			padding: 0;
+			margin-top: 0.375rem;
+		}
+	} 
+	.video_cam{
+		margin-left:0.9375rem;
+		span{
+			width: 2.1875rem;
+			height: 2.1875rem;
+			background: #10ca93;
+			text-align: center;
+			line-height: 2.1875rem;
+			border-radius: 2.1875rem;
+			color: #fff;
+			margin-right: 0.3125rem;
+			align-self: center;
+			font-size: 1rem;
+			padding: 0 0.1875rem;
+			display: inline-block;
+		}
+	}
+	.note_card{
+		.contacts li{
+			padding: 0.75rem 1rem;
+		}
+	}
+}
+@include custommq($max: 36rem) {
+	.chatbox{
+		width: 17.5rem;
+		.chatbox-close{
+			right: 17.5rem
+		}
+	}
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

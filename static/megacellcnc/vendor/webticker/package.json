@@ -1,0 +1,75 @@
+{
+  "_from": "webticker",
+  "_id": "webticker@3.0.0",
+  "_inBundle": false,
+  "_integrity": "sha1-QufenFxsuSZw3wabMqcGcIYnmRU=",
+  "_location": "/webticker",
+  "_phantomChildren": {},
+  "_requested": {
+    "type": "tag",
+    "registry": true,
+    "raw": "webticker",
+    "name": "webticker",
+    "escapedName": "webticker",
+    "rawSpec": "",
+    "saveSpec": null,
+    "fetchSpec": "latest"
+  },
+  "_requiredBy": [
+    "#USER",
+    "/"
+  ],
+  "_resolved": "https://registry.npmjs.org/webticker/-/webticker-3.0.0.tgz",
+  "_shasum": "42e7de9c5c6cb92670df069b32a7067086279915",
+  "_spec": "webticker",
+  "_where": "E:\\RND",
+  "author": {
+    "name": "Jonathan Mifsud",
+    "email": "jon@maze.digital",
+    "url": "http://maze.digital"
+  },
+  "bugs": {
+    "url": "https://github.com/mazedigital/Web-Ticker/issues"
+  },
+  "bundleDependencies": false,
+  "dependencies": {},
+  "deprecated": false,
+  "description": "JQuery Web Ticker",
+  "devDependencies": {
+    "gulp": "^3.9.1",
+    "gulp-jshint": "^2.0.0",
+    "gulp-notify": "^2.2.0",
+    "gulp-rename": "^1.2.2",
+    "gulp-uglify": "^1.5.2",
+    "jshint": "^2.9.1"
+  },
+  "homepage": "https://maze.digital/webticker/",
+  "keywords": [
+    "animation",
+    "ecosystem",
+    "ecosystem-jquery",
+    "horizontal",
+    "horizontal-scroll",
+    "image",
+    "image-scroll",
+    "jquery",
+    "jquery-plugin",
+    "marquee",
+    "news",
+    "news-ticker",
+    "plugin",
+    "scroll",
+    "ticker"
+  ],
+  "license": "(GPL-3.0 or Commercial see license in license.md(",
+  "main": "gulpfile.js",
+  "name": "webticker",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mazedigital/Web-Ticker.git"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "version": "3.0.0"
+}

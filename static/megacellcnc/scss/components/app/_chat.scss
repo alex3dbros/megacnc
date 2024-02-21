@@ -1,0 +1,234 @@
+
+.event-chat-ryt{
+
+    .chat-area{
+        .chat-reciver, 
+        .chat-sender {
+            margin-bottom: 1.875rem;
+            padding: 0;
+            img{
+                border-radius: 1.875rem;
+            }
+        }
+
+        .media {
+            position: relative;
+
+            &-body {
+
+                p {
+                    margin: 0;
+                    max-width: 100%;
+                    display: inline-block;
+                    position: relative;
+
+                    @include media-breakpoint-up(sm) {
+                        // max-width: 60%;
+                    }
+
+                    span {
+                        padding: 1rem;
+                        display: inline-block;
+                        top: 103%;
+                        position: relative;
+                        border: 0.0625rem solid $border;
+                    }
+                }
+            }
+        }
+    }
+
+    .chat-reciver{
+        padding: .5rem 1rem;
+        display: -webkit-box;
+        display: -ms-flexbox;
+        display: flex;
+        -webkit-box-pack: end;
+            -ms-flex-pack: end;
+                justify-content: flex-end;
+
+        .media {
+            -webkit-box-flex: 1;
+                -ms-flex: 1;
+                    flex: 1;
+
+            .media-body {
+                margin-right: 2rem;
+                text-align: right;
+
+                @at-root [direction="rtl"] & {
+                    text-align: left;
+                    margin-left: 2rem;
+                    margin-right: auto;
+                }
+
+                p {
+                    background: $white;
+                    margin-bottom: 0;
+                    border-radius: 0.3125rem 0.3125rem 0 0.3125rem;
+
+                    span {
+                        text-align: left;
+                        border: 0.0625rem solid $border;
+                        
+                        &::after{
+                            content: "";
+                            width: 1.25rem;
+                            height: 1.25rem;
+                            border-bottom: 0.0625rem solid $border;
+                            border-right: 0.0625rem solid $border;
+                            position: absolute;
+                            right: 0;
+                            bottom: 0;
+                            background: $white;
+                            -webkit-transform: rotate(-45deg) translateX(15px);
+                                    transform: rotate(-45deg) translateX(15px);
+
+                            @at-root [direction="rtl"] & {
+                                left: 0;
+                                right: auto;
+                                -webkit-transform: rotate(135deg) translateY(15px);
+                                        transform: rotate(135deg) translateY(15px);
+                            }
+                        }
+                        
+                    }
+                    
+                    .time {
+                        position: absolute;
+                        font-size: 0.75rem;
+                        color: $body-color;
+                        font-weight: 400;
+                        bottom: 0;
+                        left: -5rem;
+
+                        @at-root [direction="rtl"] & {
+                            right: -5rem;
+                            left: auto;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    .chat-sender{
+        text-align: left;
+        padding: .5rem 1rem;
+
+        .media {
+
+            .media-body {
+                margin-left: 2rem;
+
+                @at-root [direction="rtl"] & {
+                    text-align: right;
+                    margin-right: 2rem;
+                    margin-left: auto;
+                }
+
+                p {
+                    background-color: $white;
+                    margin-bottom: 0;
+                    span {
+                        
+                        &::after {
+                            content: "";
+                            width: 1.25rem;
+                            height: 1.25rem;
+                            border-bottom: 0.0625rem solid $border;
+                            border-left: 0.0625rem solid $border;
+                            position: absolute;
+                            left: 0;
+                            bottom: 0;
+                            background: $white;
+                            -webkit-transform: rotate(45deg) translateX(-15px);
+                                    transform: rotate(45deg) translateX(-15px);
+
+                            @at-root [direction="rtl"] & {
+                                left: auto;
+                                right: 0;
+                                -webkit-transform: rotate(-135deg) translateY(15px);
+                                        transform: rotate(-135deg) translateY(15px);
+                            }
+                        }
+                    }
+
+                    .time {
+                        position: absolute;
+                        font-size: 0.625rem;
+                        color: $body-color;
+                        font-weight: 400;
+                        bottom: 0;
+                        right: -5rem;
+
+                        @at-root [direction="rtl"] & {
+                            left: -5rem;
+                            right: auto;
+                        }
+                    }
+
+                }
+            }
+        }
+
+    }
+}
+
+.char-type{
+    padding-top: 1.875rem;
+    padding-bottom: 1.875rem;
+
+    form{
+        
+        .form-control{
+            height: 2.8125rem;
+            // border-radius: 1.875rem;
+            padding-left: 1.125rem;
+            background: $body-bg;
+            border-right: 0;
+        }
+
+        .input-group{
+
+            &-append{
+                i{
+                    color: $gray;
+                    font-size: 1.125rem;
+                }
+                .input-group-text{
+                    padding-left: .7rem;
+                    padding-right: .7rem;
+                    background: $body-bg;
+                    border-color: $border;
+                    border-left: 0;
+
+                    &:last-child{
+                        // border-top-right-radius: 1.875rem;
+                        // border-bottom-right-radius: 1.875rem;
+                        padding-right: 1.8rem;
+                    }
+                }
+            }
+        }
+    }
+}
+
+.media-avatar{
+    padding: 1.5625rem 0;
+    border-bottom: 0.0625rem solid $border;
+    &:last-child{
+        border-bottom: 0rem;
+    }
+    p{
+        margin-bottom: 0;
+    }
+    .avatar-status{
+        position: relative;
+        i{
+            position: absolute;
+            right: 0;
+            bottom: 0;
+        }
+    }
+}

@@ -1,0 +1,33 @@
+pre {
+    display: block;
+    margin-top: 0;
+    margin-bottom: 1rem;
+    overflow: auto;
+    font-size: 0.875em;
+	-moz-tab-size: 16;
+    tab-size: 2;
+	code.hljs {
+		display: block;
+		overflow-x: auto;
+		color: #fff;
+		padding:0;
+	}
+} 
+.hljs-tag .hljs-attr, 
+.hljs-tag .hljs-name {
+    color: #78c6ff;
+}
+.hljs-punctuation, 
+.hljs-tag {
+    color: var(--primary);
+}
+.hljs-deletion, 
+.hljs-number, 
+.hljs-quote, 
+.hljs-selector-class, 
+.hljs-selector-id, 
+.hljs-string, 
+.hljs-template-tag,
+.hljs-type {
+    color: #ffa8a8;
+}

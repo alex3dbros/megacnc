@@ -1,0 +1,68 @@
+.card-list{
+	overflow: unset;
+	height: calc(100% - 50px);
+	
+	.card-header{
+		padding-top: 0;		
+		padding-bottom: 0;
+		
+		.photo{
+			overflow: hidden;
+			border-radius: 0.3125rem;
+			width: 100%;
+		}
+	}
+	
+	@include respond('tab-land') {
+		height: calc(100% - 40px);
+	}
+
+	&.list-left{
+		margin-top: 0.9375rem;
+		margin-left: 0.9375rem;
+		
+		.card-header{
+			padding-left: 0;
+			
+			.photo{
+				margin: -0.9375rem 0.9375rem 0 -0.9375rem;
+			}
+		}
+	}
+	
+	&.list-right{
+		margin-top: 0.9375rem;
+		margin-right: 0.9375rem;
+		text-align: right;
+		
+		.card-header{
+			padding-right: 0;
+			
+			.photo{
+				margin: -0.9375rem -0.9375rem 0 0.9375rem;
+				img{
+					width:100%;
+				}
+			}
+		}
+	}
+	
+	&.list-center{
+		margin-top: 0.9375rem;
+		
+		.card-header{
+			
+			.photo{
+				margin: -0.9375rem 0 0 0;
+			}
+		}
+	}
+	.photo img{
+		width:100%;
+	}
+}
+.card-profile{
+	.profile-photo{
+		margin-top: -1.25rem;
+	}
+}

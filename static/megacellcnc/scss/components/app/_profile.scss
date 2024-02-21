@@ -1,0 +1,596 @@
+.photo-content{
+    position: relative;
+    .cover-photo{
+        background: url(../images/profile/cover.jpg);
+        background-size: cover;
+        background-position: center;
+        min-height: 15.625rem;
+        width: 100%;
+
+    }
+
+}
+.profile .profile-photo {
+	max-width: 6.25rem;
+	position: relative;
+	z-index: 1;
+	margin-top: -4.5rem;
+	margin-right: 0.625rem;
+	
+	@include respond('tab-land') {
+		
+	}
+	@include respond('phone') {
+		width: 5rem;
+		margin-left: auto;
+		margin-right: auto;
+		margin-bottom:1.25rem;
+	}
+}
+[direction="rtl"]{
+    
+	.profile .profile-photo {
+		left: auto;
+		right: 0;
+		margin-right: 0;
+		margin-left: 0.9375rem;
+		
+		@include respond('tab-land') {
+			right: 0.9375rem;
+		}
+		@include respond('phone') {
+			width: 5rem;
+			right: calc(50% - 2.5rem);
+			top: -6.25rem;
+			
+			
+		}
+	}
+}
+.profile-info{
+    padding: 0.9375rem 1.25rem;
+    // margin-bottom: 1.875rem;
+	@include respond('phone') {
+		padding: 0 0 1.25rem;
+		text-align:center;
+	}
+    h4 {
+        color: $l-ctd!important;
+    }
+
+    h4.text-primary {
+        color: var(--primary)!important;
+    }
+
+    p {
+        color: $l-ctl;
+    }
+
+    .prf-col{
+        min-width: 15.625rem;
+        padding: 0.625rem 3.125rem 0;
+    }
+}
+.profile-interest{
+    .row{
+        margin: 0 -0.0437rem;
+        .int-col{
+            padding: 0 0.0437rem;
+            .interest-cat{
+                margin-bottom: 0.0875rem;
+                position: relative;
+                display: block;
+                &:after{
+                    background: $black;
+                    bottom: 0;
+                    content: "";
+                    left: 0;
+                    opacity: 0.5;
+                    position: absolute;
+                    right: 0;
+                    top: 0;
+                    z-index: 0;
+                }
+                img{
+                    // margin-bottom: 0.075rem;
+                }
+                p{
+                    position: absolute;
+                    top: 0;
+                    width: 100%;
+                    height: 100%;
+                    padding: 0.3125rem;
+                    left: 0;
+                    margin: 0;
+                    z-index: 1;
+                    color:white;
+                    font-size: 0.075rem;
+                }
+            }
+            
+        }
+    }
+}
+.profile-tab{
+    .nav-item{
+        .nav-link{
+            font-size: 1rem;
+            margin-right: 1.875rem;
+            transition: all 0.5s ease-in-out;
+            border: none;
+            border-bottom: 0.0125rem solid transparent;
+            color: $l-ctl;
+
+            &:hover, &.active{
+                border: 0;
+                background: transparent;
+                background: transparent;
+                border-bottom: 0.0125rem solid var(--primary);
+                color: var(--primary);
+            }
+			@include respond ('phone'){
+				margin-right:0rem;
+			}
+        }
+        
+    }
+}
+.profile-info{
+	display:flex;
+	@include respond('phone') {
+		display:block;
+	}
+	.profile-details {
+		display: flex;
+		width: 100%;
+		@include respond('phone') {
+			display:block;
+			.dropdown{
+				position: absolute;
+				top: 1.875rem;
+				right: 1.875rem;
+			}
+		}
+	}
+}
+
+.post-input{
+    margin-bottom: 1.875rem;
+    .form-control{
+        height: 4.6875rem;
+        font-weight: 400;
+        margin: 0.9375rem 0;
+    }
+	.btn-social{
+		font-size: 1.25rem;
+		height: 3.4375rem;
+		display:inline-block;
+		padding: 0;
+		text-align:center;
+		border-radius:$radius;
+		color:$white;
+		width: 3.4375rem;
+		line-height: 3.375rem;
+		&.facebook{
+			background-color: #3B5998;
+		}
+		&.google-plus{
+			background-color: #DE4E43;
+		}
+		&.linkedin{
+			background-color: #007BB6;
+		}
+		&.instagram{
+			background-color: #8A5A4E;
+		}
+		&.twitter{
+			background-color: #1EA1F3;
+		}
+		&.youtube{
+			background-color: #CE201F;
+		}
+		&.whatsapp{
+			background-color: #01C854;
+		}
+		i{
+			margin:0!important;
+		}
+	}
+    
+}  
+.profile-uoloaded-post{
+    
+    img{
+        margin-bottom: 1.25rem;
+    }
+    a{
+        h4{
+            margin-bottom: 0.625rem;
+            color: $l-ctd;
+        }
+    }
+}
+
+.profile-page{
+	height:60px;
+}
+//user profile 2
+
+
+.card-profile{
+	background-image:url('../images/crm-profile.jpg');
+	background-size: cover;
+	background-position: center center;
+	height: 420px;
+    padding: 30px;
+	.admin-user{
+		background-color: #fff;
+		padding: 30px;
+		max-width: 380px;
+		margin-top: auto;
+		margin-bottom: auto;
+		text-align: center;
+		border-radius:$radius;
+		.img-wrraper{
+			position:relative;
+			margin-bottom: 10px;
+			img{
+				height:80px;
+				width:80px;
+				border: 7px solid rgba(62, 95, 206, 0.08);
+			}
+			a{
+				position: absolute;
+				bottom: 0;
+				margin: 0 24px;
+				height: 30px;
+				width: 30px;
+				background:$white;
+				color: var(--primary);
+				text-align: center;
+				line-height: 30px;
+				border-radius: 50%;
+				box-shadow: 0 0 6px 3px rgba(68, 102, 242, 0.1);
+			}
+		}
+	}
+	.user-details{
+		.title{
+			h4{
+				font-size:1rem;
+			}
+			h6{
+				color:$body-color;
+				margin-bottom: 20px;
+			}
+		}
+	}
+	.user-social-links{
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		a{
+			color: var(--primary);
+			display: block;
+			height: 30px;
+			width: 30px;
+			background-color: var(--rgba-primary-1);
+			text-align: center;
+			line-height: 30px;
+			margin: 0 4px;
+			border-radius:$radius;
+			&:hover{
+				background:var(--primary);
+				color:$white;
+			}
+		}
+	}
+	
+	.follow-list{
+		display: flex;
+        justify-content: center;
+		li{
+			padding: 14px 20px;
+			border-radius:$radius;
+			margin: 0 9px;
+            margin-top: 44px;
+			background: var(--rgba-primary-1);
+			@include respond ('phone'){
+				padding: 5px 10px;
+			}
+		}
+		.follow-num{
+			font-size:1rem;
+			font-weight:500;
+			color:black;
+		}	
+		
+	}
+}
+.profile-accordion{
+	.accordion-item{
+		background:transparent;
+		.accordion-header{
+			padding:0;
+			border: 0;
+			.accordion-button{
+				padding: 0;
+                background: transparent;
+				box-shadow:none;
+				font-size:1rem;
+				font-weight:500;
+				color:black;
+			}
+		}
+		.accordion-body{
+			padding-left:0;
+			padding-right:0;
+		}
+	}
+}
+.about-me{
+	ul{
+		li{
+			display: flex;
+            align-items: center;
+			margin: 15px 0px;
+			margin-top:0;
+			h6{
+				margin-bottom:0;
+				
+			}
+			i{
+				height:35px;
+				width:35px;
+				background-color:var(--rgba-primary-1);
+				color:var(--primary);
+				text-align: center;
+                line-height: 35px;
+				border-radius:$radius;
+				margin-right:15px;
+			}
+		}
+	}
+}
+.second-head{
+	font-size: 1rem;
+    font-weight: 500;
+    color: black;
+}
+.bg-facebook{
+	background:#4867aa;
+	color:white;
+	&:hover{
+		background:#4867aa;
+	   color:white;
+	}
+}
+.bg-whatsapp{
+	background:#1ad03f;
+	color:white;
+	&:hover{
+		background:#1ad03f;
+	   color:white;
+	}
+}
+.bg-skype{
+	background:#0194d7;
+	color:white;
+	&:hover{
+		background:#0194d7;
+	   color:white;
+	}
+}
+.bg-linkedin{
+	background:#0a66c2;
+	color:white;
+	&:hover{
+		background:#0a66c2;
+	   color:white;
+	}
+}
+.profile-interest{
+	img{
+		border-radius:$radius;
+	}
+}
+.post-img{
+	img{
+		border-radius:$radius;
+		width: 100%;
+		@include respond ('laptop'){
+			margin-bottom:10px;
+			margin-left:0!important;
+			margin-right:0!important;
+		}
+	}
+}
+.friend-list{
+	.avatar{
+		margin-left: 9px;
+        margin-bottom: 16px;
+	}
+}
+
+///chat
+
+.chat-border{
+	border-right:1px solid rgba(136,136,136,0.2);
+}
+.chat-p{
+	display:flex;
+	justify-content:space-between;
+	padding: 1.25rem;	
+	
+	h6{
+		font-size:14px;
+	}
+	span{
+		font-size:12px;
+		white-space: nowrap;
+	}
+	&.shaprate{
+		border-bottom:1px solid rgba(136,136,136,0.2);
+	}
+	&.style-1{
+		padding-bottom: 0;
+		.active{
+			position: relative;
+			&:after{
+				content:"";
+				position:absolute;
+				height:10px;
+				width:10px;
+				background:$success;
+				bottom:0;
+				left: 33px;
+				border-radius:50%;
+				border:2px solid $white;
+				
+			}
+		}
+	}
+	
+}
+.c-list{
+	padding: 1.25rem;	
+	.search-area{
+		background-color:transparent!important;
+		.form-control{
+			background:$body-bg;
+			border-color:$body-bg;
+			
+		}	
+		.input-group-text{
+			background:$body-bg;
+			border-color:$body-bg;
+		}
+	}
+}
+.people-list{
+	height:calc(100vh - 260px);
+	margin-bottom: 25px;
+}
+.chat-height{
+	min-height:1000px!important;
+}
+.chat-admin{
+	height: 0;
+	.sharp{
+		line-height: 1.5;
+	}
+	@include respond ('phone'){
+		.icon-box{
+			height: 2rem;
+            width: 2rem;
+			border-radius:5px;
+			line-height: 1.9rem;
+			svg{
+				width: 14px;
+				line-height: 1.8rem;
+			}
+		}
+		.sharp{
+			height: 2rem;
+            min-width: 2rem;
+			min-height: 2rem;
+			padding: 0.2375rem;
+		}
+	}
+}
+.chat-box-area{
+	&.style-2{
+		padding:1.25rem;
+		height:calc(100vh - 260px);
+		margin-top: 20px;
+		@include respond ('phone'){
+			height:calc(100vh - 230px);
+		}
+	}
+}
+.message-send{
+	&.style-2{
+		margin:1.25rem;
+		
+	}
+}
+.chat-meadia{
+	padding:1.25rem;
+	@include respond ('tab-land'){
+		width: 50%;
+		float: left;
+	}
+	@include respond ('phone'){
+		width: 100%;
+	}
+}
+.image-list{
+	margin-top:10px;
+	img{
+		height:75px;
+		width:75px;
+		object-fit:cover;
+		border-radius: 6px;
+		margin-left: 10px;
+		margin-bottom: 10px;
+	}
+}
+.file-list{
+	h5{
+		margin-top: 10px;
+	}
+	.filie-l-icon{
+		margin-top:10px;
+		padding: 10px;
+		cursor: pointer;
+		border-radius:6px;
+		max-width:164px;
+		@include respond ('tab-land'){
+			max-width:100%;
+		}
+		&:hover{
+			background:var(--rgba-primary-1);
+		}
+		img{
+			width:46px;
+			height:45px;
+		}
+	}
+	@include respond ('laptop'){
+		height: 300px;
+	}
+}
+@include respond ('phone'){
+	.chat-left-area{
+		width: 22rem;
+		position: absolute;
+		z-index: 2;
+		transition: all 0.2s;
+		left: -22rem;
+		&.active{
+			left:0;
+			background: white;
+		}
+	}
+}
+
+.chat-toggle{
+	display:none!important;
+	@include respond ('phone'){
+		display:inline-block!important;
+	}
+	&:before{
+		content: '';
+		display: block;
+		position: absolute;
+		top: 0;
+		left: -50vw;
+		width: 100vw;
+		height: 100vh;
+	}
+	&.active{
+		&:before{
+			z-index: 1;
+		}
+	}
+}

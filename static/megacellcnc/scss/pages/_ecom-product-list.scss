@@ -1,0 +1,76 @@
+/*
+===================================
+    list view
+===================================*/
+
+.new-arrival-content {
+    .item {
+        font-size: 0.75rem;
+        color: $dark;
+    }
+    h4 {
+        font-size: 1rem;
+        font-weight: 600;
+        margin-bottom: 0.625rem;
+		a{
+			color:$black;
+		}
+    }
+    .price {
+        font-weight: 600;
+		color: var(--primary);
+		font-size: 1.5rem;
+		margin-bottom: 0;
+		float: right;
+		@include respond ('phone'){
+			float:none;
+			margin-top:0.625rem;
+		}
+    }
+    p {
+        font-size: 0.875rem;
+        color: $d-ctl;
+        margin-bottom: 0.375rem;
+        line-height: 1.5rem;
+    }
+    .text-content {
+        margin-top: 1.125rem;
+    }
+}
+.new-arrival-content.text-center .price {
+	float: unset!important;
+}
+
+.success-icon {
+    color: $success;
+    font-size: 1rem;
+}
+
+.comment-review {
+    margin-bottom: 0.9375rem;
+    display: table;
+    width: 100%;
+    .client-review {
+        color: $d-ctl;
+        padding-right: 1.25rem;
+        text-decoration: underline !important;
+        font-size: 0.875rem;
+    }
+    .span {
+        color: $d-ctl;
+        font-size: 0.875rem;
+    }
+	@include respond ('phone'){
+		margin-bottom:0;
+	}
+}
+
+.star-rating li {
+    display: inline-block;
+    i {
+        color: gold;
+    }
+}
+.order{
+	font-weight:500;
+}

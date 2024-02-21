@@ -1,0 +1,466 @@
+{% extends 'megacellcnc/elements/layouts/admin.html' %}
+{% load static %}
+        
+{% block additional_css %}
+<link href="https://cdn.datatables.net/buttons/1.6.4/css/buttons.dataTables.min.css" rel="stylesheet">
+{% endblock %}		
+{% block content %}
+
+<!--**********************************
+    Content body start
+***********************************-->
+<div class="content-body">
+    <!-- row -->	
+    <div class="page-titles">
+        <ol class="breadcrumb">
+            <li><h5 class="bc-title">Dashboard</h5></li>
+            <li class="breadcrumb-item"><a href="javascript:void(0)">
+                <svg width="17" height="17" viewBox="0 0 17 17" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M2.125 6.375L8.5 1.41667L14.875 6.375V14.1667C14.875 14.5424 14.7257 14.9027 14.4601 15.1684C14.1944 15.4341 13.8341 15.5833 13.4583 15.5833H3.54167C3.16594 15.5833 2.80561 15.4341 2.53993 15.1684C2.27426 14.9027 2.125 14.5424 2.125 14.1667V6.375Z" stroke="#2C2C2C" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M6.375 15.5833V8.5H10.625V15.5833" stroke="#2C2C2C" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                Users Manager </a>
+            </li>
+            <li class="breadcrumb-item active"><a href="javascript:void(0)">{{page_title}}</a></li>
+        </ol>
+        
+    </div>
+    <div class="container">
+        <div class="row">
+            <h4 class="heading mb-3">Account Setting</h4>
+            <div class="col-xl-3">
+                <div class="row">
+                    <div class="col-xl-12">
+                        <div class="card">
+                            <div class="card-header">
+                                <h4 class="heading mb-0">Personal</h4>
+                            </div>
+                            <div class="card-body px-0">
+                                <ul class="personal-info">
+                                    <li><i class="fa-solid fa-user text-primary me-3"></i> Profile</li>
+                                    <li><i class="fa-solid fa-lock text-primary me-3"></i> Password</li>
+                                    <li><i class="fa-solid fa-calendar-days text-primary me-3"></i> Date</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xl-12">
+                        <div class="card">
+                            <div class="card-header">
+                                <h4 class="heading mb-0">Company</h4>
+                            </div>
+                            <div class="card-body px-0">
+                                <ul class="personal-info">
+                                    <li><i class="fa-solid fa-building text-primary me-3"></i> Commpany Details</li>
+                                    <li><i class="fa-solid fa-user-plus text-primary me-3"></i> Team Members</li>
+                                    <li><i class="far fa-clock text-primary me-3"></i> Format setting</li>
+                                    <li><i class="fa-solid fa-briefcase text-primary me-3"></i> Job boards</li>
+                                    <li><i class="far fa-user text-primary me-3"></i> Positions</li>
+                                    <li><i class="fas fa-times-circle text-primary me-3"></i>Rejections resions</li>
+                                    <li><i class="fas fa-envelope text-primary me-3"></i>Automated message</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-xl-9">
+                <div class="row">
+                    <div class="col-xl-12">
+                        <div class="card">
+                            <div class="card-header">
+                                <div>
+                                    <h4 class="heading mb-0">Team Members</h4>
+                                    <span>Invitite or manage your origanisation's members.</span>
+                                </div>
+                                
+                            </div>
+                            <div class="card-body p-0">
+                                <div class="all_user">
+                                    <h4 class="mb-0 d-flex align-items-center heading">All Users<span class="badge badge-primary badge-xs ms-3">5</span></h4>
+                                    <h4 class="mb-0 text-primary heading">Users role manager</h4>
+                                </div>
+                                <div class="all_user1">
+                                    <span class="mb-0 heading">Actions</span>
+                                    <div class="d-flex member">
+                                        <h4 class="heading mb-0">Member</h4>
+                                        <h4 class="heading mb-0">Manager</h4>
+                                        <h4 class="heading mb-0">Admin</h4>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <h4 class="heading mb-0 manage"><i class="fa-solid fa-user-plus text-primary me-2 mb-3 "></i> Job Management</h4>
+                    <div class="col-xl-12">
+                        <div class="card">
+                            <div class="card-body">
+                                <ul>
+                                    <li class="right-check">
+                                        <div class="d-flex align-items-center justify-content-between">
+                                            <h6 class=" mb-0">Create new job and stage</h6>
+                                            <div class="d-flex">
+                                                <div class="form-check custom-checkbox mb-3 checkbox-warning">
+                                                    <input type="checkbox" class="form-check-input" checked="" id="customCheckBox1" required="">
+                                                </div>
+                                                <div class="form-check custom-checkbox mb-3 checkbox-primary">
+                                                    <input type="checkbox" class="form-check-input" id="customCheckBox2" required="">
+                                                </div>
+                                                <div class="form-check custom-checkbox mb-3 checkbox-success">
+                                                    <input type="checkbox" class="form-check-input" checked="" id="customCheckBox3" required="">
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </li>
+                                    <li class="right-check">
+                                        <div class="d-flex align-items-center justify-content-between">
+                                            <h6 class=" mb-0">Edit job and stage</h6>
+                                            <div class="d-flex">
+                                                <div class="form-check custom-checkbox mb-3 checkbox-warning">
+                                                    <input type="checkbox" class="form-check-input"  id="customCheckBox4" required="">
+                                                </div>
+                                                <div class="form-check custom-checkbox mb-3 checkbox-primary">
+                                                    <input type="checkbox" class="form-check-input" checked="" id="customCheckBox5" required="">
+                                                </div>
+                                                <div class="form-check custom-checkbox mb-3 checkbox-success">
+                                                    <input type="checkbox" class="form-check-input" checked="" id="customCheckBox6" required="">
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </li>
+                                    <li class="right-check">
+                                        <div class="d-flex align-items-center justify-content-between">
+                                            <h6 class=" mb-0">Atchive jobs</h6>
+                                            <div class="d-flex">
+                                                <div class="form-check custom-checkbox mb-3 checkbox-warning">
+                                                    <input type="checkbox" class="form-check-input" checked="" id="customCheckBox7" required="">
+                                                </div>
+                                                <div class="form-check custom-checkbox mb-3 checkbox-primary">
+                                                    <input type="checkbox" class="form-check-input" id="customCheckBox6" required="">
+                                                </div>
+                                                <div class="form-check custom-checkbox mb-3 checkbox-success">
+                                                    <input type="checkbox" class="form-check-input" checked="" id="customCheckBox8" required="">
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </li>
+                                    <li class="right-check">
+                                        <div class="d-flex align-items-center justify-content-between">
+                                            <h6 class=" mb-0">Atchive jobs</h6>
+                                            <div class="d-flex">
+                                                <div class="form-check custom-checkbox mb-3 checkbox-warning">
+                                                    <input type="checkbox" class="form-check-input" checked="" id="customCheckBox9" required="">
+                                                </div>
+                                                <div class="form-check custom-checkbox mb-3 checkbox-primary">
+                                                    <input type="checkbox" class="form-check-input"  checked="" id="customCheckBox10" required="">
+                                                </div>
+                                                <div class="form-check custom-checkbox mb-3 checkbox-success">
+                                                    <input type="checkbox" class="form-check-input" id="customCheckBox11" required="">
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </li>
+                                    <li class="right-check">
+                                        <div class="d-flex align-items-center justify-content-between">
+                                            <h6 class=" mb-0">Change jobs status</h6>
+                                            <div class="d-flex">
+                                                <div class="form-check custom-checkbox mb-3 checkbox-warning">
+                                                    <input type="checkbox" class="form-check-input" checked="" id="customCheckBox12" required="">
+                                                </div>
+                                                <div class="form-check custom-checkbox mb-3 checkbox-primary">
+                                                    <input type="checkbox" class="form-check-input"  checked="" id="customCheckBox13" required="">
+                                                </div>
+                                                <div class="form-check custom-checkbox mb-3 checkbox-success">
+                                                    <input type="checkbox" class="form-check-input" id="customCheckBox14" required="">
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </li>
+                                </ul>
+                            </div>
+                            
+                        </div>
+                    </div>
+                    <h4 class="heading mb-0  manage"><i class="far fa-user text-primary me-2 mb-3 "></i></i> Candidate Management</h4>
+                    <div class="col-xl-12">
+                        <div class="card">
+                            <div class="card-body">
+                                <ul>
+                                    <li class="right-check">
+                                        <div class="d-flex align-items-center justify-content-between">
+                                            <h6 class=" mb-0">Create new job and stage</h6>
+                                            <div class="d-flex">
+                                                <div class="form-check custom-checkbox mb-3 checkbox-warning">
+                                                    <input type="checkbox" class="form-check-input" checked="" id="customCheckBox1" required="">
+                                                </div>
+                                                <div class="form-check custom-checkbox mb-3 checkbox-primary">
+                                                    <input type="checkbox" class="form-check-input" id="customCheckBox2" required="">
+                                                </div>
+                                                <div class="form-check custom-checkbox mb-3 checkbox-success">
+                                                    <input type="checkbox" class="form-check-input" checked="" id="customCheckBox3" required="">
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </li>
+                                    <li class="right-check">
+                                        <div class="d-flex align-items-center justify-content-between">
+                                            <h6 class=" mb-0">Edit job and stage</h6>
+                                            <div class="d-flex">
+                                                <div class="form-check custom-checkbox mb-3 checkbox-warning">
+                                                    <input type="checkbox" class="form-check-input"  id="customCheckBox4" required="">
+                                                </div>
+                                                <div class="form-check custom-checkbox mb-3 checkbox-primary">
+                                                    <input type="checkbox" class="form-check-input" checked="" id="customCheckBox5" required="">
+                                                </div>
+                                                <div class="form-check custom-checkbox mb-3 checkbox-success">
+                                                    <input type="checkbox" class="form-check-input" checked="" id="customCheckBox6" required="">
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </li>
+                                    <li class="right-check">
+                                        <div class="d-flex align-items-center justify-content-between">
+                                            <h6 class=" mb-0">Atchive jobs</h6>
+                                            <div class="d-flex">
+                                                <div class="form-check custom-checkbox mb-3 checkbox-warning">
+                                                    <input type="checkbox" class="form-check-input" checked="" id="customCheckBox7" required="">
+                                                </div>
+                                                <div class="form-check custom-checkbox mb-3 checkbox-primary">
+                                                    <input type="checkbox" class="form-check-input" id="customCheckBox6" required="">
+                                                </div>
+                                                <div class="form-check custom-checkbox mb-3 checkbox-success">
+                                                    <input type="checkbox" class="form-check-input" checked="" id="customCheckBox8" required="">
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </li>
+                                    <li class="right-check">
+                                        <div class="d-flex align-items-center justify-content-between">
+                                            <h6 class=" mb-0">Atchive jobs</h6>
+                                            <div class="d-flex">
+                                                <div class="form-check custom-checkbox mb-3 checkbox-warning">
+                                                    <input type="checkbox" class="form-check-input" checked="" id="customCheckBox9" required="">
+                                                </div>
+                                                <div class="form-check custom-checkbox mb-3 checkbox-primary">
+                                                    <input type="checkbox" class="form-check-input"  checked="" id="customCheckBox10" required="">
+                                                </div>
+                                                <div class="form-check custom-checkbox mb-3 checkbox-success">
+                                                    <input type="checkbox" class="form-check-input" id="customCheckBox11" required="">
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </li>
+                                    <li class="right-check">
+                                        <div class="d-flex align-items-center justify-content-between">
+                                            <h6 class=" mb-0">Change jobs status</h6>
+                                            <div class="d-flex">
+                                                <div class="form-check custom-checkbox mb-3 checkbox-warning">
+                                                    <input type="checkbox" class="form-check-input" checked="" id="customCheckBox12" required="">
+                                                </div>
+                                                <div class="form-check custom-checkbox mb-3 checkbox-primary">
+                                                    <input type="checkbox" class="form-check-input"  checked="" id="customCheckBox13" required="">
+                                                </div>
+                                                <div class="form-check custom-checkbox mb-3 checkbox-success">
+                                                    <input type="checkbox" class="form-check-input" id="customCheckBox14" required="">
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </li>
+                                </ul>
+                            </div>
+                            
+                        </div>
+                    </div>
+                    <div class="col-xl-12">
+                        <div class="card">
+                            <div class="card-body">
+                                <ul>
+                                    <li class="right-check">
+                                        <div class="d-flex align-items-center justify-content-between">
+                                            <h6 class=" mb-0">Create new job and stage</h6>
+                                            <div class="d-flex">
+                                                <div class="form-check custom-checkbox mb-3 checkbox-warning">
+                                                    <input type="checkbox" class="form-check-input" checked="" id="customCheckBox1" required="">
+                                                </div>
+                                                <div class="form-check custom-checkbox mb-3 checkbox-primary">
+                                                    <input type="checkbox" class="form-check-input" id="customCheckBox2" required="">
+                                                </div>
+                                                <div class="form-check custom-checkbox mb-3 checkbox-success">
+                                                    <input type="checkbox" class="form-check-input" checked="" id="customCheckBox3" required="">
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </li>
+                                    <li class="right-check">
+                                        <div class="d-flex align-items-center justify-content-between">
+                                            <h6 class=" mb-0">Edit job and stage</h6>
+                                            <div class="d-flex">
+                                                <div class="form-check custom-checkbox mb-3 checkbox-warning">
+                                                    <input type="checkbox" class="form-check-input"  id="customCheckBox4" required="">
+                                                </div>
+                                                <div class="form-check custom-checkbox mb-3 checkbox-primary">
+                                                    <input type="checkbox" class="form-check-input" checked="" id="customCheckBox5" required="">
+                                                </div>
+                                                <div class="form-check custom-checkbox mb-3 checkbox-success">
+                                                    <input type="checkbox" class="form-check-input" checked="" id="customCheckBox6" required="">
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </li>
+                                    <li class="right-check">
+                                        <div class="d-flex align-items-center justify-content-between">
+                                            <h6 class=" mb-0">Atchive jobs</h6>
+                                            <div class="d-flex">
+                                                <div class="form-check custom-checkbox mb-3 checkbox-warning">
+                                                    <input type="checkbox" class="form-check-input" checked="" id="customCheckBox7" required="">
+                                                </div>
+                                                <div class="form-check custom-checkbox mb-3 checkbox-primary">
+                                                    <input type="checkbox" class="form-check-input" id="customCheckBox6" required="">
+                                                </div>
+                                                <div class="form-check custom-checkbox mb-3 checkbox-success">
+                                                    <input type="checkbox" class="form-check-input" checked="" id="customCheckBox8" required="">
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </li>
+                                    <li class="right-check">
+                                        <div class="d-flex align-items-center justify-content-between">
+                                            <h6 class=" mb-0">Atchive jobs</h6>
+                                            <div class="d-flex">
+                                                <div class="form-check custom-checkbox mb-3 checkbox-warning">
+                                                    <input type="checkbox" class="form-check-input" checked="" id="customCheckBox9" required="">
+                                                </div>
+                                                <div class="form-check custom-checkbox mb-3 checkbox-primary">
+                                                    <input type="checkbox" class="form-check-input"  checked="" id="customCheckBox10" required="">
+                                                </div>
+                                                <div class="form-check custom-checkbox mb-3 checkbox-success">
+                                                    <input type="checkbox" class="form-check-input" id="customCheckBox11" required="">
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </li>
+                                    <li class="right-check">
+                                        <div class="d-flex align-items-center justify-content-between">
+                                            <h6 class=" mb-0">Change jobs status</h6>
+                                            <div class="d-flex">
+                                                <div class="form-check custom-checkbox mb-3 checkbox-warning">
+                                                    <input type="checkbox" class="form-check-input" checked="" id="customCheckBox12" required="">
+                                                </div>
+                                                <div class="form-check custom-checkbox mb-3 checkbox-primary">
+                                                    <input type="checkbox" class="form-check-input"  checked="" id="customCheckBox13" required="">
+                                                </div>
+                                                <div class="form-check custom-checkbox mb-3 checkbox-success">
+                                                    <input type="checkbox" class="form-check-input" id="customCheckBox14" required="">
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </li>
+                                </ul>
+                            </div>
+                            
+                        </div>
+                    </div>
+                    <h4 class="heading mb-0  manage"><i class="far fa-user text-primary me-2 mb-3 "></i></i> Commpany Management</h4>
+                    <div class="col-xl-12">
+                        <div class="card">
+                            <div class="card-body">
+                                <ul>
+                                    <li class="right-check">
+                                        <div class="d-flex align-items-center justify-content-between">
+                                            <h6 class=" mb-0">Create new job and stage</h6>
+                                            <div class="d-flex">
+                                                <div class="form-check custom-checkbox mb-3 checkbox-warning">
+                                                    <input type="checkbox" class="form-check-input" checked="" id="customCheckBox1" required="">
+                                                </div>
+                                                <div class="form-check custom-checkbox mb-3 checkbox-primary">
+                                                    <input type="checkbox" class="form-check-input" id="customCheckBox2" required="">
+                                                </div>
+                                                <div class="form-check custom-checkbox mb-3 checkbox-success">
+                                                    <input type="checkbox" class="form-check-input" checked="" id="customCheckBox3" required="">
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </li>
+                                    <li class="right-check">
+                                        <div class="d-flex align-items-center justify-content-between">
+                                            <h6 class=" mb-0">Import applications</h6>
+                                            <div class="d-flex">
+                                                <div class="form-check custom-checkbox mb-3 checkbox-warning">
+                                                    <input type="checkbox" class="form-check-input"  id="customCheckBox4" required="">
+                                                </div>
+                                                <div class="form-check custom-checkbox mb-3 checkbox-primary">
+                                                    <input type="checkbox" class="form-check-input" checked="" id="customCheckBox5" required="">
+                                                </div>
+                                                <div class="form-check custom-checkbox mb-3 checkbox-success">
+                                                    <input type="checkbox" class="form-check-input" checked="" id="customCheckBox6" required="">
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </li>
+                                    <li class="right-check">
+                                        <div class="d-flex align-items-center justify-content-between">
+                                            <h6 class=" mb-0">Read message</h6>
+                                            <div class="d-flex">
+                                                <div class="form-check custom-checkbox mb-3 checkbox-warning">
+                                                    <input type="checkbox" class="form-check-input" checked="" id="customCheckBox7" required="">
+                                                </div>
+                                                <div class="form-check custom-checkbox mb-3 checkbox-primary">
+                                                    <input type="checkbox" class="form-check-input" id="customCheckBox6" required="">
+                                                </div>
+                                                <div class="form-check custom-checkbox mb-3 checkbox-success">
+                                                    <input type="checkbox" class="form-check-input" checked="" id="customCheckBox8" required="">
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </li>
+                                    <li class="right-check">
+                                        <div class="d-flex align-items-center justify-content-between">
+                                            <h6 class=" mb-0">Edit user details</h6>
+                                            <div class="d-flex">
+                                                <div class="form-check custom-checkbox mb-3 checkbox-warning">
+                                                    <input type="checkbox" class="form-check-input" checked="" id="customCheckBox9" required="">
+                                                </div>
+                                                <div class="form-check custom-checkbox mb-3 checkbox-primary">
+                                                    <input type="checkbox" class="form-check-input"  checked="" id="customCheckBox10" required="">
+                                                </div>
+                                                <div class="form-check custom-checkbox mb-3 checkbox-success">
+                                                    <input type="checkbox" class="form-check-input" id="customCheckBox11" required="">
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </li>
+                                    <li class="right-check">
+                                        <div class="d-flex align-items-center justify-content-between">
+                                            <h6 class=" mb-0">Change jobs status</h6>
+                                            <div class="d-flex">
+                                                <div class="form-check custom-checkbox mb-3 checkbox-warning">
+                                                    <input type="checkbox" class="form-check-input" checked="" id="customCheckBox12" required="">
+                                                </div>
+                                                <div class="form-check custom-checkbox mb-3 checkbox-primary">
+                                                    <input type="checkbox" class="form-check-input"  checked="" id="customCheckBox13" required="">
+                                                </div>
+                                                <div class="form-check custom-checkbox mb-3 checkbox-success">
+                                                    <input type="checkbox" class="form-check-input" id="customCheckBox14" required="">
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </li>
+                                </ul>
+                            </div>
+                            
+                        </div>
+                    </div>
+                </div>
+                
+            </div>
+        </div>
+    
+    </div>
+</div>
+
+<!--**********************************
+    Content body end
+***********************************-->
+
+
+{% endblock %}

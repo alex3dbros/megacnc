@@ -1,0 +1,60 @@
+.morris-hover {
+	position: absolute;
+	z-index : 1;
+	background: var(--primary);
+	color: $white;
+}
+
+.morris-hover .morris-hover-point {
+	color: $white !important;
+	margin: 0.1875rem 0;
+	text-align: center;
+	padding: 0 1.5625rem;
+	color: #fff;
+}
+
+.morris-hover .morris-hover-row-label {
+	background-color: $dark;
+	text-align: center;
+	padding: 0.3125rem;
+	color: #fff;
+	margin-bottom: 0.3125rem;
+}
+
+.morris-hover.morris-default-style {
+	border-radius: 0.3125rem;
+	padding      : 0;
+	margin: 0;
+	border       : none;
+	overflow: hidden;
+}
+
+/* svg text {
+    font-weight: 600 !important;
+} */
+
+
+#morris_donught, 
+#morris_donught_2, 
+#line_chart_2, 
+#morris_bar, 
+#morris_bar_stalked, 
+#morris_bar_2, 
+#morris_area_2, 
+#morris_area {
+    height: 15rem !important;
+}
+
+#morris_line {
+	height: 17.375rem !important;
+}
+
+
+#crypto-btc-card, 
+#crypto-eth-card, 
+#crypto-rpl-card, 
+#crypto-ltc-card {
+    height: 9.375rem;
+}
+
+

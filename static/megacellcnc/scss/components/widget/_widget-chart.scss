@@ -1,0 +1,134 @@
+#chart_widget_4 {
+    height: 15.9375rem !important;
+}
+
+#chart_widget_1{
+	margin-top:-5px;
+}
+#chart_widget_2{
+	//margin-top:-1px;
+}
+#chart_widget_5 {
+    .ct-series-a .ct-line, 
+    .ct-series-a .ct-point {
+        stroke: #46ffc8;
+    }
+
+    .ct-line {
+        stroke-width: 0.0625rem;
+    }
+
+    .ct-point {
+        stroke-width: 0.125rem;
+    }
+
+    .ct-series-a .ct-area {
+        fill: #20dea6;
+    }
+
+    .ct-area {
+        fill-opacity: 1;
+    }
+}
+
+#chart_widget_6 {
+    .ct-series-a .ct-line, 
+    .ct-series-a .ct-point {
+        stroke: $info;
+    }
+
+    .ct-line {
+        stroke-width: 0.125rem;
+    }
+
+    .ct-point {
+        stroke-width: 0.3125rem;
+    }
+
+    .ct-series-a .ct-area {
+        fill: $info;
+    }
+
+    .ct-area {
+        fill-opacity: .5;
+    }
+}
+
+#chart_widget_8 {
+    height: 15.9375rem;
+
+    .ct-series-a .ct-line, 
+    .ct-series-a .ct-point {
+        stroke: $info;
+    }
+
+    .ct-line {
+        stroke-width: 0.125rem;
+    }
+
+    .ct-point {
+        stroke-width: 0.3125rem;
+    }
+
+    .ct-series-a .ct-area {
+        fill: $info;
+    }
+
+    .ct-area {
+        fill-opacity: .5;
+    }
+}
+
+#chart_widget_9, #chart_widget_10 {
+    height: 15.625rem !important;
+}
+
+#chart_widget_11, #chart_widget_12, #chart_widget_13 {
+    .ct-slice-donut {
+        stroke-width: 1.5625rem !important;
+    }
+}
+
+
+#chart_widget_11 {
+    height: 16.875rem !important;
+}
+
+#chart_widget_17 {
+    height: 9.375rem !important;
+}
+
+
+.chart_widget_tab_one {
+    .nav-link {
+        border: 0.0625rem solid #ddd;
+
+        &.active {
+            background-color: var(--primary);
+            border: 0.0625rem solid var(--primary);
+            color: $white;
+
+            &:hover {
+                border: 0.0625rem solid var(--primary);
+            }
+        }
+
+        &:hover {
+            border: 0.0625rem solid #ddd;
+        }
+    }
+}
+
+.ccc-widget {
+    &>div {
+        @at-root [data-theme-version="dark"] & {
+            background: $dark-card !important;
+            border-color: $d-border !important;
+        }
+    }
+}
+.list-group-flush{
+	.list-group-item{
+		border:0;
+	}
+}

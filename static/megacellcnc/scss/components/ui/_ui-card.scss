@@ -1,0 +1,246 @@
+.card {
+    margin-bottom: 1.563rem;
+    background-color: $white;
+    transition: all .5s ease-in-out;
+    position: relative;
+    border: 0rem solid transparent;
+    border-radius: $radius;
+	height: calc(100% - 30px);
+	border:1px solid $border;
+	
+	// z-index: 0;
+	@include custommq($max: 35.9375rem) {
+		margin-bottom:0.938rem;
+		height: calc(100% - 0.938rem);
+	}
+
+    &-body {
+        padding: 1.25rem;
+		@include respond('phone') {
+			padding: 1rem;
+		}
+    }
+
+    &-title {
+        font-size: 1rem;
+        font-weight: 500;
+        // line-height: 2.2rem;
+        color:var(--secondary);
+        text-transform: capitalize;
+        // margin-bottom: 1.5rem;
+    
+        &--large{
+            font-size: 1.5rem;
+        }
+    
+        &--medium{
+            font-size: 1rem;
+        }
+    
+        &--small{
+            font-size: 0.875rem;
+        }
+    }
+
+    &-header {
+        border-color: $border;
+        position: relative;
+        background: transparent;
+        padding:1.5rem 1.25rem 1.25rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        // min-height: 4.0625rem;
+		@include respond('phone') {
+			padding: 1.25rem 1rem 1.25rem;
+		}
+        @at-root [data-theme-version="dark"] & {
+            border-color: $d-border;
+        }
+
+        .card-title{
+            margin-bottom: 0rem;
+        }
+        .subtitle{
+            padding-top: 0.3125rem;
+            font-size: 0.875rem;
+			line-height: 1.5;
+        }
+    }
+
+    &-footer {
+        border-color: $border;
+        background: transparent;
+        padding: 1rem 1.25rem 1rem;
+        @at-root [data-theme-version="dark"] & {
+            border-color: $d-border;
+        }
+		@include respond('phone') {
+			  padding: 1.25rem 1rem 1.25rem;
+		}
+    }    
+}
+
+.transparent-card{
+    &.card{
+        background: transparent;
+        border: 0.0625rem solid transparent;
+        box-shadow: none;
+    }
+}
+
+
+
+
+///////////////////
+//  Card action
+///////////////////
+.card-action {
+    > a {
+        display: inline-block;
+        width: 1.875rem;
+        height: 1.875rem;
+        line-height: 1.875rem;
+        border-radius: 0.3125rem;
+        border-color: transparent;
+        text-align: center;
+        background: var(--primary-dark);
+        color: $white;
+        margin-right: 0.5rem;
+
+        @at-root [data-theme-version="dark"] & {
+            background: $d-bg;
+        }
+
+        &:last-child{
+            margin-right: 0;
+        }
+        &:hover,&:focus{
+            background: var(--primary-dark);
+
+            @at-root [data-theme-version="dark"] & {
+                background: $d-bg;
+            }
+        }
+
+
+        i,span{
+            font-size: 1rem;
+            // color: #333333;
+        }
+        // padding: 0 .5rem;
+    }
+
+    .dropdown{
+        width: 1.875rem;
+        height: 1.875rem;
+        border-radius: 0.3125rem;
+        border-color: transparent;
+        text-align: center;
+        margin-right: 0.5rem;
+        top: -0.125rem;
+        position: relative;
+        display: inline-block;
+        background: var(--primary-dark);
+        color: var(--primary);
+
+        @at-root [data-theme-version="dark"] & {
+            background: $d-bg;
+        }
+        
+        &:hover,&:focus{
+            background: var(--primary-dark);
+
+            @at-root [data-theme-version="dark"] & {
+                background: $d-bg;
+            }
+        }
+
+        .btn{
+            padding: 0;
+            line-height: 1.6875rem;
+            color: $white;
+
+            &:focus{
+                box-shadow: none;
+            }
+        }
+    }
+}
+
+.card-fullscreen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 99999999;
+    overflow: auto;
+}
+
+.card-loader {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: -webkit-box;
+    display: -ms-flexbox;
+    display: flex;
+    -webkit-box-align: center;
+    -ms-flex-align: center;
+    align-items: center;
+    background-color: rgba(0, 0, 0, 0.75);
+    z-index: 999
+}
+
+.card-loader i {
+    margin: 0 auto;
+    background: var(--primary-dark);
+    padding: 0.625rem;
+    border-radius: 50%;
+    color: $white;
+    font-size: 1rem
+}
+
+.rotate-refresh {
+    -webkit-animation: mymove 0.8s infinite linear;
+    animation: mymove 0.8s infinite linear;
+    display: inline-block
+}
+
+.card-header {
+    .date_picker {
+        display: inline-block;
+        padding: 0.5rem;
+        border: 0.0625rem solid $border;
+        cursor: pointer;
+        border-radius: .375rem;
+    }
+	.border-0{
+		padding-bottom:0;
+	}
+}
+
+
+@-webkit-keyframes mymove {
+    0% {
+        -webkit-transform: rotate(0deg);
+        transform: rotate(0deg)
+    }
+    100% {
+        -webkit-transform: rotate(360deg);
+        transform: rotate(360deg)
+    }
+}
+
+@keyframes mymove {
+    0% {
+        -webkit-transform: rotate(0deg);
+        transform: rotate(0deg)
+    }
+    100% {
+        -webkit-transform: rotate(360deg);
+        transform: rotate(360deg)
+    }
+}

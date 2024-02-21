@@ -1,0 +1,100 @@
+.svg-icons-ov {
+    @include transitionMedium;
+	align-items: center;
+    padding: 15px 15px 75px;
+    position: relative;
+    margin-bottom: 10px;
+    border: 1px solid rgba(0,0,0,0.1);
+    border-radius: 5px;
+    margin-bottom: 30px;
+	display: flex;
+	
+	.svg-icons-prev{
+		margin-right:15px;
+		svg{
+			path{
+				stroke:var(--primary);
+			}
+			path[fill] {
+				fill: var(--primary);
+			}
+		}
+		i{
+			font-size:24px;
+			color:var(--primary);
+		}
+	}
+	.svg-icon-popup {
+		position: absolute;
+		bottom: 15px;
+		width: 100%;
+		display: flex;
+		left: 10px;
+		&.style-1{
+			left:0;
+			.btn{
+				width:100%;
+			}
+		}
+		
+		.btn{
+			padding: 8px;
+			background: $primary-light;
+			margin: 0 5px;
+			color: $primary;
+			font-size: 14px !important;
+			display: inline-block;
+			width: 40%;
+			min-width: 40%;
+			height: 40px;
+			
+			&:hover{
+				background-color: $primary;
+				color: #fff;
+			}
+		}
+	}
+	&:hover{
+		border-color: $primary;
+	}
+	&.style-1{
+		padding:15px;
+		flex-direction:column;
+		cursor:pointer;
+		.svg-icons-prev{
+			display: inline-block;
+			width: 3.125rem;
+			height: 3.125rem;
+			line-height: 3.563rem;
+			text-align: center;
+			background-color: #fdf4f8;
+			border-radius: 50%;
+			margin-bottom:0.688rem;
+			margin-right:0;
+		}
+		.svg-classname{
+			font-size:0.713rem;
+		}
+	}
+}
+.svg-area{
+	.row{
+		margin:0;
+	}
+	.col-md-2{
+		padding:0;
+	}
+	
+	.card-header{
+		color: #000;
+		font-size: 18px;
+		font-weight: 600;
+		padding: 0;
+		margin-top: 50px;
+		margin-bottom: 20px;
+		padding-bottom: 10px;
+		&:first-child{
+			margin-top:0;
+		}
+	}
+}

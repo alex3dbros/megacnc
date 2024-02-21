@@ -1,0 +1,103 @@
+
+
+
+%remain-steps {
+    &:before {
+        content: counter(stepNum);
+        font-family: inherit;
+        font-weight: 400;
+    }
+
+    &:after {
+        background-color: $border;
+    }
+}
+
+.multi-steps {
+    display: table;
+    table-layout: fixed;
+    width: 100%;
+
+    >li {
+        counter-increment: stepNum;
+        text-align: center;
+        display: table-cell;
+        position: relative;
+        color: var(--primary);
+
+        @include media-breakpoint-down(xs) {
+            font-size: 0.75rem;
+        }
+
+        &:before {
+            content: '\2713';
+            display: block;
+            margin: 0 auto 0.25rem;
+            background-color: $white;
+            width: 1.5625rem;
+            height: 1.5625rem;
+            line-height: 1.375rem;
+            text-align: center;
+            font-weight: bold;
+            position: relative;
+            z-index: 1;
+
+            @include media-breakpoint-down(xs) {
+                width: 1.5625rem;
+                height: 1.5625rem;
+                line-height: 1.3125rem;
+            }
+
+            border: {
+                width: 0.125rem;
+                style: solid;
+                color: var(--primary);
+                radius: 0.3125rem;
+            }
+        }
+
+        &:after {
+            content: '';
+            height: 0.125rem;
+            width: 100%;
+            background-color: var(--primary);
+            position: absolute;
+            top: 0.75rem;
+            left: 50%;
+
+            @at-root [direction="rtl"] #{&} {
+              left: auto;
+              right: 50%;
+            }
+
+            @include media-breakpoint-down(xs) {
+                top: 0.75rem;
+            }
+        }
+
+        &:last-child {
+            &:after {
+                display: none;
+            }
+        }
+
+        &.is-active {
+            @extend %remain-steps;
+
+            &:before {
+                background-color: $white;
+                border-color: var(--primary);
+            }
+
+            ~li {
+                color: $body-color;
+                @extend %remain-steps;
+
+                &:before {
+                    background-color: $border;
+                    border-color: $border;
+                }
+            }
+        }
+    }
+}

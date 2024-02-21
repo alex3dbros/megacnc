@@ -1,0 +1,301 @@
+
+.widget-timeline{
+
+	.timeline {
+		list-style: none;
+		position: relative;
+		&:before {
+			top: 1.25rem;
+			bottom: 0;
+			position: absolute;
+			content: " ";
+			width: 0.188rem;
+			left: 0.5625rem;
+			margin-right: -0.0938rem;
+			background: $border;
+			@at-root [data-theme-version="dark"] & {
+				background: $d-border;
+			}
+			@at-root [direction="rtl"] #{&} {
+				left: auto;
+				right: 0.5625rem;
+				margin-right: auto;
+				margin-left: -0.0938rem;
+			}
+			
+		}
+		> li {
+			margin-bottom: 0.9375rem;
+			position: relative;
+			&:before {
+				content: " ";
+				display: table;
+			}
+			&:after {
+				content: " ";
+				display: table;
+				clear: both;
+			}
+			> {
+				.timeline-panel {
+					border-radius: $radius;
+					padding: 0.9375rem 1.25rem;
+					position: relative;
+					display:block;
+					margin-left: 2.5rem;
+					border-width:0.0625rem;
+					border-style:solid;
+					span{
+						font-size: 0.75rem;
+						display: block;
+						margin-bottom: 0.3125rem;
+						opacity: 0.8;
+						letter-spacing: 0.0625rem;
+					}
+					p{
+						font-size:0.75rem;
+						line-height:1.125rem;
+					}
+					h6{
+						font-size:13px;
+					}
+					&:after{
+						content: "";
+						width: 0.625rem;
+						height: 0.625rem;
+						background: inherit;
+						border-color: inherit;
+						border-style: solid;
+						border-width: 0rem 0rem 0.0625rem 0.0625rem;
+						display: block;
+						position: absolute;
+						left: -0.3125rem;
+						transform: rotate(45deg);
+						top: 0.9375rem;
+					}
+				}
+				.timeline-badge {
+					border-radius: 50%;
+					height: 1.275rem;
+					left: 0;
+					position: absolute;
+					top: 0.625rem;
+					width: 1.275rem;
+					border-width: 0.125rem;
+					border-style: solid;
+					background:$white;
+					padding:0.25rem;
+					@at-root [data-theme-version="dark"] & {
+						background-color: $dark-card;
+					}
+					&:after{
+						content:"";
+						width:0.525rem;
+						height:0.525rem;
+						border-radius:100%;
+						display:block;
+					}
+					
+					@at-root [direction="rtl"] #{&} {
+						left: auto;
+						right: 1.1875rem;
+					}
+				}
+			}
+		}
+	}
+	
+	.timeline-body > p {
+		font-size: 0.75rem;
+	}
+  
+  .timeline-badge {
+    &.primary{
+		border-color: var(--rgba-primary-1);
+		@at-root [data-theme-version="dark"] & {
+			border-color: var(--rgba-primary-1);
+		}
+		&:after{
+			background-color: var(--primary);
+			box-shadow:0 0.3125rem 0.625rem 0 var(--rgba-primary-2);
+		}
+		& + .timeline-panel{
+			background:var(--rgba-primary-1);
+			border-color:var(--rgba-primary-1);
+			@at-root [data-theme-version="dark"] & {
+				border-color: transparent;
+				background-color: var(--rgba-primary-1);
+			}
+		}
+    }
+    &.success{
+		border-color:$success-light;
+		@at-root [data-theme-version="dark"] & {
+			border-color: $success-opacity;
+		}
+		&:after{
+			background-color: $success !important;
+			box-shadow:0 0.3125rem 0.625rem 0 rgba($success, 0.2);
+		}
+		& + .timeline-panel{
+			background:$success-light;
+			border-color:$success-light;
+			@at-root [data-theme-version="dark"] & {
+				background-color: $success-opacity;
+				border-color: transparent;
+			}
+		}
+    }
+    &.warning{
+		border-color:$warning-light;
+		@at-root [data-theme-version="dark"] & {
+			border-color: $warning-opacity;
+		}
+		&:after{
+			background-color: $warning !important;
+			box-shadow:0 0.3125rem 0.625rem 0 rgba($warning, 0.2);
+		}
+		& + .timeline-panel{
+			background:$warning-light;
+			border-color:$warning-light;
+			@at-root [data-theme-version="dark"] & {
+				background-color: $warning-opacity;
+				border-color: transparent;
+			}
+		}
+    }
+    &.danger{
+		border-color:$danger-light;
+		@at-root [data-theme-version="dark"] & {
+			border-color: $danger-opacity;
+		}
+		&:after{
+		  background-color: $danger !important;
+		  box-shadow:0 0.3125rem 0.625rem 0 rgba($danger, 0.2);
+		}
+		& + .timeline-panel{
+			background:$danger-light;
+			border-color:$danger-light;
+			@at-root [data-theme-version="dark"] & {
+				background-color: $danger-opacity;
+				border-color: transparent;
+			}
+		}
+    }
+	
+    &.info{
+		border-color:$info-light;
+		@at-root [data-theme-version="dark"] & {
+			border-color: $info-opacity;
+		}
+		&:after{
+			background-color: $info !important;
+			box-shadow:0 0.3125rem 0.625rem 0 rgba($info, 0.2);
+		}
+		& + .timeline-panel{
+			background:$info-light;
+			border-color:$info-light;
+			@at-root [data-theme-version="dark"] & {
+				background-color: $info-opacity;
+				border-color: transparent;
+			}
+		}
+    }
+    &.dark{
+		border-color:$dark-light;
+		@at-root [data-theme-version="dark"] & {
+			border-color: $dark-opacity;
+		}
+		&:after{
+		  background-color: $dark !important;
+		  box-shadow:0 0.3125rem 0.625rem 0 rgba($dark, 0.2);
+		}
+		& + .timeline-panel{
+			background:$dark-light;
+			border-color:$dark-light;
+			@at-root [data-theme-version="dark"] & {
+				background-color: $dark-opacity;
+				border-color: transparent;
+			}
+		}
+    }
+  }
+	
+	&.style-1{
+		.timeline-panel{
+			background:transparent;
+		}
+		.timeline {
+			.timeline-badge {
+				&.timeline-badge{
+					& + .timeline-panel{
+						background: transparent !important;
+						border-style:solid;
+						border-width: 0 0 0 0.2125rem;
+						border-radius: 0;
+						padding: 0.3125rem 0.625rem 0.3125rem 0.9375rem;
+						&:after{
+							    border: 0;
+								left: -0.3625rem;
+								width: 0.3375rem;
+								height: 0.3375rem;
+						}
+					}
+				}
+				&.primary{
+					& + .timeline-panel{
+						border-color:var(--primary);
+						&:after{
+							background:var(--primary);
+						}
+					}
+				}
+				&.success{
+					& + .timeline-panel{
+						border-color:$success;
+						&:after{
+							background:$success;
+						}
+					}
+				}
+				&.warning{
+					& + .timeline-panel{
+						border-color:$warning;
+						&:after{
+							background:$warning;
+						}
+					}
+				}
+				&.danger{
+					& + .timeline-panel{
+						border-color:$danger;
+						&:after{
+							background:$danger;
+						}
+					}
+				}
+				&.info{
+					& + .timeline-panel{
+						border-color:$info;
+						&:after{
+							background:$info;
+						}
+					}
+				}
+				&.dark{
+					& + .timeline-panel{
+						border-color:$dark;
+						&:after{
+							background:$dark;
+						}
+					}
+				}
+			}
+		}
+	
+	}  
+  
+}
+
+  
+  

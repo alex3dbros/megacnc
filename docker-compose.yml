@@ -1,0 +1,55 @@
+version: '3'
+
+services:
+  db:
+    image: postgres
+    network_mode: "host"
+    environment:
+      - POSTGRES_DB=mcccnc
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=MccAdmin
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+
+  redis:
+    image: "redis:alpine"
+    network_mode: "host"
+
+  web:
+    build: .
+    command: gunicorn dashboard.wsgi:application --bind 0.0.0.0:8000
+    volumes:
+      - .:/app
+    network_mode: "host"
+    depends_on:
+      - db
+      - redis
+    environment:
+      - DATABASE_URL=postgres://postgres:MccAdmin@localhost:5432/mcccnc  # Note the use of localhost here
+      - REDIS_URL=redis://localhost:6379/0  # Note the use of localhost here
+    cap_add:
+      - NET_ADMIN
+
+  celeryworker:
+    build: .
+    command: celery -A dashboard worker --loglevel=info
+    network_mode: "host"
+    volumes:
+      - .:/app
+    depends_on:
+      - db
+      - redis
+
+  celerybeat:
+    build: .
+    command: celery -A dashboard beat --loglevel=info --scheduler django_celery_beat.schedulers:DatabaseScheduler
+    network_mode: "host"
+    volumes:
+      - .:/app
+    depends_on:
+      - db
+      - redis
+
+volumes:
+  postgres_data:

@@ -1,0 +1,198 @@
+.widget-stat {
+    .media {
+        padding: 0rem 0;
+        align-items: center;
+        &>span {
+            height: 5.3125rem;
+            width: 5.3125rem;
+            border-radius: 3.125rem;
+            padding: 0.625rem 0.75rem;
+            font-size: 2rem;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: $l-ctd;
+            min-width:5.3125rem;
+        }
+        @include custommq($min: 36rem) {}
+        .media-body {
+            p {
+                text-transform: uppercase;
+                font-weight: 500;
+                font-size: 0.875rem;
+                @at-root [data-theme-version="dark"] & {
+                    color: $white;
+                }
+            }
+            h3{
+				font-size: 2.5rem;
+				font-weight: 600;
+				margin: 0;
+				line-height: 1.2;
+			}
+            h4 {
+                font-size: 1.5rem;
+                display: inline-block;
+				vertical-align: middle;
+            }
+            span {
+                margin-left: 0.3125rem;
+                
+            }
+        }
+    }
+	&[class*="bg-"] .media > span{
+		background-color:rgba(255,255,255,0.25);
+		color:$white;
+	}
+	&[class*="bg-"] .progress{
+		background-color:rgba(255,255,255,0.25) !important;
+	}
+	
+}
+[direction="rtl"] {
+	.widget-stat .media .media-body span{
+		margin-left: 0;
+		margin-right: 0.625rem;
+	}
+}
+.dez-widget-1{
+    .card {
+        background: #FFE7DB;
+        .card-body {
+            p {
+                color: #f87533;
+            }
+        }
+    }
+	.progress {
+	
+	}
+	.icon{
+		float: right;
+		width: 3.125rem;
+		height: 3.125rem;
+		display: flex;
+		align-items:center;
+		justify-content:center;
+		border-radius: 0.375rem;
+		font-size: 1.75rem;
+	}
+}
+.bgl-primary{
+    background: var(--rgba-primary-1);
+    border-color: var(--rgba-primary-1);
+	@at-root [data-theme-version="dark"] & {
+		background-color: var(--rgba-primary-1);
+		border-color: var(--rgba-primary-1);
+	}
+}
+.bgl-secondary{
+    background: $secondary-light;
+    border-color: $secondary-light;
+	@at-root [data-theme-version="dark"] & {
+		background-color: $secondary-opacity;
+		border-color: $secondary-opacity;
+	}
+
+}
+.bgl-success{
+    background: $success-light;
+    border-color: $success-light;
+	@at-root [data-theme-version="dark"] & {
+		background-color: $success-opacity;
+		border-color: $success-opacity;
+	}
+
+}
+.bgl-warning{
+    background: $warning-light;
+    border-color: $warning-light;
+	@at-root [data-theme-version="dark"] & {
+		background-color: $warning-opacity;
+		border-color: $warning-opacity;
+	}
+
+}
+.bgl-danger{
+    background: $danger-light;
+    border-color: $danger-light;
+	@at-root [data-theme-version="dark"] & {
+		background-color: $danger-opacity;
+		border-color: $danger-opacity;
+	}
+
+}
+.bgl-info{
+    background: $info-light;
+    border-color: $info-light;
+	@at-root [data-theme-version="dark"] & {
+		background-color: $info-opacity;
+		border-color: $info-opacity;
+	}
+
+}
+.bg-primary-light{
+    background: var(--rgba-primary-1);
+	@at-root [data-theme-version="dark"] & {
+		background-color: var(--rgba-primary-1);
+	}
+}
+.bg-secondary-light{
+   background: rgba($secondary-light, 0.5);
+   @at-root [data-theme-version="dark"] & {
+		background-color: rgba($secondary, 0.05);
+	}
+}
+.bg-success-light{
+   background:  rgba($success-light, 0.5);
+   @at-root [data-theme-version="dark"] & {
+		background-color: rgba($success, 0.05);
+	}
+}
+.bg-warning-light{
+   background:  rgba($warning-light, 0.5);
+   @at-root [data-theme-version="dark"] & {
+		background-color: rgba($warning, 0.05);
+	}
+}
+.bg-danger-light{
+   background:  rgba($danger-light, 0.4);
+	@at-root [data-theme-version="dark"] & {
+		background-color: rgba($danger, 0.05);
+	}
+}
+.bg-info-light{
+    background:  rgba($info-light, 0.5);
+	@at-root [data-theme-version="dark"] & {
+		background-color: rgba($info, 0.05);
+	}
+}
+
+
+.bgl-dark{
+    background: $dark-light;
+    border-color: $dark-light;
+}
+.bgl-light{
+    background: $light;
+    border-color: $light;
+}
+.overlay-box{
+	position:relative;
+	z-index:1;
+	&:after{
+		content:"";
+		width:100%;
+		height:100%;
+		left:0;
+		top:0;;
+		position:absolute;
+		opacity:0.85;
+		background:var(--primary);
+		z-index: -1;
+	}
+}
+.rating-bar{
+    font-size: 0.8125rem;
+}

@@ -1,0 +1,98 @@
+
+#visitor_graph {
+    height: 15.8125rem !important;
+}
+
+#user_rating_graph {
+    height: 17.5rem !important;
+}
+
+#radar_chart, 
+#pie_chart, 
+#doughnut_chart, 
+#polar_chart {
+    // height: 10.875rem!important;
+}
+
+#activity {
+    height: 16.875rem !important;
+}
+
+#visitorOnline{
+    height: 4.5rem !important;
+}
+#trendMeter{
+    height: 4.5rem !important;
+}
+#widget-revenue1,
+#widget-revenue2,
+#widget-revenue3{
+    height: 7.3125rem !important;
+}
+#widget-profit1,
+#widget-profit2,
+#widget-profit3{
+    height: 10rem !important;
+}
+
+#comparison-rate{
+    height: 14.375rem;
+}
+#session_day{
+    height: 10.9375rem;
+    width: auto!important;
+    margin: 0 auto;
+}
+
+#walet-status {
+    height: 8.75rem;
+}
+#bar1 {
+    height: 9.375rem;
+}
+#sold-product {
+    height: 14.375rem;
+}
+
+
+#chart-venue-expenses,
+#chart-online-sale,
+#chart-gross-sale{
+    height: 9.375rem !important;
+}
+
+
+#areaChart_3{
+    height: 18.4375rem !important;
+}
+.chart-point{
+	display:flex;
+	align-items: center;
+	
+	.check-point-area{
+		width:6.25rem;
+		height: 6.25rem;
+		margin-top: -0.625rem;
+		margin-left: -0.625rem;
+	}
+	.chart-point-list{
+		margin:0;
+		padding-left: 0.3125rem;
+			
+		li{
+			list-style:none;
+			font-size: 0.8125rem;
+			padding: 0.125rem 0;
+			
+			i{
+				margin-right: 0.3125rem;
+				font-size: 0.6875rem;
+				position: relative;
+				top: -0.0625rem;
+			}
+		}
+	}
+}
+
+
+

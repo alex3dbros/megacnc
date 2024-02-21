@@ -1,0 +1,353 @@
+{% extends 'megacellcnc/elements/layouts/admin.html' %}
+{% load static %}
+{% load custom_tags %}
+{% block additional_css %}
+
+
+<style>
+
+    .tableFixHead          { overflow: auto; max-height: 300px; min-height: 50px;}
+    .tableFixHead thead th { position: sticky; top: 0; z-index: 1; }
+
+    /* Just common table stuff. Really. */
+    table  { border-collapse: collapse; width: 100%; }
+    th, td { padding: 8px 16px; }
+    th     { background:#eee; }
+
+
+    .tbl-caption {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    .heading {
+        margin-bottom: 0;
+    }
+
+    .accordion-content {
+      display: none;
+    }
+
+</style>
+
+
+{% endblock %}
+{% block content %}
+
+<!--**********************************
+    Content body start
+***********************************-->
+<div class="content-body">
+    <div id="deviceInfo" data-device-id="{{ device.id }}" data-slot-count="{{ slots|length }}"></div>
+    <!-- row -->
+    <div class="page-titles">
+        <ol class="breadcrumb">
+            <li><h5 class="bc-title">{{page_title}}</h5></li>
+            <li class="breadcrumb-item"><a href="javascript:void(0)">
+                <svg width="17" height="17" viewBox="0 0 17 17" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M2.125 6.375L8.5 1.41667L14.875 6.375V14.1667C14.875 14.5424 14.7257 14.9027 14.4601 15.1684C14.1944 15.4341 13.8341 15.5833 13.4583 15.5833H3.54167C3.16594 15.5833 2.80561 15.4341 2.53993 15.1684C2.27426 14.9027 2.125 14.5424 2.125 14.1667V6.375Z" stroke="#2C2C2C" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M6.375 15.5833V8.5H10.625V15.5833" stroke="#2C2C2C" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                Home </a>
+            </li>
+            <li class="breadcrumb-item active"><a href="javascript:void(0)">{{page_title}}</a></li>
+        </ol>
+
+    </div>
+
+
+
+    <div class="container-fluid">
+
+
+        <div class="col-xl-3 col-sm-6">
+            <div class="card box-hover">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="icon-box icon-box-lg bg-success-light rounded-circle">
+                            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M12.0001 8.32733V15.6537" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                                <path d="M15.6668 11.9905H8.3335" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                                <path fill-rule="evenodd" clip-rule="evenodd" d="M16.6857 2H7.31429C4.04762 2 2 4.31208 2 7.58516V16.4148C2 19.6879 4.0381 22 7.31429 22H16.6857C19.9619 22 22 19.6879 22 16.4148V7.58516C22 4.31208 19.9619 2 16.6857 2Z" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+
+                        </div>
+                        <div class="total-projects ms-3">
+                            <h3 class="text-success count">{{slots_count}}</h3>
+                            <span>Total Slots</span>
+
+                        </div>
+                        <div class="total-projects ms-3" style="padding-left: 30px; text-align: right;">
+                            <span>{{device.status}}</span>
+                            <h3 class="text-success count" >{{device.name}}</h3>
+
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h5 class="mb-0">Summary</h5>
+        </div>
+
+        <div class="row">
+            <div class="col-xl-12">
+                <div class="card">
+                    <div class="card-body">
+                        <div class="row task">
+                            <div class="col-xl-1 col-sm-4 col-6">
+                                <div class="task-summary">
+                                    <div class="d-flex align-items-center">
+                                        <h2 id="count-not-inserted" class="text-primary count">-</h2>
+                                        <span>Not Inserted</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-xl-1 col-sm-4 col-6">
+                                <div class="task-summary">
+                                    <div class="d-flex align-items-center">
+                                        <h2 id="count-regular-cells" class="text-primary count">-</h2>
+                                        <span>Regular Cells</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-xl-1 col-sm-4 col-6">
+                                <div class="task-summary">
+                                    <div class="d-flex align-items-center">
+                                        <h2 id="count-low-voltage" class="text-primary count">-</h2>
+                                        <span>Low Voltage Cells</span>
+                                    </div>
+                                </div>
+                            </div>
+
+
+                            <div class="col-xl-1 col-sm-4 col-6">
+                                <div class="task-summary">
+                                    <div class="d-flex align-items-center">
+                                        <h2 id="count-charging" class="text-purple count">-</h2>
+                                        <span>Charging</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-xl-1 col-sm-4 col-6">
+                                <div class="task-summary">
+                                    <div class="d-flex align-items-center">
+                                        <h2 id="count-discharging" class="text-warning count">-</h2>
+                                        <span>Discharging</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-xl-1 col-sm-4 col-6">
+                                <div class="task-summary">
+                                    <div class="d-flex align-items-center">
+                                        <h2 id="count-stored" class="text-danger count">-</h2>
+                                        <span>Stored</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-xl-1 col-sm-4 col-6">
+                                <div class="task-summary">
+                                    <div class="d-flex align-items-center">
+                                        <h2 id="count-bad" class="text-success count">-</h2>
+                                        <span>Bad</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+
+            <div class="col-xl-12">
+                <div class="card">
+                    <div class="card-body p-0">
+                        <div class="table-responsive active-projects task-table">
+                            <div class="tbl-caption">
+                                <h4 class="heading mb-0">Slots</h4>
+
+                                <div class="help-desk slots-table">
+                                    <button type="button" id="charge" class="btn btn-success" data-bs-toggle="tooltip" title="Charge selected cell(s) to set voltage">
+                                        <i class="fa-solid fa-battery-full me-2"></i>Charge
+                                    </button>
+
+                                    <button type="button" id="discharge" class="btn btn-warning" data-bs-toggle="tooltip" title="Discharge selected cell(s) to set voltage">
+                                        <i class="fa-solid fa-battery-empty me-2"></i>Discharge
+                                    </button>
+
+                                    <button type="button" id="store" class="btn btn-info" data-bs-toggle="tooltip" title="Charge or discharge selected cell(s) to set store voltage">
+                                        <i class="fa-solid fa-box-archive me-2"></i>Store
+                                    </button>
+
+                                    <button type="button" id="esr" class="btn btn-secondary" data-bs-toggle="tooltip" title="Run ESR test (only on simple slot setup)">
+                                        <i class="fa-brands fa-nfc-directional me-2"></i>ESR
+                                    </button>
+
+                                    <button type="button" id="dispose" class="btn btn-dark" data-bs-toggle="tooltip" title="Discharge cells to 1 volt for safe disposal">
+                                        <i class="fa-solid fa-trash-arrow-up me-2"></i>Dispose
+                                    </button>
+
+                                    <button type="button" id="stop" class="btn btn-danger" data-bs-toggle="tooltip" title="Stop any action">
+                                        <i class="fa-solid fa-circle-stop me-2"></i>Stop
+                                    </button>
+
+                                    <button type="button" id="macro" class="btn btn-light" data-bs-toggle="tooltip" title="Run charge, discharge, store macro">
+                                        <i class="fa-solid fa-arrows-spin me-2"></i>Macro
+                                    </button>
+
+                                    <button type="button" id="stop_macro" class="btn btn-light" data-bs-toggle="tooltip" title="Stop Macro">
+                                        <i class="fa-solid fa-circle-stop me-2"></i>Stop Macro
+                                    </button>
+
+
+                                </div>
+
+
+                            </div>
+
+
+                            </div>
+
+
+
+
+
+
+                            <table id="slotSpecial" class="table">
+                                <thead>
+                                <tr>
+                                    <th>
+                                        <div class="form-check-checkall custom-checkbox ms-0">
+                                            <input type="checkbox"  class="form-check-input" id="checkSlots" >
+                                            <label class="form-check-label" for="checkAll"></label>
+                                        </div>
+                                    </th>
+                                    <th data-bs-toggle="tooltip" title="Slot Number">#</th>
+                                    <th data-bs-toggle="tooltip" title="Cell Voltage">V</th>
+                                    <th data-bs-toggle="tooltip" title="Current">C</th>
+                                    <th data-bs-toggle="tooltip" title="Internal Resistance Measured with Ohm's Law">ESR</th>
+                                    <th data-bs-toggle="tooltip" title="Discharge Capacity">Capacity</th>
+                                    <th data-bs-toggle="tooltip" title="Charge Capacity">Charge Cap</th>
+                                    <th data-bs-toggle="tooltip" title="State">State</th>
+                                    <th data-bs-toggle="tooltip" title="Action Runtime">Runtime</th>
+                                    <th data-bs-toggle="tooltip" title="Charge->Discharge Cycles">Cycles</th>
+                                    <th data-bs-toggle="tooltip" title="Temperature in Celsius Degrees">Temp</th>
+                                    <th data-bs-toggle="tooltip" title="Max Voltage Set">Max V</th>
+                                    <th data-bs-toggle="tooltip" title="Store Voltage Set">Store V</th>
+                                    <th data-bs-toggle="tooltip" title="Min Voltage Set">Min V</th>
+                                    <th data-bs-toggle="tooltip" title="Cell ID Registered in Database per Project">Cell Id</th>
+                                    <th></th>
+
+                                </tr>
+                                </thead>
+                                <tbody id="slot-table-body" data-initial-slot-count="{{ slots|length }}">
+                                {% for slot in slots %}
+                                <tr>
+                                    <td>
+                                        <div class="form-check custom-checkbox">
+                                            <input type="checkbox" class="form-check-input" id="customCheckBox{{ forloop.counter }}" required="" value={{slot.slot_number}} name="slot_number">
+                                            <label class="form-check-label" for="customCheckBox{{ forloop.counter }}"></label>
+                                        </div>
+                                    </td>
+
+                                    <td id="slot_{{ slot.slot_number }}_number">{{ slot.slot_number }}</td>
+                                    <td id="slot_{{ slot.slot_number }}_voltage">{{ slot.voltage|round2 }}</td>
+                                    <td id="slot_{{ slot.slot_number }}_current">{{ slot.current|round2 }}</td>
+                                    <td id="slot_{{ slot.slot_number }}_esr">{{ slot.esr|round2 }}</td>
+                                    <td id="slot_{{ slot.slot_number }}_capacity">{{ slot.capacity|round2 }}</td>
+                                    <td id="slot_{{ slot.slot_number }}_charge_capacity">{{ slot.charge_capacity|round2 }}</td>
+                                    <td id="slot_{{ slot.slot_number }}_state">{{ slot.state }}</td>
+                                    <td id="slot_{{ slot.slot_number }}_action_running_time">{{ slot.action_running_time|format_duration }}</td>
+                                    <td id="slot_{{ slot.slot_number }}_completed_cycles">{{ slot.completed_cycles }} / {{ slot.discharge_cycles_set }}</td>
+                                    <td id="slot_{{ slot.slot_number }}_temperature">{{ slot.temperature|round2 }}</td>
+                                    <td id="slot_{{ slot.slot_number }}_max_volt">{{ slot.max_volt|round2 }}</td>
+                                    <td id="slot_{{ slot.slot_number }}_store_volt">{{ slot.store_volt|round2 }}</td>
+                                    <td id="slot_{{ slot.slot_number }}_min_volt">{{ slot.min_volt|round2 }}</td>
+                                    <td id="slot_{{ slot.slot_number }}_cell_id">{{ slot.active_cell_uuid }}</td>
+
+                                    <td>
+                                        <button type="button" class="btn btn-primary shadow btn-xs sharp me-1 expandBtn"
+                                            data-target="#detailsRow1" data-slot-number="{{ slot.slot_number }}"
+                                                data-device-id="{{ slot.device.id }}"><i class="fa fa-plus"></i></button>
+
+
+                                        <button type="button" class="btn btn-primary shadow btn-xs sharp me-1 saveCellBtn"
+                                           data-slot-id="{{ slot.slot_number }}" data-device-id="{{ slot.device.id }}"
+                                           data-cell-capacity="{{slot.capacity|round2}}"><i class="fa fa-floppy-disk">
+                                            </i></button>
+                                    </td>
+
+                                </tr>
+
+                                {% empty %}
+                                <tr><td colspan="7" style="text-align:center;">No devices found.</td></tr>
+                                {% endfor %}
+
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!--**********************************
+    Content body end
+***********************************-->
+
+
+{% endblock %}
+
+{% block additional_js %}
+
+
+<script>
+    jQuery(document).ready(function(){
+
+        toastr.options = {
+            timeOut: 5000,
+            closeButton: !0,
+            debug: !1,
+            newestOnTop: !0,
+            progressBar: !0,
+            positionClass: "toast-top-right",
+            preventDuplicates: !0,
+            onclick: null,
+            showDuration: "300",
+            hideDuration: "1000",
+            extendedTimeOut: "1000",
+            showEasing: "swing",
+            hideEasing: "linear",
+            showMethod: "fadeIn",
+            hideMethod: "fadeOut",
+            tapToDismiss: !1
+        };
+
+
+
+        {% if messages %}
+        {% for message in messages %}
+        // Check the message level and call the appropriate Toastr function
+        {% if message.level_tag == 'success' %}
+        toastr.success("{{ message }}", "Success");
+        {% elif message.level_tag == 'error' %}
+        toastr.error("{{ message }}", "Error");
+        {% elif message.level_tag == 'info' %}
+        toastr.info("{{ message }}", "Info");
+        {% elif message.level_tag == 'warning' %}
+        toastr.warning("{{ message }}", "Warning");
+        {% else %}
+        toastr.info("{{ message }}", "Notice");
+        {% endif %}
+        {% endfor %}
+        {% endif %}
+    });
+</script>
+
+
+{% endblock %}

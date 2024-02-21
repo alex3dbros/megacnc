@@ -1,0 +1,221 @@
+// .authincation{
+//     height: 100%;
+
+// }
+
+.flex-row-fluid{
+	-webkit-box-flex: 1;
+    flex: 1 auto;
+    -ms-flex: 1 0 0rem;
+    min-width: 0;
+}
+
+
+.authincation{
+	background:var(--rgba-primary-1);
+	display:flex;
+	min-height: 100vh;
+	.login-aside{
+		background: $white;
+		padding-top: 5rem;
+		max-width:35rem;
+		width: 100%;
+		z-index:1;
+		position:relative;
+		&:after{
+			content:"";
+			clip-path: polygon(0% 100%, 100% 0%, 0% 0%);
+			width:8.75rem;
+			height:100%;
+			position:absolute;
+			right:-8.75rem;
+			z-index:-1;
+			top:0;
+			background: $white;
+			box-shadow: 0.125rem 0rem 1.875rem rgba(0, 0, 0,0.15);
+		}
+		.aside-image{
+			min-height:28.125rem;
+			margin: auto 0;
+			min-width: 0;
+			background-size: contain;
+			background-repeat: no-repeat;
+			background-position: center;
+		}
+	}
+	@include respond ('laptop'){
+		.login-aside{
+			max-width:22.5rem;
+		}
+	}
+	@include respond ('tab-port'){
+		.login-aside{
+			max-width:100%;
+			padding-top: 0;
+			&:after{
+				content:none;
+			}
+		}
+	}
+	@include respond ('phone'){
+		.login-aside{
+			.aside-image{
+				min-height:18.75rem;
+			}
+		}
+	}
+}
+
+
+
+
+
+
+.authincation-content{
+    background: $white;
+    box-shadow: 0 0 2.1875rem 0 rgba(154, 161, 171, 0.15);
+    border-radius: 0.3125rem;
+    @at-root [data-theme-version="dark"] & {
+        background: $dark-card;
+        box-shadow: none;
+    }
+	&.style-1{
+		background:rgba($white,0.5);
+		backdrop-filter:blur(1.25rem);
+		.form-control{
+			background:rgba($white,0.6);
+			border-radius:0.3125rem;
+		}
+		.user-icon{
+			height: 6.25rem;
+			background:var(--primary);
+			width: 6.25rem;
+			text-align:center;
+			border-radius: 6.25rem;
+			line-height: 6.25rem;
+			margin-left: auto;
+			font-size: 3.75rem;
+			text-align: center;
+			color: white;
+			margin-right: auto;
+			margin-top: -6.25rem;
+			margin-bottom: 1.25rem;
+		}
+	}
+	&.style-2{
+		background:transparent;
+		box-shadow:none;
+		max-width: 33.125rem;
+		width: 100%;
+		.form-control{
+			border:0;
+			border-radius:0.3125rem;
+			box-shadow:0rem 0rem 0.9375rem rgba(0,0,0,0.08);
+		}
+		@include respond ('phone'){
+			.auth-form{
+				padding: 1.875rem 0rem;
+				
+			}
+		}
+	}
+}
+.auth-form{
+	img{
+	  width: 100px;
+	}
+}
+
+.welcome-content{
+    background: url('./../images/1.jpg');
+    background-size: cover;
+    background-position: center;
+    height: 100%;
+    padding: 4.6875rem 3.125rem;
+    position: relative;
+    z-index: 1;
+    border-top-left-radius: 0.3125rem;
+    border-bottom-left-radius: 0.3125rem;
+    &::after{
+        content: '';
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: 0;
+        bottom: 0;
+        background: var(--primary);
+        opacity: 0.75;
+        z-index: -1;
+        border-top-left-radius: 0.3125rem;
+        border-bottom-left-radius: 0.3125rem;
+    }
+    .welcome-title{
+        color: $white;
+        font-weight: 500;
+        font-size: 1.25rem;
+    }
+    p{
+        color: $white;
+    }
+
+    .brand-logo{
+        a{
+            display: inline-block;
+            margin-bottom: 1.25rem;
+            font-weight: 700;
+            color: $white;
+            font-size: 1.25rem;
+        img{
+            width: 6.25rem;
+        }
+        }
+    }
+
+    .intro-social{
+        position: absolute;
+        bottom: 4.6875rem;
+        ul{
+            margin-bottom: 0;
+            li{
+                display: inline-block;
+                a{
+                    color: $white;
+                    font-size: 0.875rem;
+                    padding: 0rem 0.4375rem;
+                }
+            }
+        }
+    }
+}
+
+.auth-form{
+    padding: 3.125rem 3.125rem;
+	@include respond('phone') {
+		padding: 1.875rem;
+	}	
+    .btn{
+        height: 3.125rem;
+        font-weight: 700;
+    }
+    .page-back{
+        display: inline-block;
+        margin-bottom: 0.9375rem;
+    }
+}
+.login-form{
+	margin: 0 58px;
+    background: white;
+    box-shadow: rgba(0, 0, 0, 0.24) 0px 3px 8px;
+    border-radius: 10px;
+	@include respond ('phone'){
+		margin:0 10px;
+	}
+}
+.forget-main{
+	.forget-tab{
+		border-radius:$radius;
+		&:active{
+			color:var(--primary)!important;
+		}
+	}
+}

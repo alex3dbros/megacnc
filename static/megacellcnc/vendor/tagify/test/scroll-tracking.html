@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <title>Tagify - pupetteer tests</title>
+        <meta name="description" content="Converts HTML input/textarea into Tags component">
+        <meta name="author" content="Yair Even-Or">
+        <meta name="viewport" content="width=device-width">
+        <link rel="stylesheet" href="../dist/tagify.css">
+        <script src="../dist/tagify.min.js"></script>
+
+        <style>
+            body{ font: 16px Arial; background:#CCC; }
+
+            section{
+                margin-bottom: 2em;
+                background: white;
+                position: absolute;
+                width: 50%;
+                xheight: 50%;
+                top: 200px;
+                left: 200px;
+                bottom: -500px;
+                margin: auto;
+                overflow: auto;
+            }
+
+            .tagify {
+                position: relative;
+                top: -100px;
+                left: 50px;
+                width: 70%;
+                margin: 1000px 1em;
+            }
+        </style>
+    </head>
+
+    <body>
+        <button onclick='document.querySelector("section").requestFullscreen({ navigationUI: "show" });'>FullScreen</button>
+    <section>
+        <input>
+    </section>
+
+<script>
+    window.xxx = new Tagify(document.querySelector('input'), {
+        whitelist: [1,2,3,4,5,6,7,8,9],
+        dropdown: {
+            enabled: 0,
+            appendTarget: document.querySelector("section")
+        }
+    })
+</script>
+</body>
+</html>

@@ -1,0 +1,180 @@
+
+
+.asColorPicker-dropdown {
+    max-width: 26rem;
+}
+
+.asColorPicker-trigger {
+	background: none;
+}
+
+.asColorPicker-trigger {
+    border  : 0 none;
+    height  : 100%;
+    position: absolute;
+    right: 0;
+    top     : 0;
+    width   : 2.1875rem;
+}
+[direction="rtl"] .asColorPicker-trigger{
+	left: 0;
+	right: auto;
+}
+
+.asColorPicker-trigger {
+	span {
+		border-radius: 0 0.425rem 0.425rem 0;
+	}
+}
+.asColorPicker-clear {
+    display        : none;
+    position       : absolute;
+    right          : 1rem;
+    text-decoration: none;
+    top            : .5rem;
+}
+
+
+
+.daterangepicker {
+    td.active {
+        background-color: var(--primary);
+
+        &:hover {
+            background-color: var(--primary);
+        }
+    }
+
+    button.applyBtn {
+        background-color: var(--primary);
+        border-color: var(--primary);
+    }
+}
+
+.datepicker {
+
+    &.datepicker-dropdown {
+        background: $white;
+        border-radius: 0.0625rem;
+        border: 0.0625rem solid $gallery;
+
+        td.day, th.next, th.prev {
+            height: 1.875rem;
+            width: 1.875rem !important;
+            padding: 0;
+            text-align: center;
+            font-weight: 500;
+            border-radius: $radius;
+
+            &:hover {
+                box-shadow: unset;
+               /*  color: $main-color; */
+                background-color: var(--rgba-primary-1);
+               
+            }
+        }
+
+        th.datepicker-switch, th.next, th.prev {
+            font-weight: 600;
+            color: $heading;
+        }
+
+        th.dow {
+            font-weight: 600;
+        }
+    }
+    table {
+        tr td.selected, tr td.active.active {
+            background-color: var(--primary);
+            border-radius: $radius;
+            border: 0;
+            color: $white; 
+            background-image: none;
+            position: relative;
+        }
+
+        tr {
+            
+            td.today {
+                border-radius: $radius;
+                /* color : $main-color; */
+
+                &:hover {
+                    background-color: var(--primary);
+                    box-shadow: 0rem 0rem 1.875rem 0.3125rem rgba(243,30,122,0.3);
+                    color : #ffffff;
+                }
+            }
+
+            td.today.disabled {
+               
+                box-shadow: 0rem 0rem 1.875rem 0.3125rem rgba(243,30,122,0.3);
+                color     : #ffffff;
+
+                &:hover {
+                  
+                    box-shadow: 0rem 0rem 1.875rem 0.3125rem rgba(243,30,122,0.3);
+                    color     : #ffffff;
+                }
+            }
+        }
+         thead tr:first-child th:hover {
+            background: var(--rgba-primary-1) ;
+        }
+        thead tr th:hover {
+            background: var(--rgba-primary-1) ;
+        }
+        td.day:hover{
+            background: var(--rgba-primary-1) ;
+            border-radius: $radius;
+        }
+    }
+}
+
+
+.picker {
+    &__select--month, &__select--year {
+        height: 2.5em;
+    }
+
+    &__input {
+        background-color: transparent !important;
+
+        @at-root [data-theme-version="dark"] & {
+            background-color: transparent !important;
+            border: 0.0625rem solid $d-border;
+        }
+    }
+}
+.bootstrap-select.form-control-lg .dropdown-toggle{
+	min-height: 3.75rem;
+    padding: 0.5rem 1.563rem;
+}
+.bootstrap-select.form-control-sm .dropdown-toggle{
+	min-height: 2.5rem;
+    padding: 0.25rem 1.563rem;
+}
+.basic-form{
+	.form-check-input[type="radio"] + .form-check-label{
+		margin-top: 5px;
+	}
+}
+.input-group-sm > .form-control, .input-group-sm > .form-select, .input-group-sm > .input-group-text, .input-group-sm > .btn{
+	min-height: 2.5rem;
+    padding: 0.25rem 1.1rem;
+	border-radius:$radius;
+}
+.input-group{
+	&.input-group-lg{
+		min-height: 3.75rem;
+		border-radius:$radius;
+	}	
+	
+}
+.input-group-lg > .form-control, .input-group-lg > .form-select, .input-group-lg > .input-group-text, .input-group-lg > .btn{
+	border-radius:$radius;
+}
+
+.clockpicker-popover .popover-title{
+	padding: 10px 0px;
+}

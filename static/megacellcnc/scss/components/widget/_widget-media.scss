@@ -1,0 +1,141 @@
+.widget-media{
+	.timeline{
+		.timeline-panel{
+			display: flex;
+			align-items: center;
+			margin-bottom: 0;
+			padding: 0.8rem 0.75rem;
+			margin: 0 -5px;
+			border-radius: $radius;
+			position:relative;
+			transition:all 0.5s;
+			
+			&:hover{
+				background-color: rgba(13, 153, 255, 0.05);
+				cursor:pointer;
+			}
+			/* &:after{
+				position:absolute;
+				content:"";
+				background-color:var(--primary);
+				width:0.5rem;
+				height:0.5rem;
+				border-radius:100%;
+				top:0.875rem;
+				right:0.875rem;
+			} */
+			
+			.media{
+				width: 2.188rem;
+				height: 2.188rem;
+				background: #eee;
+				border-radius: 100%;
+				overflow: hidden;
+				font-size: 0.813rem;
+				text-align: center;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				font-weight: 700;
+				align-self: start;
+					
+				&-primary{
+					background:var(--rgba-primary-1);
+					color:var(--primary);
+					@at-root [data-theme-version="dark"] & {
+						background-color: var(--rgba-primary-1);
+					}
+				}
+				&-info{
+					background:$info-light;
+					color:$info;
+					@at-root [data-theme-version="dark"] & {
+						background-color: $info-opacity;
+					}
+				}
+				&-warning{
+					background:$warning-light;
+					color:$warning;
+					@at-root [data-theme-version="dark"] & {
+						background-color: $warning-opacity;
+					}
+				}
+				&-danger{
+					background:$danger-light;
+					color:$danger;
+					@at-root [data-theme-version="dark"] & {
+						background-color: $danger-opacity;
+					}
+				}
+				&-success{
+					background:$success-light;
+					color:$success;
+					@at-root [data-theme-version="dark"] & {
+						background-color: $success-opacity;
+					}
+				}
+			}
+			.media-body{
+				span{
+					border:1px solid $border;
+					font-size:0.75rem;
+					border-radius:$radius;	
+					padding:0.313rem 0.625rem;
+					
+				}
+				h6{
+					font-size:0.813rem;
+					line-height:1rem;
+				}
+				p{
+					font-size:0.75rem;
+				}
+				.attc{
+					display:flex;
+					align-items:flex-start;
+					border:1px solid #f1f1f1;
+					border-radius:$radius;
+					padding:0.313rem 0.625rem;
+					
+					.media{
+						&.style-1{
+							border-radius:$radius;
+							border:1px solid $border;
+						}
+					}
+				}
+			}
+			.dropdown {
+				align-self: self-end;
+				margin-top: 0.3125rem;
+			}
+		}
+		li:last-child {
+			.timeline-panel{
+				margin-bottom:0;
+				border-bottom:0;
+				padding-bottom:0;
+			}
+		}
+	}
+}
+.card[class*="bg-"]{
+	.timeline{
+		.timeline-panel{
+			border-color:rgba(255,255,255,0.2) !important;
+		}
+	}
+}
+.donut-chart-sale small, .donut-chart-sale .small{
+	position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 1.125rem;
+    font-weight: 600;
+}
+.students{
+	h4,h5,span{
+		color:$white;
+	}
+}

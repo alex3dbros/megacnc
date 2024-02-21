@@ -1,0 +1,108 @@
+{% extends 'megacellcnc/elements/layouts/admin.html' %}
+{% load static %}
+        
+{% block additional_css %}
+{% endblock %}
+        
+{% block content %}
+<!--**********************************
+	Content body start
+***********************************-->
+<div class="content-body">
+	<div class="page-titles">
+			<ol class="breadcrumb">
+				<li class="breadcrumb-item active"><a href="javascript:void(0)">{{page_title}}</a></li>
+			</ol>
+		</div>
+	<div class="container-fluid">
+		
+		<!-- row -->
+		<div class="row">
+			<div class="col-lg-12">
+				<div class="card">
+					<div class="card-header">
+						<h4 class="card-title">Create New Cell Project</h4>
+					</div>
+					<div class="card-body">
+						<div class="form-validation">
+							<form class="needs-validation" novalidate action="/new-project/" method="post">
+								{% csrf_token %}
+								<div class="row">
+									<div class="col-xl-6">
+										<div class="mb-3 row">
+											<label class="col-lg-4 col-form-label" for="validationCustom01" >Project Name
+												<span class="text-danger">*</span>
+											</label>
+											<div class="col-lg-6">
+												<input type="text" class="form-control" id="validationCustom01" name="project_name" placeholder="Enter a project name.." required>
+												<div class="invalid-feedback">
+													Please enter a project name.
+												</div>
+											</div>
+										</div>
+
+
+										<div class="mb-3 row">
+											<label class="col-lg-4 col-form-label" for="validationCustom06" >Cell Type
+												<span class="text-danger">*</span>
+											</label>
+											<div class="col-lg-6">
+												<input type="text" class="form-control" id="validationCustom06" name="cell_type" placeholder="18650" required>
+												<div class="invalid-feedback">
+													Please enter a cell type.
+												</div>
+											</div>
+										</div>
+
+										<div class="mb-3 row">
+											<label class="col-lg-4 col-form-label" for="validationCustom04" >Notes</label>
+											<div class="col-lg-6">
+												<textarea class="form-control h-50" id="validationCustom04"  rows="5" name="notes" placeholder="Notes about the cells" ></textarea>
+											</div>
+										</div>
+
+										<div class="mb-3 row">
+											<div class="col-lg-8 ms-auto">
+												<button type="submit" class="btn btn-primary">Submit</button>
+											</div>
+										</div>
+
+									</div>
+								</div>
+							</form>
+						</div>
+					</div>
+				</div>
+			</div>
+
+		</div>
+	</div>
+</div>
+<!--**********************************
+	Content body end
+***********************************-->
+{% endblock %}
+
+{% block additional_js %}
+	<script>
+		(function () {
+		  'use strict'
+
+		  // Fetch all the forms we want to apply custom Bootstrap validation styles to
+		  var forms = document.querySelectorAll('.needs-validation')
+
+		  // Loop over them and prevent submission
+		  Array.prototype.slice.call(forms)
+			.forEach(function (form) {
+			  form.addEventListener('submit', function (event) {
+				if (!form.checkValidity()) {
+				  event.preventDefault()
+				  event.stopPropagation()
+				}
+
+				form.classList.add('was-validated')
+			  }, false)
+			})
+		})()
+	</script>
+{% endblock %}

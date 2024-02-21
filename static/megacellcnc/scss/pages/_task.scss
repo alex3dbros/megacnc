@@ -1,0 +1,252 @@
+.task{
+	.task-summary{
+		border-right:1px solid $border;	
+		h2{
+			font-size:28px;
+			margin-bottom:0;
+			font-weight: 600;
+			margin-right: 9px;
+			&.text-purple{
+				color:#BB6BD9;
+			}
+		}
+		span{
+			font-size:14px;
+			color:var(--secondary);
+			font-weight:500;
+		}
+		p{
+			margin-bottom:12px;
+			font-size:13px;
+			line-height: 0.7;
+		}
+		@include respond ('tab-land'){
+			margin: 24px 0;
+            margin-top: 0;
+		}
+		
+		
+		
+	}
+	&> div{
+		&:last-child{
+			.task-summary{
+				border-right:0;
+				@include respond ('tab-land'){
+					border-right:1px solid $border;	
+				}
+			}
+		}
+	}
+}
+.status-select {
+	width:auto!important;
+	.btn{
+		padding: 2px 10px;
+		font-size:12px;
+		font-weight:500;
+		border: 0!important;
+		border-radius:$radius-xs;
+	}
+	[title="Testing"]{
+		background-color:$warning-light !important;
+		color:$warning!important;		
+	}
+	[title="Pending"],[title="Low"]{
+		background-color:$danger-light !important;
+		color:$danger!important;		
+	}
+	[title="In Progress"]{
+		background-color:rgba(187, 107, 217, 0.1)!important;
+		color:$purple!important;		
+	}
+	[title="Complete"],[title="High"]{
+		background-color:$success-light!important;
+		color:$success!important;		
+	}
+	[title="Medium"]{
+		background-color:rgba(44, 44, 44, 0.1) !important;
+		color:#888888!important;		
+	}
+}
+.normal-select{
+	.btn{
+		font-size:13px;
+		color: var(--primary)!important;
+	}
+	.dropdown-toggle::after{
+		font-family: 'Font Awesome 6 Free';
+		font-weight: 900;
+		content: "\f078";
+		border: 0;
+		font-size: 0.7rem;
+	}
+}
+.border-purple{
+	border-color:$purple!important;
+}
+.bg-purple-light{
+	background: rgba(187, 107, 217, 0.1);
+}
+//task-summary
+.kanban-bx{
+	display: flex;
+    width: 100%;
+    overflow-x: auto;
+	flex-wrap:nowrap;
+	.col{
+		width: 304px;
+		min-width: 304px;
+		.card{
+			height:100%;
+			border:0;
+		}
+	}
+	&::-webkit-scrollbar {
+		background-color: #ECECEC;
+		width: 8px;
+		height: 8px;
+	}
+	&::-webkit-scrollbar-thumb{
+		background-color: #7e7e7e;
+		border-radius: 10px;
+	}
+	@include respond ('phone-land'){
+		display: block;
+		width: auto;
+		.col{
+			width:100%;
+			min-width:100%;
+			flex-basis: 0;
+			flex-grow: 1;
+		}
+	}
+}
+.sub-card-2{
+	display: flex;
+    align-items: center;
+    justify-content: space-between;
+	.icon-box{
+		h5{
+			line-height: 2.6;
+			font-weight: 600;
+		}
+	}
+}
+.kanbanPreview-bx{
+	background-color:transparent;
+	box-shadow:none;
+	.card-body{
+		padding:0;
+		.sub-card{
+			margin-bottom:20px;
+			background-color:$white;
+			border-radius:$radius;
+			padding: 0.938rem 0.938rem;
+			box-shadow: 0px 0px 13px 0px rgba(82, 63, 105,0.05);
+			border:1px solid $border;
+			&>.sub-title{
+				margin-bottom:10px;
+				display:block;
+				font-weight: 600;
+				font-size:14px;
+			}
+			@include respond ('phone'){
+				padding:1rem;
+				margin-bottom: 10px;
+				&>.sub-title{
+					margin-bottom:2px;
+				}
+			}
+			.dropzone{
+				min-height:70px;
+				border-radius:$radius;
+				height:70px;
+				background: transparent;
+				border-style: dashed;
+				.dz-message{
+					margin:0;
+				}
+			}
+			.task-card-data{
+				padding: 0.938rem 0.938rem;
+			}
+			.footer-data{
+				span{
+					font-size:12px;
+					color:var(--primary);
+				}
+				p{
+					margin:0;
+					font-size:13px;
+				}
+			}
+		}
+		.card-footer{
+			padding: 0.938rem 0.938rem;
+		}
+	}
+}
+
+.draggable{
+	-webkit-transition:opacity .3s ease;
+	transition:opacity .3s ease;
+	outline:0!important
+}
+.draggable.draggable-mirror{
+	opacity:.8;
+	-webkit-transition:opacity .3s ease;
+	transition:opacity .3s ease;
+	border-radius:$radius;
+	padding: 1.3rem 1.6rem;
+	background:$white;
+	border:2px dashed #e4e6ef!important
+}
+.draggable.draggable--original{
+	opacity:0!important
+}
+.draggable.draggable-source--is-dragging.draggable--over{
+	opacity:0!important
+}
+.draggable-handle{
+	cursor: all-scroll;
+}
+.draggable-zone{
+	outline:0!important
+}
+
+//project
+
+.total-projects{
+	h3{
+		font-size:28px;
+		font-weight:600;
+		margin-bottom:0;
+	}
+	span{
+		font-size: 14px;
+		font-weight: 500;
+		color: var(--secondary);
+	}
+	@include custommq($max: 1300px , $min:1199px) {
+		h3{
+			font-size: 20px;
+		}
+		span{
+			font-size: 12px;
+		}
+	}
+}
+.box-hover{
+	&:hover{
+		box-shadow: rgba(0, 0, 0, 0.1) 0px 10px 15px -3px, rgba(0, 0, 0, 0.05) 0px 4px 6px -2px;
+	}
+}
+.due-progress{
+	p{
+		font-weight:500;
+		span{
+			font-weight:400;
+		}
+	}
+}

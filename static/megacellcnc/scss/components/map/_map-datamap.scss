@@ -1,0 +1,29 @@
+#world-datamap {
+    padding-bottom: 46% !important;
+}
+
+.datamaps-hoverover {
+    background: $white;
+    padding: 0.3125rem;
+    border-radius: 0.3125rem;
+    font-family: 'Roboto' !important;
+    color: var(--primary);
+    border: 0.0625rem solid var(--rgba-primary-3);
+}
+
+.world_map_card {
+    ul.list-group {
+        @include custommq($max: 90rem) {
+            display: flex;
+            flex-wrap: wrap;
+            flex-direction: row;
+            margin-top: 2.1875rem;
+        }
+
+        // li {
+        //     @include custommq($min: 75rem, $max: 90rem) {
+        //         flex: 1;
+        //     }
+        // }
+    }
+}

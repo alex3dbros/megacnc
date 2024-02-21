@@ -1,0 +1,83 @@
+{% extends 'megacellcnc/elements/layouts/admin.html' %}
+{% load static %}
+        
+{% block additional_css %}
+{% endblock %}
+        
+{% block content %}
+<!--**********************************
+	Content body start
+***********************************-->
+<div class="content-body badge-demo">
+	<div class="page-titles">
+		<nav aria-label="breadcrumb">
+			<ol class="breadcrumb">
+			<li class="breadcrumb-item ps-0"><a href="#">Bootstrap</a></li>
+			<li class="breadcrumb-item active" aria-current="page">{{page_title}}</li>
+			</ol>
+		</nav>
+	</div>
+	<div class="container-fluid">
+		<div class="row ">
+			<div class="col-xl-12">
+			</div>
+		</div>
+			<!--element-area-->
+		<div class="element-area">
+			<div class="demo-view">
+				<div class="container-fluid pt-0 ps-0 pe-lg-4 pe-0">
+				<!-- row -->
+				<div class="row">
+
+
+					<!-- Column  -->  
+					<!-- /Column  -->  
+				</div>
+				</div>
+			</div>
+			<div class="demo-right ">
+				<div class="demo-right-inner dz-scroll " id="right-sidebar">
+					<h4 class="title">Badge</h4>
+					<div class="dz-scroll demo-right-tabs" id="rightSidebarScroll">
+						<ul class="navbar-nav" id="menu-bar">
+							<li><a href="#badges-size" class="scroll">Badges Size</a></li>
+							<li><a href="#badges-light" class="scroll">Badges Light</a></li>
+							<li><a href="#badges" class="scroll">Badges</a></li>
+							<li><a href="#pill-badge" class="scroll">Pill Badge</a></li>
+							<li><a href="#link-badge" class="scroll">Link Badge</a></li>
+							<li><a href="#rounded-badge" class="scroll">Rounded Badge</a></li>
+							<li><a href="#rounded-outline" class="scroll">Rounded Outline Badge </a></li>
+							<li><a href="#outline-circle" class="scroll">Outline Circle Badge </a></li>
+							<li><a href="#circle-badge" class="scroll">Circle Badge</a></li>
+							<li><a href="#circle-badge-default" class="scroll">Circle Badge Default</a></li>
+							<li><a href="#number-badge" class="scroll">Number Badge</a></li>
+							<li><a href="#badge-sizes" class="scroll">Badge Sizes</a></li>
+							
+						</ul>	
+					</div>
+				</div>
+			</div>
+		</div>
+		<!--/element-area-->
+
+	</div>
+</div>
+<!--**********************************
+	Content body end
+        ***********************************-->
+{% endblock %}
+
+{% block additional_js %}
+	<script>hljs.highlightAll();
+	hljs.configure({ ignoreUnescapedHTML: true })
+		
+	</script>
+
+	<script>
+		document.addEventListener('DOMContentLoaded', (event) => {
+			document.querySelectorAll('pre code').forEach((el) => {
+				hljs.highlightElement(el);
+			});
+			});
+	</script>
+{% endblock %}

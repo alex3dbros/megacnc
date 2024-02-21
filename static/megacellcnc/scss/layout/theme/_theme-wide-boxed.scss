@@ -1,0 +1,113 @@
+@media (min-width: 62rem) {
+    [data-container="wide-boxed"] {
+        #main-wrapper {
+            max-width: 92.5rem;
+            margin: 0 auto;
+			box-shadow: 0 0 1.875rem 0 rgba(0,0,0,0.1);
+				
+            @at-root [direction="rtl"]#{&} {
+                text-align: right;
+            }
+        }
+		.content-body {
+			padding-right:0rem;
+		}
+		.email-susb{
+			display:none;
+		}
+		.market-previews,
+		.assets-al{
+			width:50%;
+		}
+		.buy-coin .coin-img img{
+			width: 332px;
+			bottom: -11px;
+		}
+		
+    }
+}
+
+    
+    
+@include custommq($min: 84.375rem) {
+    [data-layout="vertical"][data-sidebar-style="overlay"][data-container="wide-boxed"][data-header-position="fixed"] {
+        .header {
+            width: 92.5rem;
+        }
+    }
+}
+
+@include custommq($min: 75rem, $max: 100rem) {
+    [data-layout="vertical"][data-sidebar-style="overlay"][data-container="wide-boxed"][data-header-position="fixed"] {
+        .header {
+            width: 92.5rem;
+        }
+    }
+}
+[data-sidebar-style="compact"][data-header-position="fixed"][data-container="wide-boxed"][data-layout="vertical"] {
+    .header {
+        width: 92.5rem;
+    }
+}
+
+[data-header-position="fixed"][data-layout="horizontal"][data-container="wide-boxed"] {
+    .deznav {
+        max-width: 92.5rem;
+    }
+} //ok
+
+[data-layout="vertical"][data-container="wide-boxed"][data-header-position="fixed"],
+[data-layout="horizontal"][data-container="wide-boxed"][data-header-position="fixed"] {
+    .header {
+        width: 92.5rem;
+    }
+}
+
+[data-layout="horizontal"][data-container="wide-boxed"][data-header-position="fixed"][data-sidebar-style="mini"] {
+    .header {
+        width: 92.5rem;
+    }
+}
+
+
+[data-container="wide-boxed"] {
+    .metismenu.fixed {
+        left: auto;
+        max-width: 92.5rem;
+    }
+
+    .page-titles {
+        margin-bottom: 3rem;
+        padding: 0.9375rem 0.9375rem;
+    }
+
+    .content-body .container-fluid {
+        padding: 2.5rem;
+    }
+}
+
+[data-container="wide-boxed"][data-layout="vertical"] {
+    .page-titles {
+        margin-left: 0;
+        margin-right: 0;
+    }
+}
+
+[data-layout="vertical"][data-container="wide-boxed"][data-sidebar-position="fixed"][data-header-position="static"][data-sidebar-style="overlay"] {
+    .nav-header {
+        position: absolute;
+    }
+
+    .menu-toggle {
+        .deznav {
+            position: absolute;
+        }
+    }
+}
+
+[data-container="wide-boxed"][data-sidebar-position="fixed"][data-layout="horizontal"] {
+    .deznav.fixed {
+        left: auto;
+        max-width: 92.5rem;
+    }
+}

@@ -1,0 +1,155 @@
+.label {
+    display: inline-block;
+    text-align: center;
+    font-size: 0.75rem;
+    padding: .2rem .8rem;
+	border-radius:0.5rem;
+
+    &-fixed {
+        width: 7.5rem;
+        padding: .6rem 0;
+
+        &-lg {
+            width: 9.5rem;
+            padding: .6rem 0;
+        }
+    }
+
+    &-big {
+        width: 16.8rem;
+        font-size: 1.4rem;
+        padding: 1.1rem 0;
+    }
+
+    &-xl {
+        width: 10.5rem;
+        padding: 1.1rem 0;
+        font-size: 1.5rem;
+    }
+
+    &-lg {
+        width: 9.5rem;
+        padding: 1.1rem 0;
+    }
+
+    &-md {
+        width: 8.5rem;
+        padding: 1.1rem 0;
+    }
+
+    &-sm {
+        width: 7.5rem;
+        padding: 1.1rem 0;
+    }
+}
+
+.label-default{
+    background: #ADB6C7;
+}
+
+.label-primary{
+    background: var(--primary);
+    color: $white;
+}
+
+.label-secondary{
+    background: $secondary;
+    color: $white;
+}
+
+.label-info{
+    background: $info;
+    color: $white;
+}
+
+.label-success{
+    background: $success;
+    color: $white;
+}
+
+.label-warning{
+    background: $warning;
+    color: $white;
+}
+
+.label-danger{
+    background: $danger;
+    color: $white;
+}
+
+
+.label-light{
+    background: $light;
+    color: $black;
+}
+
+
+.label-dark{
+    background: $dark;
+    color: $white;
+}
+
+
+
+code{
+    word-break: break-word;
+    padding: 0.125rem 0.3125rem;
+    border-radius: 0.1875rem;
+	background: lighten($danger, 33%);
+    color: $danger;
+	@at-root [data-theme-version="dark"] & {
+		background: rgba($danger, 0.1);
+	}
+}
+
+.heading-labels{
+    color: #333333;
+
+    & > *{
+        margin-bottom: .8rem;
+    }
+
+    h1{
+        .label{
+            font-size: 1.125rem;
+            font-weight: normal;
+            padding: .4rem .9rem;
+        }
+    }
+
+    h2{
+        .label{
+            font-size: 1rem;
+            font-weight: normal;
+            padding: 0.3rem .9rem;
+        }
+    }
+
+    h3{
+        .label{
+            font-size: 0.875rem;
+            font-weight: normal;
+        }
+    }
+
+    h4{
+        .label{
+            font-size: 0.75rem;
+            font-weight: normal;
+        }
+    }
+
+    h5{
+        .label{
+            font-size: 0.75rem;
+            font-weight: normal;
+        }
+    }
+
+    h6{
+        .label{
+            font-size: 0.75rem;
+            font-weight: normal;
+        }
+    }
+}

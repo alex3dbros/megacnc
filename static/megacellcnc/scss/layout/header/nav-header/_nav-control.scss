@@ -1,0 +1,274 @@
+[data-sidebar-style="mini"],
+[data-layout="horizontal"] {
+    .nav-control {
+        display: none;
+    }
+}
+
+[data-header-position="fixed"] {
+    .nav-header {
+        position: fixed;
+    }
+}
+.brand-logo {
+	img{
+		// width: 12.7rem;
+	}
+}
+.nav-header {
+    height: 3.125rem;
+    width: 15rem;
+    display: inline-block;
+    text-align: left;
+    position: absolute;
+    top:0;
+    background-color:var(--nav-headbg);
+    transition: all .2s ease;
+    z-index: 5;
+	
+    .logo-compact {
+        display: none;
+    }
+	.brand-title-color {
+        display: none;
+    }
+
+    .brand-logo {
+        display: flex;
+        height: 100%;
+        width: 100%;
+        justify-content: flex-start;
+        align-items: center;
+        font-size: 1.125rem;
+        color: $white;
+        text-decoration: none;
+		padding-left: 1.1rem;
+		padding-right: 3rem;
+        font-weight: 700;
+		
+		@include respond('laptop') {
+			padding-left: 1.25rem;
+			padding-right:1.25rem;
+		}
+		
+        [data-sidebar-style="compact"] &,
+        [data-sidebar-style="mini"] & {
+            padding-left: 0;
+            padding-right: 0;
+            justify-content: center;
+        }
+        @include respond('phone-land') {
+            padding-left: 0;
+            padding-right: 0;
+            justify-content: center;
+        }
+    }
+	.logo-abbr{
+		/* height:45px;
+		width:45px; */
+	}
+	.logo-mini{
+		display:none;
+	}
+	.logo-color{
+		display:none;
+			@include respond ('phone-land'){
+			display:block;
+			/* height:45px;
+			width:45px; */
+		}
+	}
+	
+    .brand-title {
+		margin-left: 0.6375rem;
+		max-width: 10.15rem;
+		margin-top: 0.2rem;
+		font-size: 2.375rem;
+		color: $black;
+        @at-root [data-theme-version="dark"] & {
+            background-position: 0 120%;
+        }
+    }
+	@include respond ('phone-land'){
+		top:0;
+		background:transparent;
+	}
+	
+	.rect-primary-rect{
+		fill:var(--primary);
+	}
+}
+
+@include custommq($max:63.9375rem) {
+    .nav-header {
+        width: 5rem;
+        .brand-title {
+            display: none;
+        }
+    }
+}
+
+.nav-control {
+    cursor: pointer;
+    position: absolute;
+    right: -3rem;
+    text-align: center;
+	top: 50.8%;
+    transform: translateY(-50%);
+    z-index: 9999;
+    font-size: 1.4rem;
+    padding: 0.125rem 0.5rem 0;
+    border-radius: 0.125rem;
+	background-color:var(--primary);
+	width:3.063rem;
+	height: 3.063rem;
+	
+    @include respond('phone-land') {
+        right: -3rem;
+    }
+}
+
+////////////////////
+// Humbuger Icon
+////////////////////
+.hamburger {
+    display: inline-block;
+    left: 0.1rem;
+    position: relative;
+    top: 0.5rem;
+    -webkit-transition: all 0.3s ease-in-out 0s;
+    transition: all 0.3s ease-in-out 0s;
+    width: 1.625rem;
+    z-index: 999;
+}
+
+.hamburger .line {
+    background: $white;
+    display: block;
+    height: 1px;
+    border-radius: 0.1875rem;
+    margin-top: 0.375rem;
+    margin-bottom: 0.375rem;
+    margin-right: auto;
+    -webkit-transition: all 0.3s ease-in-out;
+    transition: all 0.3s ease-in-out;
+	
+}
+
+.hamburger svg {
+    position: absolute;
+    top: 9px;
+    left: 0;
+    z-index: 1;
+	
+}
+.hamburger.is-active{
+	.line{
+		opacity:1;
+	}
+	svg {
+		opacity:0;
+	}
+}
+.hamburger .line:nth-child(1) {
+    width: 1.25rem;
+}
+
+.hamburger .line:nth-child(2) {
+    width: 1.25rem;
+}
+
+.hamburger .line:nth-child(3) {
+   width: 1.25rem;
+}
+
+.hamburger:hover {
+    cursor: pointer;
+}
+
+.hamburger.is-active .line:nth-child(1),
+.hamburger.is-active .line:nth-child(3) {
+    width: 0.625rem;
+    height: 0.125rem;
+}
+
+.hamburger.is-active .line:nth-child(2) {
+    -webkit-transform: translateX(0px);
+    transform: translateX(0px);
+    width: 1.375rem;
+    height: 0.125rem;
+}
+
+.hamburger.is-active .line:nth-child(1) {
+    -webkit-transform: translateY(4px) translateX(12px) rotate(45deg);
+    transform: translateY(4px) translateX(12px) rotate(45deg);
+}
+
+.hamburger.is-active .line:nth-child(3) {
+    -webkit-transform: translateY(-4px) translateX(12px) rotate(-45deg);
+    transform: translateY(-4px) translateX(12px) rotate(-45deg);
+}
+
+@media (min-width:47.9375rem) {
+    [data-sidebar-style="compact"] {
+        .nav-control {
+            display: none;
+        }
+        .nav-header {
+            width: 11.25rem;
+        }
+    }
+}
+
+[data-sidebar-style="full"][data-layout="vertical"] {
+    .menu-toggle {
+        .brand-title {
+            display: none;
+        }
+    }
+}
+
+[data-sidebar-style="full"][data-layout="horizontal"] {
+    .logo-compact {
+        display: none;
+    }
+}
+
+[data-sidebar-style="mini"] {
+    .nav-header {
+		//height:5rem;
+        
+		@include custommq($max: 63.9375rem){
+			//height:5rem;
+		}
+    }
+}
+
+[data-sidebar-style="compact"][data-layout="vertical"] {
+    .nav-header {
+        .brand-title {
+            display: none;
+        }
+        .logo-compact {
+            max-width: 4.6875rem;
+        }
+    }
+}
+[data-sidebar-style="compact"][data-layout="horizontal"] {
+    .nav-header .brand-logo {
+        padding-left: 1.875rem;
+		padding-right: 1.875rem;
+		justify-content: start;
+    }
+}
+[data-sidebar-style="modern"][data-layout="vertical"] {
+    .nav-header {
+        width: 10.625rem;
+        .brand-title {
+            display: none;
+        }
+        .logo-compact {
+            display: none;
+        }
+    }
+}

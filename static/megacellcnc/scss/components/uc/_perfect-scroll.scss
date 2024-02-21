@@ -1,0 +1,88 @@
+// .deznav-scroll{
+//     .ps__rail-x:hover,
+//     .ps__rail-y:hover,
+//     .ps__rail-x:focus,
+//     .ps__rail-y:focus,
+//     .ps__rail-x.ps--clicking,
+//     .ps__rail-y.ps--clicking {
+//         background-color: #f00;
+//         opacity: 0.9;
+//     }
+//     .ps__rail-y:hover > .ps__thumb-y,
+//     .ps__rail-y:focus > .ps__thumb-y,
+//     .ps__rail-y.ps--clicking .ps__thumb-y {
+//         background-color: #f00;
+//         width: 0.25rem;
+//     }
+//     .ps__thumb-y {
+//         background-color: #f00;
+//         width: 0.25rem;
+//     }
+// }
+.ps__rail-x:hover,
+.ps__rail-y:hover,
+.ps__rail-x:focus,
+.ps__rail-y:focus,
+.ps__rail-x.ps--clicking,
+.ps__rail-y.ps--clicking {
+    background-color: transparent;
+    opacity: 0.9;
+}
+
+.ps__rail-y:hover>.ps__thumb-y,
+.ps__rail-y:focus>.ps__thumb-y,
+.ps__rail-y.ps--clicking .ps__thumb-y {
+    background-color: #DAE2F3;
+    width: 0.25rem;
+}
+
+.ps__thumb-y {
+    background-color: #DAE2F3;
+    width: 0.25rem;
+}
+
+.total-average {
+    position: relative;
+    height: 18.75rem;
+}
+
+.widget-chat {
+    position: relative;
+    height: 15.625rem;
+}
+
+.widget-todo {
+    position: relative;
+    height: 13.125rem;
+}
+
+.widget-team {
+    position: relative;
+    height: 17.8125rem;
+}
+
+.widget-timeline {
+    position: relative;
+}
+
+.widget-comments {
+    position: relative;
+    height: 25rem;
+}
+
+.sidebar-right-inner {
+    position: relative;
+    height: 100%;
+}
+
+.widget-team {
+    .ps .ps__rail-x:hover,
+    .ps .ps__rail-y:hover,
+    .ps .ps__rail-x:focus,
+    .ps .ps__rail-y:focus,
+    .ps .ps__rail-x.ps--clicking,
+    .ps .ps__rail-y.ps--clicking {
+        background-color: transparent!important;
+        opacity: 0.9;
+    }
+}

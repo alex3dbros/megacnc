@@ -1,0 +1,610 @@
+{% extends 'megacellcnc/elements/layouts/admin.html' %}
+{% load static %}
+        
+{% block additional_css %}
+{% endblock %}
+        
+{% block content %}
+
+<!--**********************************
+	Content body start
+***********************************-->
+<div class="content-body">
+	<div class="page-titles">
+		<ol class="breadcrumb">
+			<li class="breadcrumb-item"><a href="javascript:void(0)">App</a></li>
+			<li class="breadcrumb-item active"><a href="javascript:void(0)">{{page_title}}</a></li>
+		</ol>
+	</div>
+	<div class="container-fluid">
+		<!-- row -->
+		<div class="row">
+			<div class="col-lg-12">
+				<div class="card card-profile">
+					<div class="admin-user">
+						<div class="img-wrraper">                              
+							<div class="">
+								<img src="{% static 'w3crm/images/user1.jpg' %}" class="rounded-circle"></div>
+							<a class="icon-wrapper" href="{% url 'w3crm:edit-profile' %}"><i class="fa-solid fa-pencil"></i></a>
+						</div>
+						<div class="user-details">
+							<div class="title"><a target="_blank" href=""> 
+								<h4>Thomas Fleming</h4></a>
+								<h6>Web Designer</h6>
+							</div>
+								<ul class="user-social-links">
+								<li><a href="javascript:void(0)" target="_blank"><i class="fa-brands fa-facebook-f"></i></a></li>
+								<li><a href="javascript:void(0)" target="_blank"><i class="fa-brands fa-skype"></i></a></li>
+								<li><a href="javascript:void(0)" target="_blank"><i class="fa-brands fa-linkedin-in"></i></a></li>
+								<li><a href="javascript:void(0)" target="_blank"><i class="fa-brands fa-instagram"></i></a></li>
+								<li><a href="javascript:void(0)" target="_blank"><i class="fa fa-rss"></i></a></li>
+								</ul>
+								<ul class="follow-list">
+								<li>
+									<div class="follow-num ">325</div><span>Follower</span>
+								</li>
+								<li>
+									<div class="follow-num ">450</div><span>Following</span>
+								</li>
+								<li>
+									<div class="follow-num ">500</div><span>Likes</span>
+								</li>
+								</ul>
+							
+							</div>
+					</div>	
+				</div>
+			</div>
+		</div>
+		<div class="row">
+			<div class="col-xl-3 col-xxl-4">
+				<div class="row">
+					<div class="col-xl-12">
+						<div class="card">
+							<div class="card-body profile-accordion pb-0">
+								<div class="accordion" id="accordionExample1">
+									<div class="accordion-item">
+										<h2 class="accordion-header" id="headingOne1">
+											<button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapseOne1" aria-expanded="true" aria-controls="collapseOne1">
+											About Me
+											</button>
+										</h2>
+										<div id="collapseOne1" class="accordion-collapse collapse show" aria-labelledby="headingOne1" data-bs-parent="#accordionExample1">
+											<div class="accordion-body">
+											<div class="about-me">
+												<ul>
+													<li>
+														<i class="fa-solid fa-briefcase"></i>
+														<div>
+															<h6>Software Engineer at W3itexperts</h6>
+															<span>Oct 2021 - Present</span>
+														</div>
+													</li>
+													<li>
+														<i class="fa-solid fa-book"></i>
+														<div>
+															<h6>Techno India NJR Institute</h6>
+															<span>Nov-2019 at University Usa</span>
+														</div>
+													</li>
+													<li>
+														<i class="fa-solid fa-location-dot"></i>
+														<div>
+															<h6>Lived In Usa</h6>
+															<span>Oct 2019 - Present</span>
+														</div>
+													</li>
+													<li>
+														<i class="fa-solid fa-location-dot"></i>
+														<div>
+															<h6>Blood Group</h6>
+															<span>A+</span>
+														</div>
+													</li>
+													<li class="second-head">Social Networks</li>
+													<div>
+														<a href="javascript:void(0)" class="btn btn-block bg-facebook mb-2"><i class="fa-brands fa-facebook-f me-2"></i>Facebook</a>
+														<a href="javascript:void(0)" class="btn btn-block bg-whatsapp mb-2"><i class="fa-brands fa-whatsapp me-2"></i>WhatsApp</a>
+														<a href="javascript:void(0)" class="btn btn-block bg-facebook mb-2"><i class="fa-brands fa-skype me-2"></i>Skype</a>
+													</div>
+												</ul>
+											</div>
+											
+											</div>
+										</div>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+					<div class="col-xl-12">
+						<div class="card">
+							<div class="card-body profile-accordion pb-0">
+								<div class="accordion" id="accordionExample2">
+									<div class="accordion-item">
+										<h2 class="accordion-header" id="headingOne2">
+											<button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapseOne2" aria-expanded="true" aria-controls="collapseOne2">
+											Followers
+											</button>
+										</h2>
+										<div id="collapseOne2" class="accordion-collapse collapse show" aria-labelledby="headingOne2" data-bs-parent="#accordionExample2">
+											<div class="accordion-body">
+												<div class="products mb-3">
+													<img src="{% static 'w3crm/images/contacts/pic2.jpg' %}" class="avatar avatar-md" alt="">
+													<div>
+														<h6><a href="javascript:void(0)">Liam Antony</a></h6>
+														<span>Web Doveloper</span>	
+													</div>	
+												</div>
+												<div class="products mb-3">
+													<img src="{% static 'w3crm/images/contacts/pic3.jpg' %}" class="avatar avatar-md" alt="">
+													<div>
+														<h6><a href="javascript:void(0)">Ricky Noah</a></h6>
+														<span>Php Doveloper</span>	
+													</div>	
+												</div>
+												<div class="products mb-3">
+													<img src="{% static 'w3crm/images/contacts/pic3.jpg' %}" class="avatar avatar-md" alt="">
+													<div>
+														<h6><a href="javascript:void(0)">Oliver Elijah</a></h6>
+														<span>Ux Designer</span>	
+													</div>	
+												</div>
+												<div class="products mb-3">
+													<img src="{% static 'w3crm/images/contacts/pic1.jpg' %}" class="avatar avatar-md" alt="">
+													<div>
+														<h6><a href="javascript:void(0)">James William</a></h6>
+														<span>Web Designer</span>	
+													</div>	
+												</div>
+												<div class="products">
+													<img src="{% static 'w3crm/images/contacts/d4.jpg' %}" class="avatar avatar-md" alt="">
+													<div>
+														<h6><a href="javascript:void(0)">Benjamin Lucas</a></h6>
+														<span>Asp Doveloper</span>	
+													</div>	
+												</div>
+											</div>
+										</div>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+					<div class="col-xl-12">
+						<div class="card">
+							<div class="card-body profile-accordion pb-0">
+								<div class="accordion" id="accordionExample3">
+									<div class="accordion-item">
+										<h2 class="accordion-header" id="headingOne3">
+											<button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapseOne3" aria-expanded="true" aria-controls="collapseOne3">
+											Following
+											</button>
+										</h2>
+										<div id="collapseOne3" class="accordion-collapse collapse show" aria-labelledby="headingOne3" data-bs-parent="#accordionExample3">
+											<div class="accordion-body">
+												<div class="products mb-3">
+													<img src="{% static 'w3crm/images/contacts/pic2.jpg' %}" class="avatar avatar-md" alt="">
+													<div>
+														<h6><a href="javascript:void(0)">Liam Antony</a></h6>
+														<span>Web Doveloper</span>	
+													</div>	
+												</div>
+												<div class="products mb-3">
+													<img src="{% static 'w3crm/images/contacts/pic3.jpg' %}" class="avatar avatar-md" alt="">
+													<div>
+														<h6><a href="javascript:void(0)">Ricky Noah</a></h6>
+														<span>Php Doveloper</span>	
+													</div>	
+												</div>
+												<div class="products mb-3">
+													<img src="{% static 'w3crm/images/contacts/pic3.jpg' %}" class="avatar avatar-md" alt="">
+													<div>
+														<h6><a href="javascript:void(0)">Oliver Elijah</a></h6>
+														<span>Ux Designer</span>	
+													</div>	
+												</div>
+												<div class="products mb-3">
+													<img src="{% static 'w3crm/images/contacts/pic1.jpg' %}" class="avatar avatar-md" alt="">
+													<div>
+														<h6><a href="javascript:void(0)">James William</a></h6>
+														<span>Web Designer</span>	
+													</div>	
+												</div>
+												<div class="products">
+													<img src="{% static 'w3crm/images/contacts/d4.jpg' %}" class="avatar avatar-md" alt="">
+													<div>
+														<h6><a href="javascript:void(0)">Benjamin Lucas</a></h6>
+														<span>Asp Doveloper</span>	
+													</div>	
+												</div>
+											</div>
+										</div>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+					<div class="col-xl-12">
+						<div class="card">
+							<div class="card-body profile-accordion pb-0">
+								<div class="accordion" id="accordionExample4">
+									<div class="accordion-item">
+										<h2 class="accordion-header" id="headingOne4">
+											<button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapseOne4" aria-expanded="true" aria-controls="collapseOne4">
+											Interest
+											</button>
+										</h2>
+										<div id="collapseOne4" class="accordion-collapse collapse show" aria-labelledby="headingOne4" data-bs-parent="#accordionExample4">
+											<div class="accordion-body">
+												<div class="profile-interest">
+													<div class="row mt-4 sp4" id="lightgallery">
+														<a href="{% static 'w3crm/images/profile/2.jpg' %}" data-exthumbimage="{% static 'w3crm/images/profile/2.jpg' %}" data-src="{% static 'w3crm/images/profile/2.jpg' %}" class="mb-1 col-lg-4 col-xl-4 col-sm-4 col-6">
+															<img src="{% static 'w3crm/images/profile/2.jpg' %}" alt="" class="px-1 py-1 img-fluid rounded">
+														</a>
+														<a href="{% static 'w3crm/images/profile/3.jpg' %}" data-exthumbimage="{% static 'w3crm/images/profile/3.jpg' %}" data-src="{% static 'w3crm/images/profile/3.jpg' %}" class="mb-1 col-lg-4 col-xl-4 col-sm-4 col-6">
+															<img src="{% static 'w3crm/images/profile/3.jpg' %}" alt="" class="px-1 py-1 img-fluid rounded">
+														</a>
+														<a href="{% static 'w3crm/images/profile/4.jpg' %}" data-exthumbimage="{% static 'w3crm/images/profile/4.jpg' %}" data-src="{% static 'w3crm/images/profile/4.jpg' %}" class="mb-1 col-lg-4 col-xl-4 col-sm-4 col-6">
+															<img src="{% static 'w3crm/images/profile/4.jpg' %}" alt="" class="px-1 py-1 img-fluid rounded">
+														</a>
+														<a href="{% static 'w3crm/images/profile/3.jpg' %}" data-exthumbimage="{% static 'w3crm/images/profile/3.jpg' %}" data-src="{% static 'w3crm/images/profile/3.jpg' %}" class="mb-1 col-lg-4 col-xl-4 col-sm-4 col-6">
+															<img src="{% static 'w3crm/images/profile/3.jpg' %}" alt="" class="px-1 py-1 img-fluid rounded">
+														</a>
+														<a href="{% static 'w3crm/images/profile/4.jpg' %}" data-exthumbimage="{% static 'w3crm/images/profile/4.jpg' %}" data-src="{% static 'w3crm/images/profile/4.jpg' %}" class="mb-1 col-lg-4 col-xl-4 col-sm-4 col-6">
+															<img src="{% static 'w3crm/images/profile/4.jpg' %}" alt="" class="px-1 py-1 img-fluid rounded">
+														</a>
+														<a href="{% static 'w3crm/images/profile/2.jpg' %}" data-exthumbimage="{% static 'w3crm/images/profile/2.jpg' %}" data-src="{% static 'w3crm/images/profile/2.jpg' %}" class="mb-1 col-lg-4 col-xl-4 col-sm-4 col-6">
+															<img src="{% static 'w3crm/images/profile/2.jpg' %}" alt="" class="px-1 py-1 img-fluid rounded">
+														</a>
+													</div>
+												</div>
+											</div>
+										</div>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+					<div class="col-xl-12">
+						<div class="card">
+							<div class="card-body profile-accordion pb-0">
+								<div class="accordion" id="accordionExample5">
+									<div class="accordion-item">
+										<h2 class="accordion-header" id="headingOne5">
+											<button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapseOne5" aria-expanded="true" aria-controls="collapseOne4">
+											Our Latest News
+											</button>
+										</h2>
+										<div id="collapseOne5" class="accordion-collapse collapse show" aria-labelledby="headingOne5" data-bs-parent="#accordionExample5">
+											<div class="accordion-body">
+												<div class="profile-news">
+													<div class="media pt-3 pb-3">
+														<img src="{% static 'w3crm/images/profile/5.jpg' %}" alt="image" class="me-3 rounded" width="75">
+														<div class="media-body">
+															<h6 class="m-b-5"><a href="{% url 'w3crm:post-details' %}" class="text-black">Collection of textile samples</a></h6>
+															<p class="mb-0">I shared this on my fb wall a few months back, and I thought.</p>
+														</div>
+													</div>
+													<div class="media pt-3 pb-3">
+														<img src="{% static 'w3crm/images/profile/6.jpg' %}" alt="image" class="me-3 rounded" width="75">
+														<div class="media-body">
+															<h6 class="m-b-5"><a href="{% url 'w3crm:post-details' %}" class="text-black">Collection of textile samples</a></h6>
+															<p class="mb-0">I shared this on my fb wall a few months back, and I thought.</p>
+														</div>
+													</div>
+													<div class="media pt-3 pb-3">
+														<img src="{% static 'w3crm/images/profile/7.jpg' %}" alt="image" class="me-3 rounded" width="75">
+														<div class="media-body">
+															<h6 class="m-b-5"><a href="{% url 'w3crm:post-details' %}" class="text-black">Collection of textile samples</a></h6>
+															<p class="mb-0">I shared this on my fb wall a few months back, and I thought.</p>
+														</div>
+													</div>
+												</div>
+											</div>
+										</div>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+					<div class="col-xl-12">
+						<div class="card">
+							<div class="card-body profile-accordion pb-0">
+								<div class="accordion" id="accordionExample6">
+									<div class="accordion-item">
+										<h2 class="accordion-header" id="headingOne5">
+											<button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapseOne6" aria-expanded="true" aria-controls="collapseOne6">
+											Friends
+											</button>
+										</h2>
+										<div id="collapseOne6" class="accordion-collapse collapse show" aria-labelledby="headingOne6" data-bs-parent="#accordionExample6">
+											<div class="accordion-body">
+												<div class="friend-list">
+													<img src="{% static 'w3crm/images/profile/friends/f3.jpg' %}" class="avatar avatar-md" alt="">
+													<img src="{% static 'w3crm/images/contacts/pic2.jpg' %}" class="avatar avatar-md" alt="">
+													<img src="{% static 'w3crm/images/contacts/pic3.jpg' %}" class="avatar avatar-md" alt="">
+													<img src="{% static 'w3crm/images/profile/friends/f2.jpg' %}" class="avatar avatar-md" alt="">
+													<img src="{% static 'w3crm/images/contacts/pic1.jpg' %}" class="avatar avatar-md" alt="">
+													<img src="{% static 'w3crm/images/contacts/d4.jpg' %}" class="avatar avatar-md" alt="">
+													<img src="{% static 'w3crm/images/profile/friends/f4.jpg' %}" class="avatar avatar-md" alt="">
+													<img src="{% static 'w3crm/images/profile/friends/f1.jpg' %}" class="avatar avatar-md" alt="">
+													<img src="{% static 'w3crm/images/profile/friends/f3.jpg' %}" class="avatar avatar-md" alt="">
+													<img src="{% static 'w3crm/images/contacts/pic2.jpg' %}" class="avatar avatar-md" alt="">
+													<img src="{% static 'w3crm/images/contacts/pic3.jpg' %}" class="avatar avatar-md" alt="">
+													<img src="{% static 'w3crm/images/profile/friends/f2.jpg' %}" class="avatar avatar-md" alt="">
+												</div>
+											</div>
+										</div>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+			<div class="col-xl-9 col-xxl-8">
+				<div class="row">
+					<div class="col-xl-12">
+						<div class="card">
+							<div class="card-header border-0">
+								<div class="products">
+									<img src="{% static 'w3crm/images/user1.jpg' %}" class="avatar avatar-md rounded-circle" alt="">
+									<div>
+										<h5 class="mb-0"><a href="javascript:void(0)" class="text-black">Thomas Fleming</a></h5>
+										<span>8 Hours ago</span>	
+									</div>	
+								</div>
+								<div class="dropdown custom-dropdown ">
+									<div class="btn sharp btn-primary tp-btn  ms-3" data-bs-toggle="dropdown">
+										<svg width="22" height="22" viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg">
+										<path d="M13.5202 17.4167C13.5202 18.81 12.3927 19.9375 10.9994 19.9375C9.60601 19.9375 8.47852 18.81 8.47852 17.4167C8.47852 16.0233 9.60601 14.8958 10.9994 14.8958C12.3927 14.8958 13.5202 16.0233 13.5202 17.4167ZM9.85352 17.4167C9.85352 18.0492 10.3669 18.5625 10.9994 18.5625C11.6319 18.5625 12.1452 18.0492 12.1452 17.4167C12.1452 16.7842 11.6319 16.2708 10.9994 16.2708C10.3669 16.2708 9.85352 16.7842 9.85352 17.4167Z" fill="#2696FD"/>
+										<path d="M13.5202 4.58369C13.5202 5.97699 12.3927 7.10449 10.9994 7.10449C9.60601 7.10449 8.47852 5.97699 8.47852 4.58369C8.47852 3.19029 9.60601 2.06279 10.9994 2.06279C12.3927 2.06279 13.5202 3.19029 13.5202 4.58369ZM9.85352 4.58369C9.85352 5.21619 10.3669 5.72949 10.9994 5.72949C11.6319 5.72949 12.1452 5.21619 12.1452 4.58369C12.1452 3.95119 11.6319 3.43779 10.9994 3.43779C10.3669 3.43779 9.85352 3.95119 9.85352 4.58369Z" fill="#2696FD"/>
+										<path d="M13.5202 10.9997C13.5202 12.393 12.3927 13.5205 10.9994 13.5205C9.60601 13.5205 8.47852 12.393 8.47852 10.9997C8.47852 9.6063 9.60601 8.4788 10.9994 8.4788C12.3927 8.4788 13.5202 9.6063 13.5202 10.9997ZM9.85352 10.9997C9.85352 11.6322 10.3669 12.1455 10.9994 12.1455C11.6319 12.1455 12.1452 11.6322 12.1452 10.9997C12.1452 10.3672 11.6319 9.8538 10.9994 9.8538C10.3669 9.8538 9.85352 10.3672 9.85352 10.9997Z" fill="#2696FD"/>
+										</svg>
+
+									</div>
+									<div class="dropdown-menu dropdown-menu-end">
+										<a class="dropdown-item"  href="javascript:void(0);">Option 1</a>
+										<a class="dropdown-item"  href="javascript:void(0);">Option 2</a>
+										<a class="dropdown-item"  href="javascript:void(0);">Option 3</a>
+									</div>
+								</div>
+							</div>
+							<div class="card-body pt-0">
+								<div class="post-img">
+									<img src="{% static 'w3crm/images/post/post1.jpg' %}">	
+								</div>
+								<div class="post-see d-flex align-items-center mt-3">
+									<ul>
+									<div class="avatar-list avatar-list-stacked">
+										<img src="{% static 'w3crm/images/contacts/pic1.jpg' %}" class="avatar rounded-circle" alt="">
+										<img src="{% static 'w3crm/images/contacts/pic777.jpg' %}" class="avatar rounded-circle" alt="">
+										<img src="{% static 'w3crm/images/contacts/pic666.jpg' %}" class="avatar rounded-circle" alt="">
+									</div>
+									</ul>
+									<h6 class="mb-0 ms-3">+3 people see this post</h6>
+								</div>
+								<div class="mt-3">
+									<span>Lorem Ipsum is simply dummy text of the printing and typesetting industry.
+									Lorem Ipsum has been the industry's standard dummy text ever since the 1500s,
+									when an unknown printer took a galley of type and scrambled it to make a type specimen book.</span>
+								</div>
+								<ul class="post-comment d-flex mt-3">
+									<li>
+									<label class="me-3"><a href="javascript:void(0)"><i class="fa-regular fa-heart me-2"></i>Like</a></label>
+									</li>
+									<li>
+									<label class="me-3"><a href="javascript:void(0)"><i class="fa-regular fa-message me-2"></i>Comment</a></label>
+									</li>
+									<li>
+									<label class="me-3"><a href="javascript:void(0)"><i class="fa-solid fa-share me-2"></i>Share</a></label>										  </li>
+								</ul>
+							</div>
+						</div>
+					</div>
+					<div class="col-xl-12">
+						<div class="card">
+							<div class="card-header border-0">
+								<div class="products">
+									<img src="{% static 'w3crm/images/profile/friends/f2.jpg' %}" class="avatar avatar-md rounded-circle" alt="">
+									<div>
+										<h5 class="mb-0"><a href="javascript:void(0)" class="text-black">Thomas Fleming</a></h5>
+										<span>8 Hours ago</span>	
+									</div>	
+								</div>
+								<div class="dropdown custom-dropdown ">
+									<div class="btn sharp btn-primary tp-btn  ms-3" data-bs-toggle="dropdown">
+										<svg width="22" height="22" viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg">
+										<path d="M13.5202 17.4167C13.5202 18.81 12.3927 19.9375 10.9994 19.9375C9.60601 19.9375 8.47852 18.81 8.47852 17.4167C8.47852 16.0233 9.60601 14.8958 10.9994 14.8958C12.3927 14.8958 13.5202 16.0233 13.5202 17.4167ZM9.85352 17.4167C9.85352 18.0492 10.3669 18.5625 10.9994 18.5625C11.6319 18.5625 12.1452 18.0492 12.1452 17.4167C12.1452 16.7842 11.6319 16.2708 10.9994 16.2708C10.3669 16.2708 9.85352 16.7842 9.85352 17.4167Z" fill="#2696FD"/>
+										<path d="M13.5202 4.58369C13.5202 5.97699 12.3927 7.10449 10.9994 7.10449C9.60601 7.10449 8.47852 5.97699 8.47852 4.58369C8.47852 3.19029 9.60601 2.06279 10.9994 2.06279C12.3927 2.06279 13.5202 3.19029 13.5202 4.58369ZM9.85352 4.58369C9.85352 5.21619 10.3669 5.72949 10.9994 5.72949C11.6319 5.72949 12.1452 5.21619 12.1452 4.58369C12.1452 3.95119 11.6319 3.43779 10.9994 3.43779C10.3669 3.43779 9.85352 3.95119 9.85352 4.58369Z" fill="#2696FD"/>
+										<path d="M13.5202 10.9997C13.5202 12.393 12.3927 13.5205 10.9994 13.5205C9.60601 13.5205 8.47852 12.393 8.47852 10.9997C8.47852 9.6063 9.60601 8.4788 10.9994 8.4788C12.3927 8.4788 13.5202 9.6063 13.5202 10.9997ZM9.85352 10.9997C9.85352 11.6322 10.3669 12.1455 10.9994 12.1455C11.6319 12.1455 12.1452 11.6322 12.1452 10.9997C12.1452 10.3672 11.6319 9.8538 10.9994 9.8538C10.3669 9.8538 9.85352 10.3672 9.85352 10.9997Z" fill="#2696FD"/>
+										</svg>
+
+									</div>
+									<div class="dropdown-menu dropdown-menu-end">
+										<a class="dropdown-item"  href="javascript:void(0);">Option 1</a>
+										<a class="dropdown-item"  href="javascript:void(0);">Option 2</a>
+										<a class="dropdown-item"  href="javascript:void(0);">Option 3</a>
+									</div>
+								</div>
+							</div>
+							<div class="card-body pt-0">
+								<div class="row">
+									<div class="col-xl-6">
+										<div class="post-img">
+											<img src="{% static 'w3crm/images/post/post11.jpg' %}" class="me-3">	
+										</div>	
+									</div>
+									<div class="col-xl-6">
+										<div class="post-img">
+											<img src="{% static 'w3crm/images/post/post12.jpg' %}" class="ms-3">	
+										</div>	
+									</div>
+								</div>
+								<div class="post-see d-flex align-items-center mt-3">
+									<ul>
+									<div class="avatar-list avatar-list-stacked">
+										<img src="{% static 'w3crm/images/contacts/pic1.jpg' %}" class="avatar rounded-circle" alt="">
+										<img src="{% static 'w3crm/images/contacts/pic777.jpg' %}" class="avatar rounded-circle" alt="">
+										<img src="{% static 'w3crm/images/contacts/pic666.jpg' %}" class="avatar rounded-circle" alt="">
+									</div>
+									</ul>
+									<h6 class="mb-0 ms-3">+3 people see this post</h6>
+								</div>
+								<div class="mt-3">
+									<span>Lorem Ipsum is simply dummy text of the printing and typesetting industry.
+									Lorem Ipsum has been the industry's standard dummy text ever since the 1500s,
+									when an unknown printer took a galley of type and scrambled it to make a type specimen book.</span>
+								</div>
+								<ul class="post-comment d-flex mt-3">
+									<li>
+									<label class="me-3"><a href="javascript:void(0)"><i class="fa-regular fa-heart me-2"></i>Like</a></label>
+									</li>
+									<li>
+									<label class="me-3"><a href="javascript:void(0)"><i class="fa-regular fa-message me-2"></i>Comment</a></label>
+									</li>
+									<li>
+									<label class="me-3"><a href="javascript:void(0)"><i class="fa-solid fa-share me-2"></i>Share</a></label>										  </li>
+								</ul>
+							</div>
+						</div>
+					</div>
+					<div class="col-xl-12">
+						<div class="card">
+							<div class="card-header border-0">
+								<div class="products">
+									<img src="{% static 'w3crm/images/user1.jpg' %}" class="avatar avatar-md rounded-circle" alt="">
+									<div>
+										<h5 class="mb-0"><a href="javascript:void(0)" class="text-black">Thomas Fleming</a></h5>
+										<span>8 Hours ago</span>	
+									</div>	
+								</div>
+								<div class="dropdown custom-dropdown ">
+									<div class="btn sharp btn-primary tp-btn  ms-3" data-bs-toggle="dropdown">
+										<svg width="22" height="22" viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg">
+										<path d="M13.5202 17.4167C13.5202 18.81 12.3927 19.9375 10.9994 19.9375C9.60601 19.9375 8.47852 18.81 8.47852 17.4167C8.47852 16.0233 9.60601 14.8958 10.9994 14.8958C12.3927 14.8958 13.5202 16.0233 13.5202 17.4167ZM9.85352 17.4167C9.85352 18.0492 10.3669 18.5625 10.9994 18.5625C11.6319 18.5625 12.1452 18.0492 12.1452 17.4167C12.1452 16.7842 11.6319 16.2708 10.9994 16.2708C10.3669 16.2708 9.85352 16.7842 9.85352 17.4167Z" fill="#2696FD"/>
+										<path d="M13.5202 4.58369C13.5202 5.97699 12.3927 7.10449 10.9994 7.10449C9.60601 7.10449 8.47852 5.97699 8.47852 4.58369C8.47852 3.19029 9.60601 2.06279 10.9994 2.06279C12.3927 2.06279 13.5202 3.19029 13.5202 4.58369ZM9.85352 4.58369C9.85352 5.21619 10.3669 5.72949 10.9994 5.72949C11.6319 5.72949 12.1452 5.21619 12.1452 4.58369C12.1452 3.95119 11.6319 3.43779 10.9994 3.43779C10.3669 3.43779 9.85352 3.95119 9.85352 4.58369Z" fill="#2696FD"/>
+										<path d="M13.5202 10.9997C13.5202 12.393 12.3927 13.5205 10.9994 13.5205C9.60601 13.5205 8.47852 12.393 8.47852 10.9997C8.47852 9.6063 9.60601 8.4788 10.9994 8.4788C12.3927 8.4788 13.5202 9.6063 13.5202 10.9997ZM9.85352 10.9997C9.85352 11.6322 10.3669 12.1455 10.9994 12.1455C11.6319 12.1455 12.1452 11.6322 12.1452 10.9997C12.1452 10.3672 11.6319 9.8538 10.9994 9.8538C10.3669 9.8538 9.85352 10.3672 9.85352 10.9997Z" fill="#2696FD"/>
+										</svg>
+
+									</div>
+									<div class="dropdown-menu dropdown-menu-end">
+										<a class="dropdown-item"  href="javascript:void(0);">Option 1</a>
+										<a class="dropdown-item"  href="javascript:void(0);">Option 2</a>
+										<a class="dropdown-item"  href="javascript:void(0);">Option 3</a>
+									</div>
+								</div>
+							</div>
+							<div class="card-body pt-0">
+								<div class="post-img">
+									<img src="{% static 'w3crm/images/post/post2.jpg' %}">	
+								</div>
+								<div class="post-see d-flex align-items-center mt-3">
+									<ul>
+									<div class="avatar-list avatar-list-stacked">
+										<img src="{% static 'w3crm/images/contacts/pic1.jpg' %}" class="avatar rounded-circle" alt="">
+										<img src="{% static 'w3crm/images/contacts/pic777.jpg' %}" class="avatar rounded-circle" alt="">
+										<img src="{% static 'w3crm/images/contacts/pic666.jpg' %}" class="avatar rounded-circle" alt="">
+										<img src="{% static 'w3crm/images/contacts/pic777.jpg' %}" class="avatar rounded-circle" alt="">
+									</div>
+									</ul>
+									<h6 class="mb-0 ms-3">+35 people see this post</h6>
+								</div>
+								<div class="mt-3">
+									<span>Lorem Ipsum is simply dummy text of the printing and typesetting industry.
+									Lorem Ipsum has been the industry's standard dummy text ever since the 1500s,
+									when an unknown printer took a galley of type and scrambled it to make a type specimen book.</span>
+								</div>
+								<ul class="post-comment d-flex mt-3">
+									<li>
+									<label class="me-3"><a href="javascript:void(0)"><i class="fa-regular fa-heart me-2"></i>Like</a></label>
+									</li>
+									<li>
+									<label class="me-3"><a href="javascript:void(0)"><i class="fa-regular fa-message me-2"></i>Comment</a></label>
+									</li>
+									<li>
+									<label class="me-3"><a href="javascript:void(0)"><i class="fa-solid fa-share me-2"></i>Share</a></label>										  </li>
+								</ul>
+							</div>
+						</div>
+					</div>
+					<div class="col-xl-12">
+						<div class="card">
+							<div class="card-header border-0">
+								<div class="products">
+									<img src="{% static 'w3crm/images/user1.jpg' %}" class="avatar avatar-md rounded-circle" alt="">
+									<div>
+										<h5 class="mb-0"><a href="javascript:void(0)" class="text-black">Thomas Fleming</a></h5>
+										<span>8 Hours ago</span>	
+									</div>	
+								</div>
+								<div class="dropdown custom-dropdown ">
+									<div class="btn sharp btn-primary tp-btn  ms-3" data-bs-toggle="dropdown">
+										<svg width="22" height="22" viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg">
+										<path d="M13.5202 17.4167C13.5202 18.81 12.3927 19.9375 10.9994 19.9375C9.60601 19.9375 8.47852 18.81 8.47852 17.4167C8.47852 16.0233 9.60601 14.8958 10.9994 14.8958C12.3927 14.8958 13.5202 16.0233 13.5202 17.4167ZM9.85352 17.4167C9.85352 18.0492 10.3669 18.5625 10.9994 18.5625C11.6319 18.5625 12.1452 18.0492 12.1452 17.4167C12.1452 16.7842 11.6319 16.2708 10.9994 16.2708C10.3669 16.2708 9.85352 16.7842 9.85352 17.4167Z" fill="#2696FD"/>
+										<path d="M13.5202 4.58369C13.5202 5.97699 12.3927 7.10449 10.9994 7.10449C9.60601 7.10449 8.47852 5.97699 8.47852 4.58369C8.47852 3.19029 9.60601 2.06279 10.9994 2.06279C12.3927 2.06279 13.5202 3.19029 13.5202 4.58369ZM9.85352 4.58369C9.85352 5.21619 10.3669 5.72949 10.9994 5.72949C11.6319 5.72949 12.1452 5.21619 12.1452 4.58369C12.1452 3.95119 11.6319 3.43779 10.9994 3.43779C10.3669 3.43779 9.85352 3.95119 9.85352 4.58369Z" fill="#2696FD"/>
+										<path d="M13.5202 10.9997C13.5202 12.393 12.3927 13.5205 10.9994 13.5205C9.60601 13.5205 8.47852 12.393 8.47852 10.9997C8.47852 9.6063 9.60601 8.4788 10.9994 8.4788C12.3927 8.4788 13.5202 9.6063 13.5202 10.9997ZM9.85352 10.9997C9.85352 11.6322 10.3669 12.1455 10.9994 12.1455C11.6319 12.1455 12.1452 11.6322 12.1452 10.9997C12.1452 10.3672 11.6319 9.8538 10.9994 9.8538C10.3669 9.8538 9.85352 10.3672 9.85352 10.9997Z" fill="#2696FD"/>
+										</svg>
+
+									</div>
+									<div class="dropdown-menu dropdown-menu-end">
+										<a class="dropdown-item"  href="javascript:void(0);">Option 1</a>
+										<a class="dropdown-item"  href="javascript:void(0);">Option 2</a>
+										<a class="dropdown-item"  href="javascript:void(0);">Option 3</a>
+									</div>
+								</div>
+							</div>
+							<div class="card-body pt-0">
+								<div class="row">
+									<div class="col-xl-6">
+										<div class="post-img"> 
+											<img src="{% static 'w3crm/images/post/post12.jpg' %}" class="me-3">	
+										</div>
+										
+									</div>
+									<div class="col-xl-6">
+										<div class="post-img"> 
+											<img src="{% static 'w3crm/images/post/post13.jpg' %}" class="ms-3">	
+										</div>  
+									</div>
+								</div>
+								<div class="post-see d-flex align-items-center mt-3">
+									<ul>
+									<div class="avatar-list avatar-list-stacked">
+										<img src="{% static 'w3crm/images/contacts/pic1.jpg' %}" class="avatar rounded-circle" alt="">
+										<img src="{% static 'w3crm/images/contacts/pic777.jpg' %}" class="avatar rounded-circle" alt="">
+										<img src="{% static 'w3crm/images/contacts/pic666.jpg' %}" class="avatar rounded-circle" alt="">
+									</div>
+									</ul>
+									<h6 class="mb-0 ms-3">+3 people see this post</h6>
+								</div>
+								<div class="mt-3">
+									<span>Lorem Ipsum is simply dummy text of the printing and typesetting industry.
+									Lorem Ipsum has been the industry's standard dummy text ever since the 1500s,
+									when an unknown printer took a galley of type and scrambled it to make a type specimen book.</span>
+								</div>
+								<ul class="post-comment d-flex mt-3">
+									<li>
+									<label class="me-3"><a href="javascript:void(0)"><i class="fa-regular fa-heart me-2"></i>Like</a></label>
+									</li>
+									<li>
+									<label class="me-3"><a href="javascript:void(0)"><i class="fa-regular fa-message me-2"></i>Comment</a></label>
+									</li>
+									<li>
+									<label class="me-3"><a href="javascript:void(0)"><i class="fa-solid fa-share me-2"></i>Share</a></label>										  </li>
+								</ul>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+<!--**********************************
+	Content body end
+***********************************-->
+
+{% endblock %}
+
