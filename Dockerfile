@@ -15,9 +15,5 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy the current directory contents into the container at /app
 COPY . /app/
 
-
-# Copy entrypoint script into the image
-COPY entrypoint.sh /usr/src/app/entrypoint.sh
-
-# Run the entrypoint script
-ENTRYPOINT ["/usr/src/app/entrypoint.sh"]
+# Command to run the application
+CMD ["gunicorn", "--bind", "0.0.0.0:8000", "dashboard.wsgi:application"]
