@@ -7,7 +7,7 @@ dz_array = {
             "description":"Megacell Charger Command & Control",
             "og_title":"Megacell Charger Command & Control",
             "og_description":"Megacell Charger Command & Control Admin",
-            "og_image":"https://deepcyclepower.com/wp-content/uploads/2023/12/deepcyclepower_logo.jpg",
+            "og_image":f"static/{folder_name}/deepcyclepower_logo.jpg",
             "title":"Megacell Charger Command & Control",
         },
         "global":{
@@ -44,6 +44,9 @@ dz_array = {
 							f"{folder_name}/vendor/bootstrap-datetimepicker/css/bootstrap-datetimepicker.min.css",
 							f"{folder_name}/vendor/tagify/dist/tagify.css",
 
+						],
+						"settings": [
+							f"{folder_name}/vendor/jquery-smartwizard/dist/css/smart_wizard.min.css",
 						],
 						"employee": [
 							f"{folder_name}/vendor/swiper/css/swiper-bundle.min.css",
@@ -409,6 +412,10 @@ dz_array = {
 						],
 
 						"device_slots": [
+							f"{folder_name}/js/qz/qz-tray.js",
+							f"{folder_name}/js/qz/jsrsasign-all-min.js",
+							f"{folder_name}/js/qz/qprint.js",
+
 
 							f"{folder_name}/vendor/chart.js/Chart.bundle.min.js",
 
@@ -462,7 +469,20 @@ dz_array = {
 							f"{folder_name}/vendor/tagify/dist/tagify.js",
 							f"{folder_name}/js/devices-functions.js",
 						],
+						"settings": [
+							f"{folder_name}/vendor/jquery-steps/build/jquery.steps.min.js",
+							f"{folder_name}/vendor/jquery-validation/jquery.validate.min.js",
+							f"{folder_name}/js/plugins-init/jquery.validate-init.js",
+							f"{folder_name}/vendor/jquery-smartwizard/dist/js/jquery.smartWizard.js",
 
+							f"{folder_name}/js/qz/jsrsasign-all-min.js",
+							f"{folder_name}/js/qz/qz-tray.js",
+							f"{folder_name}/js/qz/qprint.js",
+
+
+
+
+						],
 
 						"reports": [
 							f"{folder_name}/vendor/datatables/js/jquery.dataTables.min.js",

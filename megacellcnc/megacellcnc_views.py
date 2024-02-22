@@ -1,16 +1,17 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.db.models import Prefetch
-from .models import Projects, Device, Slot, Cells, CellTestData
+from .models import Projects, Device, Slot, Cells, CellTestData, PrinterSettings
 from django.contrib import messages
 from django.http import JsonResponse, HttpResponseRedirect
 from django.views.decorators.http import require_POST
 from django.views.decorators.csrf import csrf_exempt
 from django.urls import reverse
-from .functions import scan_for_devices, add_new_cell
+from .functions import scan_for_devices, add_new_cell, draw_dual_label
 from datetime import timedelta
 import json
 from django.db import transaction
 from django.core.exceptions import ObjectDoesNotExist
+
 from django.utils import timezone
 from django.db.models import F
 from mccprolib.api import MegacellCharger
@@ -45,6 +46,21 @@ def index(request):
     }
 
     return render(request, 'megacellcnc/index.html', context)
+
+def settings(request):
+    projects = Projects.objects.all()
+
+    devices = Device.objects.all().order_by('id')
+    devices_count = Device.objects.all().count()
+    projects = Projects.objects.all()
+    context = {
+        "page_title": "Settings",
+        "devices": devices,
+        "devices_count": devices_count,
+        "projects": projects
+    }
+
+    return render(request, 'megacellcnc/settings-page.html', context)
 
 
 def new_project(request):
@@ -94,6 +110,8 @@ def devices(request):
             # Handle the case where the project with the given name does not exist
             print(f"Project with name '{project_id}' does not exist.")
             # You might want to create a new project here or handle this error appropriately
+
+        print(devices_details)
 
         for device in devices_details:
             print(device)
@@ -417,6 +435,143 @@ def save_device_settings(request):
         return JsonResponse({'message': f'Successfully saved device info.'})
 
 
+def save_printer_settings(request):
+    if request.method == "POST":
+        try:
+            data = json.loads(request.body)
+            printerName = data.get('printerName')
+            labelWidth = float(data.get('labelWidth'))
+            labelHeight = float(data.get('labelHeight'))
+            labelRotation = int(data.get('labelRotation'))
+            dualLabel = int(data.get('dualLabel'))
+            printerHost = data.get('printerHost')
+
+            printer_settings, created = PrinterSettings.objects.get_or_create(
+               id=1
+            )
+
+            # If the object was created, `created` will be True, and you can set additional attributes
+            if created:
+                printer_settings.PrinterName = printerName
+                printer_settings.PrinterHost = printerHost
+                printer_settings.IsDualLabel = dualLabel
+                printer_settings.LabelWidth = labelWidth
+                printer_settings.LabelHeight = labelHeight
+                printer_settings.LabelRotation = labelRotation
+                # set other fields as needed
+            else:
+                printer_settings.PrinterName = printerName
+                printer_settings.PrinterHost = printerHost
+                printer_settings.IsDualLabel = dualLabel
+                printer_settings.LabelWidth = labelWidth
+                printer_settings.LabelHeight = labelHeight
+                printer_settings.LabelRotation = labelRotation
+
+            printer_settings.save()  # Don't forget to save the object
+
+            print(printerName, labelWidth, labelHeight, labelRotation, dualLabel)
+
+
+        except json.JSONDecodeError:
+            return JsonResponse({'error': 'Invalid JSON'}, status=400)
+
+        # save_device_config.delay(device_id, data)
+        return JsonResponse({'message': f'Successfully saved device info.'})
+
+
+def get_printer_settings(request):
+
+    if request.method == "GET":
+        printer_data = {}
+
+        printer = get_object_or_404(PrinterSettings, id=1)
+
+        try:
+
+            if printer:
+                print("Printer exists")
+
+                printer_data = {
+                    'printerName': printer.PrinterName,
+                    'printerHost': printer.PrinterHost,
+                    'dualLabel': printer.IsDualLabel,
+                    'labelWidth': printer.LabelWidth,
+                    'labelHeight': printer.LabelHeight,
+                    'labelRotation': printer.LabelRotation
+                }
+
+
+            # data = json.loads(request.body)
+            # printerName = data.get('printerName')
+            # labelWidth = float(data.get('labelWidth'))
+            # labelHeight = float(data.get('labelHeight'))
+
+        except json.JSONDecodeError:
+            return JsonResponse({'error': 'Invalid JSON'}, status=400)
+
+        # save_device_config.delay(device_id, data)
+        return JsonResponse(printer_data, safe=False)
+
+
+def print_label(request):
+    if request.method == "POST":
+        try:
+            data = json.loads(request.body)
+            isDemo = int(data.get('isDemo'))
+            deviceId = data.get('deviceId')
+            slots = data.get('slots')
+
+            printer = get_object_or_404(PrinterSettings, id=1)
+
+            if printer:
+
+                if printer.IsDualLabel:
+
+                    if isDemo:
+                        label = draw_dual_label([])
+
+                        response_data = {
+                            "label": f"{label}"
+                            # Ensure the format matches the format used in saving the image
+                        }
+                        return JsonResponse(response_data)
+
+                    else:
+                        device = get_object_or_404(Device, id=deviceId)
+                        filtered_slots = device.slots.filter(slot_number__in=slots).order_by('slot_number')
+
+                        label_data = []
+
+                        for slot in filtered_slots:
+
+                            acell = slot.active_cell
+                            match = re.search(r'S0*(\d+)', acell.UUID)
+
+                            if match:
+                                # Extract the number part and convert it to an integer
+                                cserial = int(match.group(1))
+
+                            else:
+                                cserial = 0
+
+                            ldat = {"serial": cserial, "uuid": acell.UUID, "cap": acell.capacity, "esr": acell.esr,
+                                    "temp": acell.max_temp_discharging, "minV": acell.min_voltage,
+                                    "storeV": acell.store_voltage, "maxV": acell.max_voltage,
+                                    "ip": device.ip, "slot": slot.slot_number}
+
+                            label_data.append(ldat)
+
+                        label = draw_dual_label(label_data)
+
+                        response_data = {
+                            "label": f"{label}"
+                        }
+                        return JsonResponse(response_data)
+
+        except json.JSONDecodeError:
+            return JsonResponse({'error': 'Invalid JSON'}, status=400)
+
+
 def save_cell(request):
     if request.method == "POST":
         try:
@@ -483,7 +638,7 @@ def get_history(request):
                             'timestamp': test_data.timestamp,
                             'voltage': test_data.voltage,
                             'current': test_data.current,
-                            'capacity': test_data.capacity
+                            'temperature': test_data.temperature
                         }
                         for test_data in cell_test_data
                     ]
@@ -511,14 +666,14 @@ def get_history(request):
                 cleaned_df = resampled_df.dropna()
                 cleaned_df['voltage'] = cleaned_df['voltage'].round(2)
                 cleaned_df['current'] = cleaned_df['current'].round(2)
-                cleaned_df['capacity'] = cleaned_df['capacity'].astype(int)
+                cleaned_df['temperature'] = cleaned_df['temperature'].astype(int)
                 # Now, extract the resampled data back to lists
                 labels = cleaned_df.index.strftime('%Y-%m-%d %H:%M:%S').tolist()
                 volt_data = cleaned_df['voltage'].tolist()
                 current_data = cleaned_df['current'].tolist()
-                capacity_data = cleaned_df['capacity'].tolist()
+                temp_data = cleaned_df['temperature'].tolist()
 
-                response_data = {'labels': labels, 'volts': volt_data, 'current': current_data, 'cap': capacity_data}
+                response_data = {'labels': labels, 'volts': volt_data, 'current': current_data, 'temp': temp_data}
                 return JsonResponse(response_data)
 
             else:
@@ -603,9 +758,10 @@ def scan_devices(request):
     if request.method == "POST":
         ip_from = request.POST.get('ip_from')
         ip_to = request.POST.get('ip_to')
+        manual_ip = request.POST.get('device_manual_ip')
 
         # Use the IP range in your scanning function
-        devices_list = scan_for_devices(ip_from, ip_to)  # Modify this to match your function's implementation
+        devices_list = scan_for_devices(ip_from, ip_to, manual_ip)
 
         # Return the list of devices as JSON (or render a template with the context)
         return JsonResponse({'devices': devices_list})

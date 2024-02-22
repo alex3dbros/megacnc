@@ -180,6 +180,12 @@
                 <label for="ipTo" class="form-label">IP Range To</label>
                 <input type="text" class="form-control" id="ipTo" name="ip_to" placeholder="192.168.1.255" value="192.168.1.255">
             </div>
+
+            <div class="col-xl-6 mb-3">
+                <label for="deviceManualIp" class="form-label" >Manual Ip</label>
+                <input type="text" class="form-control" id="deviceManualIp"  name="device_manual_ip" placeholder="192.168.x.x">
+            </div>
+
             <button type="button" id="scanDevicesBtn" class="btn btn-primary">
                 <span>Scan for Devices</span>
                 <i id="spinner" class="fas fa-cog fa-spin" style="display: none;"></i> <!-- Spinner icon, initially hidden -->
@@ -202,6 +208,7 @@
         <form class="needs-validation" action="/devices/" method="post" id="add_device">
             {% csrf_token %}
             <div class="row">
+
                 <div class="col-xl-6 mb-3">
                     <label for="exampleFormControlInputfirst" class="form-label" >Device Prefix<span class="text-danger">*</span></label>
                     <input type="text" class="form-control" id="exampleFormControlInputfirst"  name="device_prefix" placeholder="Device Prefix" required>

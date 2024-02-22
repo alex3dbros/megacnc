@@ -1,0 +1,724 @@
+{% extends 'megacellcnc/elements/layouts/admin.html' %}
+{% load static %}
+        
+{% block additional_css %}
+
+<style>
+
+	.printer-list {
+    margin-top: 10px;
+}
+
+.printer-item {
+    margin-bottom: 10px; /* Adds space between each printer */
+}
+
+.printer-name {
+    margin-right: 10px; /* Adds space between the printer name and the button */
+}
+
+
+
+	.form-group {
+		padding-top:5px;
+    margin-bottom: 15px
+}
+
+
+
+.btn-toolbar {
+    margin-left: -5px
+}
+
+.btn-toolbar .btn, .btn-toolbar .btn-group, .btn-toolbar .input-group {
+    float: left
+}
+
+.btn-toolbar > .btn, .btn-toolbar > .btn-group, .btn-toolbar > .input-group {
+    margin-left: 5px
+}
+
+.btn-group, .btn-group-vertical {
+    position: relative;
+    display: inline-block;
+    vertical-align: middle
+}
+
+.btn-group-vertical > .btn, .btn-group > .btn {
+    position: relative;
+    float: left
+}
+
+.btn-group-vertical > .btn.active, .btn-group-vertical > .btn:active, .btn-group-vertical > .btn:focus, .btn-group-vertical > .btn:hover, .btn-group > .btn.active, .btn-group > .btn:active, .btn-group > .btn:focus, .btn-group > .btn:hover {
+    z-index: 2
+}
+
+.btn-group .btn + .btn, .btn-group .btn + .btn-group, .btn-group .btn-group + .btn, .btn-group .btn-group + .btn-group {
+    margin-left: -1px
+}
+
+
+
+	.btn-default {
+    color: #333;
+    background-color: #FFF;
+    border-color: #CCC;
+}
+
+
+
+.btn-success {
+    color: #FFF;
+    background-color: #33658A;
+    border-color: #2C5777;
+}
+
+.btn-warning {
+    color: #FFF;
+    background-color: #F6AE2D;
+    border-color: #F5A515;
+}
+
+.btn-danger {
+    color: #FFF;
+    background-color: #F26419;
+    border-color: #E5570D;
+}
+
+.btn-info {
+    color: #FFF;
+    background-color: #3680A8;
+    border-color: #307195;
+}
+
+.btn-default:hover {
+    background-color: #E6E6E6;
+    border-color: #B3B3B3;
+}
+
+
+.btn-success:hover {
+    background-color: #254A65;
+    border-color: #1E3C52;
+}
+
+.btn-warning:hover {
+    background-color: #E6970A;
+    border-color: #CE8709;
+}
+
+.btn-danger:hover {
+    background-color: #CC4E0C;
+    border-color: #B4450A;
+}
+
+.btn-info:hover {
+    background-color: #2A6382;
+    border-color: #24546E;
+}
+
+.btn-default:focus {
+    background-color: #F2F2F2;
+    border-color: #BFBFBF;
+}
+
+.btn-success:focus {
+    background-color: #2C5777;
+    border-color: #254A65;
+}
+
+.btn-warning:focus {
+    background-color: #F5A515;
+    border-color: #E6970A;
+}
+
+.btn-danger:focus {
+    background-color: #E5570D;
+    border-color: #CC4E0C;
+}
+
+.btn-info:focus {
+    background-color: #307195;
+    border-color: #2A6382;
+}
+
+.btn-default:active {
+    background-color: #E6E6E6;
+    border-color: #B3B3B3;
+}
+
+
+.btn-success:active {
+    background-color: #254A65;
+    border-color: #1E3C52;
+}
+
+.btn-warning:active {
+    background-color: #E6970A;
+    border-color: #CE8709;
+}
+
+.btn-danger:active {
+    background-color: #CC4E0C;
+    border-color: #B4450A;
+}
+
+.btn-info:active {
+    background-color: #2A6382;
+    border-color: #24546E;
+}
+
+.btn-default.disabled {
+    background-color: #FFFFFF;
+    border-color: #CFCFCF;
+}
+
+
+.btn-success.disabled {
+    background-color: #34688E;
+    border-color: #2D5A7B;
+}
+
+.btn-warning.disabled {
+    background-color: #F6B032;
+    border-color: #F5A619;
+}
+
+.btn-danger.disabled {
+    background-color: #F2671E;
+    border-color: #E9590D;
+}
+
+.btn-info.disabled {
+    background-color: #3783AC;
+    border-color: #317499;
+}
+
+a {
+    color: #3680A8;
+}
+
+a:hover,
+a:focus {
+    color: #24546E;
+}
+
+.text-primary {
+    color: #44AB53;
+}
+
+.text-danger {
+    color: #F26419;
+}
+
+.form-control .has-error {
+    border-color: #EED3D7;
+}
+
+.form-control .has-success {
+    border-color: #D6E9C6;
+}
+
+.navbar-default {
+    background-color: #44AB53;
+}
+
+.navbar-default .navbar-nav > li > a,
+.navbar-default .navbar-nav > li > a:hover,
+.navbar-default .navbar-header .navbar-brand {
+    color: #FFF;
+}
+
+@media (max-width: 768px) {
+    .navbar-default .navbar-nav .open .dropdown-menu > li > a {
+        color: #FFF;
+    }
+}
+
+.navbar-default .navbar-nav > li > a:hover {
+    background-color: #3D994A;
+}
+
+.navbar-default .navbar-toggle > .icon-bar {
+    background-color: #FFF;
+}
+
+.navbar-default .navbar-toggle:focus > .icon-bar {
+    background-color: #555;
+    color: #24546E;
+}
+
+.navbar-default .navbar-toggle:hover > .icon-bar {
+    background-color: #FFF;
+}
+
+.navbar-default .navbar-toggle:hover {
+    background-color: #3D994A;
+}
+
+.panel.panel-primary {
+	padding-top:30px;
+}
+
+.panel.panel-primary .panel-heading {
+
+}
+
+.alert.alert-warning a {
+    color: #68522C;
+}
+
+.alert.alert-danger a {
+    color: #B4450A;
+}
+
+html {
+    position: relative;
+    min-height: 100%;
+}
+
+body {
+    padding-bottom: 80px;
+}
+
+table {
+    font-size: inherit;
+}
+
+.versiontable > tbody > tr > th {
+    text-align: right;
+}
+
+.versiontable > thead > tr > th {
+    vertical-align: top;
+}
+
+.homesection + .homesection {
+    border-top: solid 1px #EEE;
+}
+
+.homesection {
+    text-align: center;
+    margin: 40px 0;
+    padding: 40px 0;
+}
+
+img.jumbo {
+    margin-top: -40px;
+    margin-left: -60px;
+}
+
+h1.jumbo {
+    margin-top: 0;
+}
+
+footer {
+    text-align: center;
+    height: 80px;
+    position: absolute;
+    bottom: 0;
+    width: 100%;
+}
+
+@media (min-width: 768px) {
+    h1.jumbo,
+    h3.jumbo {
+        text-align: right;
+    }
+}
+
+@media (max-width: 767px) {
+    h1.jumbo,
+    h3.jumbo {
+        text-align: center;
+    }
+}
+
+@media (min-width: 1200px) {
+    h1.jumbo {
+        margin-top: 40px;
+    }
+}
+
+@media (min-width: 768px) {
+    h3.jumbo {
+        margin-top: -6px;
+    }
+}
+
+.vertical-align {
+    display: flex;
+    align-items: center;
+}
+
+.hide_ {
+    display: none;
+}
+
+.dropdown-submenu {
+    position: relative;
+}
+
+.dropdown-submenu > .dropdown-menu {
+    top: 0;
+    left: 100%;
+    margin-top: -6px;
+    margin-left: 10px;
+    -webkit-border-radius: 0 6px 6px 6px;
+    -moz-border-radius: 0 6px 6px 6px;
+    border-radius: 0 6px 6px 6px;
+}
+
+button > .fa-caret-down {
+    height: 100%;
+    display: inline;
+    margin-left: -.75em;
+    margin-right: -1em;
+}
+
+@media (min-width: 768px) {
+    .dropdown-submenu:hover > .dropdown-menu {
+        display: block;
+    }
+
+    .dropdown-submenu > .dropdown-menu {
+        margin-left: -1px;
+    }
+}
+
+.dropdown-submenu > a:after {
+    display: block;
+    content: " ";
+    float: right;
+    width: 0;
+    height: 0;
+    border-color: transparent;
+    border-style: solid;
+    border-width: 5px 0 5px 5px;
+    border-left-color: #CCCCCC;
+    margin-top: 5px;
+    margin-right: -10px;
+}
+
+.dropdown-submenu:hover > a:after {
+    border-left-color: #FFFFFF;
+}
+
+.dropdown-submenu.pull-left {
+    float: none;
+}
+
+.dropdown-submenu.pull-left > .dropdown-menu {
+    left: -100%;
+    margin-left: 10px;
+    -webkit-border-radius: 6px 0 6px 6px;
+    -moz-border-radius: 6px 0 6px 6px;
+    border-radius: 6px 0 6px 6px;
+}
+
+.tip {
+    border-bottom: 1px dashed;
+}
+
+summary {
+    cursor: pointer;
+}
+
+code {
+    color: #31708F;
+    background-color: #D9EDF7;
+}
+
+input[type='radio'] {
+    margin-left: .5em;
+}
+
+#printersLog {
+    max-height: 20em;
+    overflow: auto;
+}
+
+#printersLog .INFO {
+    color: #303030;
+}
+
+#printersLog .WARN {
+    color: #9F7435;
+}
+
+#printersLog .FATAL {
+    color: #9F3535;
+}
+
+
+
+</style>
+
+{% endblock %}
+        
+{% block content %}
+<!--**********************************
+	Content body start
+***********************************-->
+<div class="content-body">
+	<div class="page-titles">
+			<ol class="breadcrumb">
+				<li class="breadcrumb-item"><a href="javascript:void(0)">Form</a></li>
+				<li class="breadcrumb-item active"><a href="javascript:void(0)">{{page_title}}</a></li>
+			</ol>
+		</div>
+	<div class="container-fluid">
+		
+		<!-- row -->
+		<div class="row">
+			<div class="col-xl-12 col-xxl-12">
+				<div class="card">
+					<div class="card-header">
+						<h4 class="card-title">Printer Settings Wizard</h4>
+						<div class="row">
+							<h1 id="title" class="page-header">
+								<a class="pull-right btn btn-primary btn" target="_blank" href="https://qz.io/download">
+									<i class="fa fa-download"></i> Download QZ Tray
+								</a>
+							</h1>
+						</div>
+
+
+					</div>
+					<div class="card-body">
+						<div id="smartwizard" class="form-wizard order-create">
+							<ul class="nav nav-wizard">
+								<li><a class="nav-link" href="#printer_wizard">
+									<span>1</span> 
+								</a></li>
+								<li><a class="nav-link" href="#label_settings">
+									<span>2</span>
+								</a></li>
+							</ul>
+
+							<div id="alertContainer"></div>
+							<div class="tab-content">
+
+
+								<!--Printer Wizard-->
+								<div id="printer_wizard" class="tab-pane" role="tabpanel">
+
+
+									<div class="row">
+
+										<div id="qz-connection" class="panel panel-default">
+											<div class="panel-heading">
+												<h4 class="panel-title">
+													Connection: <span id="qz-status" class="text-muted" style="font-weight: bold;">Unknown</span>
+												</h4>
+											</div>
+
+											<div class="panel-body">
+
+												<div class="btn-toolbar">
+													<div class="btn-group" role="group">
+														<button type="button" class="btn btn-success" onclick="startConnection();">Connect</button>
+														<button id="toggleConnectionGroup" type="button" class="btn btn-success"
+																onclick="checkGroupActive('toggleConnectionGroup', 'connectionGroup'); $('#connectionHost').select();"
+																data-toggle="tooltip" data-placement="bottom" title="Connect to QZ Tray running on a print server"><span class="fa fa-caret-down"></span>&nbsp;</button>
+														<button type="button" class="btn btn-warning" onclick="endConnection();">Disconnect</button>
+													</div>
+													<button type="button" class="btn btn-info" onclick="listNetworkDevices();">Network Info</button>
+												</div>
+
+
+
+												<div class="mb-3 col-md-2">
+
+													<div class="form-group" id="connectionGroup">
+														<hr>
+														<label for="connectionHost">Connect to host:</label>
+														<input type="text" id="connectionHost" value="localhost" class="form-control" />
+													</div>
+
+												</div>
+											</div>
+
+
+										</div>
+
+
+										<div class="panel panel-primary">
+												<div class="form-group">
+													<label>Current printer:</label>
+													<div id="configPrinter">NONE</div>
+												</div>
+
+												<div class="panel-body">
+
+													<div class="mb-3 col-md-2">
+														<label for="printerSearch">Search:</label>
+														<input type="text" id="printerSearch" value="dymo" class="form-control mb-2" />
+													</div>
+													<div class="form-group">
+														<div class="btn-group" role="group">
+															<button type="button" class="btn btn-default btn-sm" onclick="findPrinter($('#printerSearch').val(), true);">Find Printer</button>
+															<button type="button" class="btn btn-default btn-sm" onclick="findDefaultPrinter(true);">Find Default Printer</button>
+															<button type="button" class="btn btn-default btn-sm" onclick="findPrinters();">Find All Printers</button>
+														</div>
+														<div class="btn-group" role="group">
+															<button type="button" class="btn btn-default btn-sm" onclick="detailPrinters();">Get Printer Details</button>
+														</div>
+													</div>
+													<hr />
+
+												</div>
+											</div>
+
+
+									</div>
+								</div>
+
+
+								<!--Label Settings-->
+								<div id="label_settings" class="tab-pane" role="tabpanel">
+									<div class="row align-items-center">
+
+										<div class="panel-heading">
+											<h4 class="panel-title">
+												Label Settings
+											</h4>
+
+											<div class="col-auto">
+												<input type="checkbox" class="form-check-input" id="doubleLabelCheckbox" required>
+												<label class="form-check-label" >Dual Label</label>
+											</div>
+
+
+										</div>
+
+
+										<div class="col-auto">
+											<label for="pxlWidth">Width (mm)</label>
+											<input type="number" step="any" id="pxlWidth" class="form-control pull-right" />
+										</div>
+
+										<div class="col-auto">
+											<label for="pxlHeight">Height (mm)</label>
+											<input type="number" step="any" id="pxlHeight" class="form-control pull-right" />
+										</div>
+
+										<div class="col-auto">
+											<label for="pxlRotation">Rotation</label>
+											<input type="number" step="any" id="pxlRotation" class="form-control pull-right" />
+										</div>
+
+									</div>
+
+
+									<div class="row" style="padding-top: 20px;">
+										<div class="col-auto">
+												<button type="button" class="btn btn-success" onclick="printImage();">Test Print</button>
+										</div>
+
+										<div class="col-auto">
+												<button type="button" class="btn btn-primary" onclick="savePrinterInDb();">Save</button>
+										</div>
+
+									</div>
+
+
+									<div class="row">
+
+									</div>
+
+
+								</div>
+
+
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+
+<!-- Modal for network-->
+<div class="modal fade" id="infoModal">
+	<div class="modal-dialog modal-dialog-centered" role="document">
+		<div class="modal-content">
+			<div class="modal-header">
+				<h5 class="modal-title">Info</h5>
+				<button type="button" class="btn-close" data-bs-dismiss="modal">
+				</button>
+			</div>
+			<div class="modal-body">
+
+			</div>
+			<div class="modal-footer">
+				<button type="button" class="btn btn-danger light" data-bs-dismiss="modal">Close</button>
+			</div>
+		</div>
+	</div>
+</div>
+
+
+<!--**********************************
+	Content body end
+***********************************-->
+{% endblock %}
+
+{% block additional_js %}
+	<script>
+		$(document).ready(function(){
+			// SmartWizard initialize
+			$('#smartwizard').smartWizard();
+		});
+
+	</script>
+
+<script>var imagePath = '{% static "image_sample.png" %}';</script>
+
+<script>
+    jQuery(document).ready(function(){
+
+        toastr.options = {
+            timeOut: 5000,
+            closeButton: !0,
+            debug: !1,
+            newestOnTop: !0,
+            progressBar: !0,
+            positionClass: "toast-top-right",
+            preventDuplicates: !0,
+            onclick: null,
+            showDuration: "300",
+            hideDuration: "1000",
+            extendedTimeOut: "1000",
+            showEasing: "swing",
+            hideEasing: "linear",
+            showMethod: "fadeIn",
+            hideMethod: "fadeOut",
+            tapToDismiss: !1
+        };
+
+
+
+        {% if messages %}
+        {% for message in messages %}
+        // Check the message level and call the appropriate Toastr function
+        {% if message.level_tag == 'success' %}
+        toastr.success("{{ message }}", "Success");
+        {% elif message.level_tag == 'error' %}
+        toastr.error("{{ message }}", "Error");
+        {% elif message.level_tag == 'info' %}
+        toastr.info("{{ message }}", "Info");
+        {% elif message.level_tag == 'warning' %}
+        toastr.warning("{{ message }}", "Warning");
+        {% else %}
+        toastr.info("{{ message }}", "Notice");
+        {% endif %}
+        {% endfor %}
+        {% endif %}
+    });
+</script>
+
+
+
+{% endblock %}

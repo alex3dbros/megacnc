@@ -15,6 +15,7 @@ document.getElementById('scanDevicesBtn').addEventListener('click', function() {
     const spinner = document.getElementById('spinner');
     const ipFromInput = document.getElementById('ipFrom');
     const ipToInput = document.getElementById('ipTo');
+    const manualIp = document.getElementById('device_manual_ip');
     let isValid = true;
 
 

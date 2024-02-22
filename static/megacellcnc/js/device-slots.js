@@ -157,27 +157,63 @@ function sendAction(action) {
         return;
     }
 
-    // Setup the AJAX request
-    fetch(`/slot/action/`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': getCookie('csrftoken')
-        },
-        body: JSON.stringify({ action, slots_number, deviceId })
-    })
-        .then(response => response.json())
-        .then(data => {
 
-            toastr.success(data.message, "Success");
+    if (action === "print") {
+
+        let doubleLabel = parseInt(includedValue($("#doubleLabel")));
+
+        if (doubleLabel === 1) {
+            let batch_size = 2;
+            console.log("this is double label");
+
+            if (slots_number.length > 1) {
+                for (let i = 0; i <= slots_number.length - batch_size; i += batch_size) {
+                    let batch = slots_number.slice(i, i + batch_size);
+                    console.log("Batch: ", batch);
+
+                    if (batch.length === 2) {
+                        printLabels(batch, deviceId);
+                    }
+                }
+            }
+
+        } else {
+            printLabels(slots_number, deviceId);
+        }
 
 
+    }
+
+    else {
+
+        // Setup the AJAX request
+        fetch(`/slot/action/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({ action, slots_number, deviceId })
         })
-        .catch(error => console.error('Error:', error));
+            .then(response => response.json())
+            .then(data => {
+
+                toastr.success(data.message, "Success");
+
+
+            })
+            .catch(error => console.error('Error:', error));
+
+    }
+
+
+
+
+
 }
 
 // Initialize the listeners for your action buttons
-addActionListeners(['charge', 'discharge', 'stop', 'macro','stop_macro', 'store', 'esr', 'dispose']);
+addActionListeners(['charge', 'discharge', 'stop', 'macro','stop_macro', 'store', 'esr', 'dispose', 'print']);
 
 
 
@@ -304,8 +340,8 @@ var slotChart = function(deviceId, slot) {
                         },
 
                         {
-                            label: "Cap",
-                            data: data.cap,
+                            label: "Temp",
+                            data: data.temp,
                             borderColor: lineChart_3gradientStroke3,
                             borderWidth: "2",
                             backgroundColor: 'transparent',
@@ -469,8 +505,8 @@ var realtimeChart = function(deviceId, slot) {
                         },
 
                         {
-                            label: "Cap",
-                            data: data.cap,
+                            label: "Temp",
+                            data: data.temp,
                             borderColor: lineChart_3gradientStroke3,
                             borderWidth: "2",
                             backgroundColor: 'transparent',
@@ -568,7 +604,7 @@ function updateRealtimeChart(chart, deviceId, slot) {
         chart.data.labels = data.labels;
         chart.data.datasets[0].data = data.volts; // Update voltage data
         chart.data.datasets[1].data = data.current; // Update current data
-        chart.data.datasets[2].data = data.cap; // Update capacity data
+        chart.data.datasets[2].data = data.temp; // Update capacity data
 
         chart.update();
     });

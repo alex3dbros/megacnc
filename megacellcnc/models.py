@@ -15,6 +15,17 @@ class Projects(models.Model):
         return self.Name
 
 
+class PrinterSettings(models.Model):
+    PrinterName = models.CharField(default="", max_length=150)
+    PrinterHost = models.CharField(default="",max_length=150)
+    IsDualLabel = models.IntegerField(default=0)
+    LabelWidth = models.FloatField(default=0)
+    LabelHeight = models.FloatField(default=0)
+    LabelRotation = models.IntegerField(default=0)
+
+    def __str__(self):
+        return self.PrinterName
+
 class Cells(models.Model):
     project = models.ForeignKey(Projects, on_delete=models.CASCADE)
     UUID = models.CharField(max_length=150)

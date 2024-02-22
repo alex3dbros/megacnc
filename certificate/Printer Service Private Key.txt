@@ -1,0 +1,6 @@
+How to use
+
+1. Open Qz from the system tray, right click and go to advanced / Site manager
+
+2. Click the blue + button / Browse and select this private key to allow the Mega CNC to
+print without asking for permision every time

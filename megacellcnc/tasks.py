@@ -152,8 +152,6 @@ def check_device_status(device_id):
 
             return True
 
-
-
         elif tester.device_type and 'McC' in tester.device_type:
             device.status = "online"
             device.type = "MCC"

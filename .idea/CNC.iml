@@ -5,7 +5,7 @@
       <excludeFolder url="file://$MODULE_DIR$/env" />
       <excludeFolder url="file://$MODULE_DIR$/env2" />
     </content>
-    <orderEntry type="jdk" jdkName="Python 3.11 (megacell-cnc)" jdkType="Python SDK" />
+    <orderEntry type="jdk" jdkName="Python 3.11 (megacnc)" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />
   </component>
 </module>
