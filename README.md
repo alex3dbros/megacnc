@@ -66,3 +66,9 @@ sudo git pull
 sudo docker-compose down
 sudo docker-compose up --build
 ```
+
+## It's a good idea to run the migration commands in case there are new changes in Db
+```
+sudo docker exec megacnc_web_1 python manage.py makemigrations
+sudo docker exec megacnc_web_1 python manage.py migrate
+```
