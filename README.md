@@ -1,4 +1,4 @@
-# megacnc
+# Mega CNC
 Software for controlling megacell charger lithium cell testing devices
 
 # Deploying the App on Ubuntu with Docker Compose
@@ -53,3 +53,16 @@ sudo docker-compose up
 
 Your app should now be accessible on the VM. Open a web browser and navigate to http://<VM_IP_ADDRESS>:8000, replacing <VM_IP_ADDRESS> with your VM's actual IP address (e.g., http://192.168.1.127:8000).
 
+
+
+
+# Update procedure
+
+## To facilitate the update, you can run the following commands
+
+```
+cd megacnc
+sudo git pull
+sudo docker-compose down
+sudo docker-compose up --build
+```
