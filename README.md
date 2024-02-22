@@ -62,7 +62,7 @@ Your app should now be accessible on the VM. Open a web browser and navigate to 
 
 ```
 cd megacnc
-sudo git pull
+git pull
 sudo docker-compose down
 sudo docker-compose up --build
 ```
