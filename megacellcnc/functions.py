@@ -29,18 +29,12 @@ def extract_segment(host):
 
 
 def portscan(port, host, res_dict):
-
-    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    s.settimeout(0.5)#
-
-    try:
-        con = s.connect((host, port))
-        hostname = socket.gethostbyaddr(host)
-        # print("Port %s, is open for: %s, hostname: %s" % (port, host, hostname[0]))
-        res_dict[host] = hostname[0]
-        con.close()
-    except:
-        pass
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.settimeout(1)  # Timeout for the socket operation
+    result = sock.connect_ex((host, port))
+    if result == 0:
+        res_dict[host] = result
+    sock.close()
 
 
 def scan_ip_range(startIP, endIP):
@@ -79,37 +73,37 @@ def scan_for_devices(from_ip, to_ip, manual_ip):
     for ip, hostname in devices.items():
         print(ip, hostname)
 
-        if "ESP-" in hostname:
-            device_name = extract_segment(hostname)
-            print(device_name)
-            tester_info = {}
-            tester_type = ""
-            mac_address = ""
-            slot_count = 0
-            firmware_v = ""
-            try:
-                tester = MegacellCharger(ip)
-                tester_info = tester.get_device_type()
-                print(tester_info)
-            except:
-                continue
+        tester_info = {}
+        tester_type = ""
+        mac_address = ""
+        slot_count = 0
+        firmware_v = ""
+        try:
+            tester = MegacellCharger(ip)
+            tester_info = tester.get_device_type()
+            print(tester_info)
+        except:
+            continue
 
-            if 'ChT' in tester_info:
-                tester_type = tester_info["ChT"]
-                mac_address = tester_info["McA"]
-                slot_count = tester_info["CeC"]
-                firmware_v = tester_info["FwV"]
-            elif 'McC' in tester_info:
-                tester_type = "MCC"
-                mac_address = tester_info["McA"]
-                slot_count = tester_info["ByC"]
-                firmware_v = tester_info["McC"]
-            else:
-                tester_type = "Unknown"
+        if 'ChT' in tester_info:
+            tester_type = tester_info["ChT"]
+            mac_address = tester_info["McA"]
+            slot_count = tester_info["CeC"]
+            firmware_v = tester_info["FwV"]
+        elif 'McC' in tester_info:
+            tester_type = "MCC"
+            mac_address = tester_info["McA"]
+            slot_count = tester_info["ByC"]
+            firmware_v = tester_info["McC"]
+        else:
+            tester_type = "Unknown"
 
-            devices_list.append({'id': dev_id, 'name': device_name, 'ip': ip, 'type': tester_type, 'mac': mac_address, 'slot_count': slot_count,
-                                 'firmware_version': firmware_v})
-            dev_id += 1
+        last_three_parts = mac_address.split(":")[-3:]
+        device_name = tester_type + "-" + "".join(last_three_parts)
+
+        devices_list.append({'id': dev_id, 'name': device_name, 'ip': ip, 'type': tester_type, 'mac': mac_address, 'slot_count': slot_count,
+                             'firmware_version': firmware_v})
+        dev_id += 1
 
     if manual_ip != "" and is_valid_ip(manual_ip):
         tester_info = {}
@@ -141,7 +135,11 @@ def scan_for_devices(from_ip, to_ip, manual_ip):
             if any(d['ip'] == manual_ip for d in devices_list):
                 pass
             else:
-                devices_list.append({'id': dev_id, 'name': mac_address, 'ip': manual_ip, 'type': tester_type, 'mac': mac_address, 'slot_count': slot_count,
+
+                last_three_parts = mac_address.split(":")[-3:]
+                device_name = tester_type + "-" + "".join(last_three_parts)
+
+                devices_list.append({'id': dev_id, 'name': device_name, 'ip': manual_ip, 'type': tester_type, 'mac': mac_address, 'slot_count': slot_count,
                                      'firmware_version': firmware_v})
 
         except:

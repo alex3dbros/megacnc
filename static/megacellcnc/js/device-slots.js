@@ -533,7 +533,7 @@ var realtimeChart = function(deviceId, slot) {
                                 type: 'linear',
                                 position: 'left',
                                 ticks: {
-                                    beginAtZero: true, // Starts the scale at 0
+                                    beginAtZero: false, // Starts the scale at 0
                                     fontColor: '#ffffff',
                                     // No need to set max and min; Chart.js will adjust automatically
                                 },
