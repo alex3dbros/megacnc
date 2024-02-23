@@ -72,3 +72,12 @@ sudo docker-compose up --build
 sudo docker exec megacnc_web_1 python manage.py makemigrations
 sudo docker exec megacnc_web_1 python manage.py migrate
 ```
+
+
+# Support and donations are welcome
+
+### Stripe:
+https://buy.stripe.com/8wMdUmaZ00mc67m4gk
+
+### Paypal:
+https://www.paypal.com/donate/?hosted_button_id=B8Z5L9NE86KLC
