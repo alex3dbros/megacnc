@@ -4,7 +4,7 @@ import socket
 import netaddr
 import re
 from mccprolib.api import MegacellCharger
-from .models import Projects, Cells
+from .models import Projects, Cells, Device
 import re
 from datetime import datetime
 from django.shortcuts import get_object_or_404
@@ -245,6 +245,7 @@ def draw_dual_label(label_data):
     label = Image.open(dymo_label_location)
     header_font = ImageFont.truetype(header_font_location, 62)
     left_values_font = ImageFont.truetype(left_values_font_loc, 42)
+    brand_font2 = ImageFont.truetype(left_values_font_loc, 32)
 
     label_editable = ImageDraw.Draw(label)
 
@@ -253,29 +254,8 @@ def draw_dual_label(label_data):
     for l in label_data:
 
         capacity, unit = format_cap(l["cap"])
-        serial = str(l["serial"]).zfill(6)
-        header_text = "%s-C:%s" % (serial, capacity)
-        label_editable.text((40, offset + -20), header_text, (0, 0, 0), font=header_font)
 
-        first_row = "I:%s T:%s" % (l["esr"], l["temp"])
-        label_editable.text((40, offset + 50), first_row, (0, 0, 0), font=left_values_font)
-
-        second_row = "%s/%s/%s" % (l["minV"], l["storeV"], l["maxV"])
-        label_editable.text((40, offset + 100), second_row, (0, 0, 0), font=left_values_font)
-
-        last_ip_num = l["ip"].split(".")[-1]
-        third_row = "Mc: %s-%s" % (last_ip_num, l["slot"])
-        label_editable.text((40, offset + 150), third_row, (0, 0, 0), font=left_values_font)
-
-        # Adding the unit
-        text_image = Image.new('RGBA', (100, 100), (255, 255, 255, 0))  # Adjust size as needed
-        draw = ImageDraw.Draw(text_image)
-
-        draw.text((0, 0), unit, (0, 0, 0), font=left_values_font)
-        rotated_text_image = text_image.rotate(-90, expand=1, fillcolor=(255, 255, 255, 0))
-
-        label.paste(rotated_text_image, (250, offset + 80), rotated_text_image)
-
+        # QR Code Block ---
         qr = qrcode.QRCode(
             version=1,
             box_size=10,
@@ -287,9 +267,37 @@ def draw_dual_label(label_data):
         qr_img = qr_img.crop((0, 0, 350, 350))
         qr_img = qr_img.resize((170, 170))
 
-        label.paste(qr_img, (340, offset + 50))
+        label.paste(qr_img, (340, offset + 30))
+        # QR Code Bloc End ---
 
-        offset += 240
+        serial = str(l["serial"]).zfill(6)
+        header_text = "%s-C:%s" % (serial, capacity)
+        label_editable.text((40, offset + -20), header_text, (0, 0, 0), font=header_font)
+
+        first_row = "I:%s T:%s" % (l["esr"], l["temp"])
+        label_editable.text((40, offset + 40), first_row, (0, 0, 0), font=left_values_font)
+
+        second_row = "%s/%s/%s" % (l["minV"], l["storeV"], l["maxV"])
+        label_editable.text((40, offset + 80), second_row, (0, 0, 0), font=left_values_font)
+
+        last_ip_num = l["ip"].split(".")[-1]
+        third_row = "Mc: %s-%s" % (last_ip_num, l["slot"])
+        label_editable.text((40, offset + 130), third_row, (0, 0, 0), font=left_values_font)
+
+        # Adding the unit
+        text_image = Image.new('RGBA', (100, 100), (255, 255, 255, 0))  # Adjust size as needed
+        draw = ImageDraw.Draw(text_image)
+
+        draw.text((0, 0), unit, (0, 0, 0), font=left_values_font)
+        rotated_text_image = text_image.rotate(-90, expand=1, fillcolor=(255, 255, 255, 0))
+
+        label.paste(rotated_text_image, (250, offset + 80), rotated_text_image)
+
+        deep_row = "deepcyclepower.com"
+        label_editable.text((160, offset + 170), deep_row, (0, 0, 0), font=brand_font2)
+
+
+        offset += 280
 
     label = label.rotate(90)
 
@@ -304,4 +312,218 @@ def draw_dual_label(label_data):
 
     return img_str
 
+
+def draw_square_label(label_data, custom_field1):
+
+    if len(label_data) == 0:
+        label_data = [{"serial": 1, "uuid": "D20240219-S000001", "cap": 3245, "esr": 0.1, "temp": 25, "minV": 2.8, "storeV": 3.7, "maxV": 4.24,
+                       "ip": "192.168.1.104", "slot": 1, "date": "2024-02-23"}]
+
+    templates_folder = os.path.join(main_settings.BASE_DIR, 'static', 'labeltemplates')
+    dymo_label_location = os.path.join(templates_folder, 'dymo_blank_13x25.jpg')
+    preview_location = os.path.join(templates_folder, 'preview_square.jpg')
+    header_font_location = os.path.join(templates_folder, 'fonts', 'OpenSans-Bold.ttf')
+    left_values_font_loc = os.path.join(templates_folder, 'fonts', 'OpenSans-Regular.ttf')
+
+    label = Image.open(dymo_label_location)
+    header_font = ImageFont.truetype(header_font_location, 65)
+    left_values_font = ImageFont.truetype(left_values_font_loc, 50)
+    brand_font = ImageFont.truetype(left_values_font_loc, 42)
+    brand_font2 = ImageFont.truetype(left_values_font_loc, 32)
+
+    label_editable = ImageDraw.Draw(label)
+
+    offset = 0
+    l = label_data[0]
+
+    capacity, unit = format_cap(l["cap"])
+
+    # QR Code Block ---------
+    qr = qrcode.QRCode(
+        version=1,
+        box_size=10,
+        border=5)
+
+    qr.add_data("%s-C%s-%s" % (l["uuid"], capacity, unit))
+    qr.make(fit=True)
+    qr_img = qr.make_image(fill='black', back_color='white')
+    qr_img = qr_img.crop((0, 0, 350, 350))
+    qr_img = qr_img.resize((250, 250))
+
+    label.paste(qr_img, (-30, 200))
+    # QR Code Block End ---------
+
+    # Cell Data Block --------
+    serial = str(l["serial"]).zfill(6)
+    header_text = "%s-C:%s" % (serial, capacity)
+    label_editable.text((20, -20), header_text, (0, 0, 0), font=header_font)
+
+    first_row = "I:%s T:%s" % (l["esr"], l["temp"])
+    label_editable.text((5, 65), first_row, (0, 0, 0), font=left_values_font)
+
+    second_row = "%s/%s/%s" % (l["minV"], l["storeV"], l["maxV"])
+    label_editable.text((5, 115), second_row, (0, 0, 0), font=left_values_font)
+
+    last_ip_num = l["ip"].split(".")[-1]
+    third_row = "Mc: %s-%s" % (last_ip_num, l["slot"])
+    label_editable.text((5, 165), third_row, (0, 0, 0), font=left_values_font)
+    # Cell Data Block End --------
+
+    # Branding
+    text_image = Image.new('RGBA', (350, 50), (255, 255, 255, 0))  # Adjust size as needed
+    draw = ImageDraw.Draw(text_image)
+
+    deep_row = "deepcyclepower.com"
+    draw.text((0, 0), deep_row, (0, 0, 0), font=brand_font2)
+    rotated_text_image = text_image.rotate(-90, expand=1, fillcolor=(255, 255, 255, 0))
+    label.paste(rotated_text_image, (450, 120), rotated_text_image)
+
+
+    # Date
+    text_image2 = Image.new('RGBA', (350, 90), (255, 255, 255, 0))  # Adjust size as needed
+    draw2 = ImageDraw.Draw(text_image2)
+    draw2.text((0, 0), l["date"], (0, 0, 0), font=left_values_font)
+    rotated_text_image = text_image2.rotate(-90, expand=1, fillcolor=(255, 255, 255, 0))
+    label.paste(rotated_text_image, (290, 120), rotated_text_image)
+
+    label_editable.text((20, 425), custom_field1, (0, 0, 0), font=brand_font)
+
+    # Adding the unit
+    text_image = Image.new('RGBA', (120, 100), (255, 255, 255, 0))  # Adjust size as needed
+    draw = ImageDraw.Draw(text_image)
+
+    draw.text((0, 0), unit, (0, 0, 0), font=brand_font)
+
+    label.paste(text_image, (370, 50), text_image)
+
+
+    buffered = BytesIO()
+    label.save(buffered, format="JPEG")
+    img_str = base64.b64encode(buffered.getvalue()).decode()
+
+    buffered.seek(0)
+
+    with open(preview_location, 'wb') as f:
+        f.write(buffered.getvalue())
+
+    return img_str
+
+
+def draw_landscape_label(label_data, custom_field1):
+
+    if len(label_data) == 0:
+        label_data = [
+            {"serial": 1, "uuid": "D20240223-S000001", "cap": 3245, "esr": 0.1, "temp": 25, "minV": 2.8, "storeV": 3.7,
+             "maxV": 4.24,
+             "ip": "192.168.1.104", "slot": 1, "date": "2024-02-23"}]
+
+    templates_folder = os.path.join(main_settings.BASE_DIR, 'static', 'labeltemplates')
+    dymo_label_location = os.path.join(templates_folder, 'phomemo_blank_30x20.jpg')
+    preview_location = os.path.join(templates_folder, 'preview_lndscp.jpg')
+    header_font_location = os.path.join(templates_folder, 'fonts', 'OpenSans-Bold.ttf')
+    left_values_font_loc = os.path.join(templates_folder, 'fonts', 'OpenSans-Regular.ttf')
+
+    label = Image.open(dymo_label_location)
+    header_font = ImageFont.truetype(header_font_location, 62)
+    left_values_font = ImageFont.truetype(left_values_font_loc, 46)
+    brand_font = ImageFont.truetype(left_values_font_loc, 42)
+    brand_font2 = ImageFont.truetype(left_values_font_loc, 32)
+
+    label_editable = ImageDraw.Draw(label)
+
+    offset = 0
+    l = label_data[0]
+
+    capacity, unit = format_cap(l["cap"])
+
+    # QR Code Block ---------
+    qr = qrcode.QRCode(
+        version=1,
+        box_size=10,
+        border=5)
+
+    qr.add_data("%s-C%s-%s" % (l["uuid"], capacity, unit))
+    qr.make(fit=True)
+    qr_img = qr.make_image(fill='black', back_color='white')
+    qr_img = qr_img.crop((0, 0, 350, 350))
+    qr_img = qr_img.resize((190, 190))
+
+    label.paste(qr_img, (260, 80))
+    # QR Code Block End ---------
+
+    # Cell Data Block --------
+    serial = str(l["serial"]).zfill(6)
+    header_text = "%s-C:%s" % (serial, capacity)
+    label_editable.text((5, -20), header_text, (0, 0, 0), font=header_font)
+
+    first_row = "I:%s T:%s" % (l["esr"], l["temp"])
+    label_editable.text((5, 42), first_row, (0, 0, 0), font=left_values_font)
+
+    second_row = "%s/%s/%s" % (l["minV"], l["storeV"], l["maxV"])
+    label_editable.text((5, 90), second_row, (0, 0, 0), font=left_values_font)
+
+    last_ip_num = l["ip"].split(".")[-1]
+    third_row = "Mc: %s-%s" % (last_ip_num, l["slot"])
+    label_editable.text((5, 140), third_row, (0, 0, 0), font=left_values_font)
+    # Cell Data Block End --------
+
+
+
+    # Date
+    label_editable.text((5, 195), l["date"], (0, 0, 0), font=brand_font2)
+    label_editable.text((5, 230), custom_field1, (0, 0, 0), font=brand_font2)
+
+    # Branding
+    deep_row = "deepcyclepower.com"
+    label_editable.text((5, 260), deep_row, (0, 0, 0), font=brand_font2)
+
+    # Adding the unit
+    text_image = Image.new('RGBA', (120, 100), (255, 255, 255, 0))  # Adjust size as needed
+    draw = ImageDraw.Draw(text_image)
+
+    draw.text((0, 0), unit, (0, 0, 0), font=brand_font)
+
+    label.paste(text_image, (330, 45), text_image)
+
+    buffered = BytesIO()
+    label.save(buffered, format="JPEG")
+    img_str = base64.b64encode(buffered.getvalue()).decode()
+
+    buffered.seek(0)
+
+    with open(preview_location, 'wb') as f:
+        f.write(buffered.getvalue())
+
+    return img_str
+
+
+def gather_label_data(deviceId, slots):
+    device = get_object_or_404(Device, id=deviceId)
+    print(slots)
+    filtered_slots = device.slots.filter(slot_number__in=slots).order_by('slot_number')
+
+    label_data = []
+
+    for slot in filtered_slots:
+        print(slot.slot_number)
+        acell = slot.active_cell
+        match = re.search(r'S0*(\d+)', acell.UUID)
+
+        if match:
+            # Extract the number part and convert it to an integer
+            cserial = int(match.group(1))
+
+        else:
+            cserial = 0
+
+        formated_date = acell.insertion_date.strftime('%Y-%m-%d')
+
+        ldat = {"serial": cserial, "uuid": acell.UUID, "cap": acell.capacity, "esr": acell.esr,
+                "temp": acell.max_temp_discharging, "minV": acell.min_voltage,
+                "storeV": acell.store_voltage, "maxV": acell.max_voltage,
+                "ip": device.ip, "slot": slot.slot_number, "date": formated_date}
+
+        label_data.append(ldat)
+
+    return label_data
 

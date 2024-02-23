@@ -22,6 +22,9 @@ class PrinterSettings(models.Model):
     LabelWidth = models.FloatField(default=0)
     LabelHeight = models.FloatField(default=0)
     LabelRotation = models.IntegerField(default=0)
+    CustomField1 = models.CharField(default="deepcyclepower.com",max_length=150)
+    LabelShape = models.CharField(default="square",max_length=150)
+
 
     def __str__(self):
         return self.PrinterName

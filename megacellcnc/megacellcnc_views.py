@@ -6,7 +6,7 @@ from django.http import JsonResponse, HttpResponseRedirect
 from django.views.decorators.http import require_POST
 from django.views.decorators.csrf import csrf_exempt
 from django.urls import reverse
-from .functions import scan_for_devices, add_new_cell, draw_dual_label
+from .functions import scan_for_devices, add_new_cell, draw_dual_label, gather_label_data, draw_square_label, draw_landscape_label
 from datetime import timedelta
 import json
 from django.db import transaction
@@ -445,27 +445,21 @@ def save_printer_settings(request):
             labelRotation = int(data.get('labelRotation'))
             dualLabel = int(data.get('dualLabel'))
             printerHost = data.get('printerHost')
+            customField1 = data.get('customField1')
+            label_shape = data.get('label_shape')
 
             printer_settings, created = PrinterSettings.objects.get_or_create(
                id=1
             )
 
-            # If the object was created, `created` will be True, and you can set additional attributes
-            if created:
-                printer_settings.PrinterName = printerName
-                printer_settings.PrinterHost = printerHost
-                printer_settings.IsDualLabel = dualLabel
-                printer_settings.LabelWidth = labelWidth
-                printer_settings.LabelHeight = labelHeight
-                printer_settings.LabelRotation = labelRotation
-                # set other fields as needed
-            else:
-                printer_settings.PrinterName = printerName
-                printer_settings.PrinterHost = printerHost
-                printer_settings.IsDualLabel = dualLabel
-                printer_settings.LabelWidth = labelWidth
-                printer_settings.LabelHeight = labelHeight
-                printer_settings.LabelRotation = labelRotation
+            printer_settings.PrinterName = printerName
+            printer_settings.PrinterHost = printerHost
+            printer_settings.IsDualLabel = dualLabel
+            printer_settings.LabelWidth = labelWidth
+            printer_settings.LabelHeight = labelHeight
+            printer_settings.LabelRotation = labelRotation
+            printer_settings.CustomField1 = customField1
+            printer_settings.LabelShape = label_shape
 
             printer_settings.save()  # Don't forget to save the object
 
@@ -484,30 +478,28 @@ def get_printer_settings(request):
     if request.method == "GET":
         printer_data = {}
 
-        printer = get_object_or_404(PrinterSettings, id=1)
+        # printer = get_object_or_404(PrinterSettings, id=1)
+        printer = PrinterSettings.objects.all().first()
 
-        try:
+        if printer:
+            print("Printer exists")
 
-            if printer:
-                print("Printer exists")
-
-                printer_data = {
-                    'printerName': printer.PrinterName,
-                    'printerHost': printer.PrinterHost,
-                    'dualLabel': printer.IsDualLabel,
-                    'labelWidth': printer.LabelWidth,
-                    'labelHeight': printer.LabelHeight,
-                    'labelRotation': printer.LabelRotation
-                }
+            printer_data = {
+                'printerName': printer.PrinterName,
+                'printerHost': printer.PrinterHost,
+                'dualLabel': printer.IsDualLabel,
+                'labelWidth': printer.LabelWidth,
+                'labelHeight': printer.LabelHeight,
+                'labelRotation': printer.LabelRotation,
+                'customField1': printer.CustomField1,
+                'label_shape': printer.LabelShape
+            }
 
 
             # data = json.loads(request.body)
             # printerName = data.get('printerName')
             # labelWidth = float(data.get('labelWidth'))
             # labelHeight = float(data.get('labelHeight'))
-
-        except json.JSONDecodeError:
-            return JsonResponse({'error': 'Invalid JSON'}, status=400)
 
         # save_device_config.delay(device_id, data)
         return JsonResponse(printer_data, safe=False)
@@ -521,10 +513,12 @@ def print_label(request):
             deviceId = data.get('deviceId')
             slots = data.get('slots')
 
-            printer = get_object_or_404(PrinterSettings, id=1)
+            printer = PrinterSettings.objects.all().first()
+
 
             if printer:
 
+                # Regular Printing
                 if printer.IsDualLabel:
 
                     if isDemo:
@@ -536,37 +530,40 @@ def print_label(request):
                         }
                         return JsonResponse(response_data)
 
-                    else:
-                        device = get_object_or_404(Device, id=deviceId)
-                        filtered_slots = device.slots.filter(slot_number__in=slots).order_by('slot_number')
+                    label_data = gather_label_data(deviceId, slots)
+                    label = draw_dual_label(label_data)
 
-                        label_data = []
+                    response_data = {
+                        "label": f"{label}"
+                    }
+                    return JsonResponse(response_data)
 
-                        for slot in filtered_slots:
+                else:
 
-                            acell = slot.active_cell
-                            match = re.search(r'S0*(\d+)', acell.UUID)
+                    if isDemo:
 
-                            if match:
-                                # Extract the number part and convert it to an integer
-                                cserial = int(match.group(1))
-
-                            else:
-                                cserial = 0
-
-                            ldat = {"serial": cserial, "uuid": acell.UUID, "cap": acell.capacity, "esr": acell.esr,
-                                    "temp": acell.max_temp_discharging, "minV": acell.min_voltage,
-                                    "storeV": acell.store_voltage, "maxV": acell.max_voltage,
-                                    "ip": device.ip, "slot": slot.slot_number}
-
-                            label_data.append(ldat)
-
-                        label = draw_dual_label(label_data)
+                        if printer.LabelShape == "square":
+                            label = draw_square_label([], printer.CustomField1)
+                        else:
+                            label = draw_landscape_label([], printer.CustomField1)
 
                         response_data = {
                             "label": f"{label}"
+                            # Ensure the format matches the format used in saving the image
                         }
                         return JsonResponse(response_data)
+
+                    label_data = gather_label_data(deviceId, slots)
+
+                    if printer.LabelShape == "square":
+                        label = draw_square_label(label_data, printer.CustomField1)
+                    else:
+                        label = draw_landscape_label(label_data, printer.CustomField1)
+
+                    response_data = {
+                        "label": f"{label}"
+                    }
+                    return JsonResponse(response_data)
 
         except json.JSONDecodeError:
             return JsonResponse({'error': 'Invalid JSON'}, status=400)

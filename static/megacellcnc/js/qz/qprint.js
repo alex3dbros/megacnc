@@ -1749,13 +1749,11 @@ function getUpdatedConfig(cleanConditions) {
 
 function updateConfig() {
 
-    let labelWidth = includedValue($("#pxlWidth")) * 10;
-    let labelHeight = includedValue($("#pxlHeight")) * 10;
+    let labelWidth = includedValue($("#pxlWidth"));
+    let labelHeight = includedValue($("#pxlHeight"));
 
-    cfg.reconfigure({
-                             size: {width: labelWidth, height: labelHeight}, units: 'mm',
+    cfg.reconfigure({size: {width: labelWidth, height: labelHeight}, units: 'mm',
                              colorType: 'grayscale',
-
                              rotation: includedValue($("#pxlRotation"))
                     });
 }
@@ -1835,8 +1833,23 @@ function savePrinterInDb() {
         let labelWidth = includedValue($("#pxlWidth"));
         let labelHeight = includedValue($("#pxlHeight"));
         let labelRotation = includedValue($("#pxlRotation"));
+        let customField1 = includedValue($("#customField1"));
         let dualLabel = document.getElementById('doubleLabelCheckbox').checked;
         let printerHost = includedValue($("#connectionHost"));
+
+        let squareLabelShape = document.getElementById('squareLabelShape').checked;
+        let landscapeLabelShape = document.getElementById('landscapeLabelShape').checked;
+
+        let label_shape;
+
+        if (squareLabelShape) {
+            label_shape = "square";
+        } else if (landscapeLabelShape) {
+            label_shape = "landscape";
+        } else {
+            // Optional: handle the case where neither is checked, if needed
+            label_shape = "square"; // or any default value you prefer
+        }
 
     fetch(`/save-printer-settings/`, {
         method: 'POST',
@@ -1844,7 +1857,8 @@ function savePrinterInDb() {
             'Content-Type': 'application/json',
             'X-CSRFToken': getCookie('csrftoken')
         },
-        body: JSON.stringify({ printerName, labelWidth, labelHeight, labelRotation, dualLabel, printerHost})
+        body: JSON.stringify({ printerName, labelWidth, labelHeight, labelRotation, dualLabel, printerHost,
+            customField1, label_shape})
     })
         .then(response => response.json())
         .then(data => {
@@ -1881,6 +1895,17 @@ function loadExistingPrinter() {
             $("#doubleLabelCheckbox").prop('checked', data.dualLabel === 1);
             findPrinter(data.printerName, true);
             $("#pxlCopies").val(1);
+            $("#pxlWidth").val(data.labelWidth);
+            $("#pxlHeight").val(data.labelHeight);
+            $("#pxlRotation").val(data.labelRotation);
+            $("#customField1").val(data.customField1);
+
+            $("#squareLabelShape").prop('checked', data.label_shape === "square");
+            $("#landscapeLabelShape").prop('checked', data.label_shape === "landscape");
+
+
+
+
 
 
         }

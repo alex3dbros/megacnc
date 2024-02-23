@@ -584,12 +584,27 @@ input[type='radio'] {
 												Label Settings
 											</h4>
 
-											<div class="col-auto">
-												<input type="checkbox" class="form-check-input" id="doubleLabelCheckbox" required>
-												<label class="form-check-label" >Dual Label</label>
+											<div class="row">
+												<div class="col-auto">
+													<input type="checkbox" class="form-check-input" id="doubleLabelCheckbox" required>
+													<label class="form-check-label" >Dual Label (Dymo 13mmx25mm)</label>
+												</div>
+
+												<div class="col-auto">
+													<div class="form-check custom-checkbox mb-3 checkbox-secondary">
+														<input type="radio" class="form-check-input" id="squareLabelShape" name="optradioCustom" checked>
+														<label class="form-check-label" for="squareLabelShape">Square Label</label>
+													</div>
+												</div>
+
+												<div class="col-auto">
+													<div class="form-check custom-checkbox mb-3 checkbox-secondary">
+														<input type="radio" class="form-check-input" id="landscapeLabelShape" name="optradioCustom">
+														<label class="form-check-label" for="landscapeLabelShape">Landscape</label>
+													</div>
+												</div>
+
 											</div>
-
-
 										</div>
 
 
@@ -606,6 +621,11 @@ input[type='radio'] {
 										<div class="col-auto">
 											<label for="pxlRotation">Rotation</label>
 											<input type="number" step="any" id="pxlRotation" class="form-control pull-right" />
+										</div>
+
+										<div class="col-auto">
+											<label for="customField1">Custom Info</label>
+											<input type="text" step="any" id="customField1" class="form-control pull-right" />
 										</div>
 
 									</div>

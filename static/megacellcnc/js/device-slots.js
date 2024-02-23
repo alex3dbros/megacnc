@@ -165,20 +165,33 @@ function sendAction(action) {
         if (doubleLabel === 1) {
             let batch_size = 2;
             console.log("this is double label");
-
+            console.log(slots_number);
             if (slots_number.length > 1) {
                 for (let i = 0; i <= slots_number.length - batch_size; i += batch_size) {
                     let batch = slots_number.slice(i, i + batch_size);
-                    console.log("Batch: ", batch);
+                    printLabels(batch, deviceId);
+                }
 
-                    if (batch.length === 2) {
-                        printLabels(batch, deviceId);
-                    }
+                // Check if there's an uneven batch at the end
+                if (slots_number.length % batch_size !== 0) {
+                    // Get the last slot
+                    let lastBatch = slots_number.slice(-1);
+
+                    // Print the last slot
+                    printLabels(lastBatch, deviceId);
                 }
             }
 
+
+
+
+
         } else {
-            printLabels(slots_number, deviceId);
+            for (let i = 0; i < slots_number.length; i++) {
+                printLabels(slots_number[i], deviceId);
+            }
+
+
         }
 
 
