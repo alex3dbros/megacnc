@@ -349,7 +349,7 @@ def save_device_config(device_id, data):
             config = {
                       "McH": int(data["chargingTimeout"]),
                       "LcR": 1000,
-                      "LmR": 180,
+                      "LmR": 500,
                       "CcO": 1,
                       "DcO": 1,
                       "LmV": 0.3,
