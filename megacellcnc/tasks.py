@@ -347,21 +347,22 @@ def save_device_config(device_id, data):
 
         elif tester.device_type and 'McC' in tester.device_type:
             config = {
-                      "McH": int(data["chargingTimeout"]),
-                      "LcR": 1000,
-                      "LmR": 500,
-                      "CcO": 1,
-                      "DcO": 1,
-                      "LmV": 0.3,
-                      "LcV": 3.3,
-                      "LmD": 1.1,
-                      "ChC": False,
-                      "MaV": maxVolt,
-                      "StV": sVolt,
-                      "MiV": minVolt,
-                      "DiR": constrain_value(100, 1000, int(data["dischargingCurrent"])),
-                      "MaT": maxTemp,
-                      "DiC": DiC
+                "ChC": True,
+                "MaV": maxVolt,
+                "StV": sVolt,
+                "MiV": minVolt,
+                "MaT": maxTemp,
+                "DiC": DiC,
+                "LmV": 0.3,
+                "LcV": 3.6,
+                "LmD": 1.1, # Limit volt drop
+                "LmR": 500,
+                "McH": int(data["chargingTimeout"]),
+                "LcR": 200,
+                "MsR": 2000,
+                "DiR": constrain_value(100, 1000, int(data["dischargingCurrent"])),
+                "CcO": 1,
+                "DcO": 1
                     }
 
             tester.set_config(config)
