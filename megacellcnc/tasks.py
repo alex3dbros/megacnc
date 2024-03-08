@@ -360,7 +360,7 @@ def save_device_config(device_id, data):
                 "McH": int(data["chargingTimeout"]),
                 "LcR": 200,
                 "MsR": 2000,
-                "DiR": constrain_value(100, 1000, int(data["dischargingCurrent"])),
+                "DiR": constrain_value(100, 990, int(data["dischargingCurrent"])),
                 "CcO": 1,
                 "DcO": 1
                     }
