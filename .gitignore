@@ -159,3 +159,9 @@ cython_debug/
 #.idea/
 
 celerybeat-schedule.dat
+
+static/labeltemplates/preview_lndscp.jpg
+
+static/labeltemplates/preview_square.jpg
+
+static/labeltemplates/preview.jpg
