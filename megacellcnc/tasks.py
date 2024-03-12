@@ -214,15 +214,20 @@ def get_device_config(device_id):
         tester = MegacellCharger(device.ip)
         if tester.device_type and "ChT" in tester.device_type:
 
-            chems = Chemistry.objects.filter(device_type="MCCPro")
-            mccpro_chemistries_json = serializers.serialize('json', chems)
+            if tester.device_type["ChT"] == "MCCPro":
+                chems = Chemistry.objects.filter(device_type="MCCPro")
+                mccpro_chemistries_json = serializers.serialize('json', chems)
+                data = {"CiD": 0}
+                device_conf = tester.get_cell_chemistry(data)
+                return device_conf, mccpro_chemistries_json, tester.device_type["FwV"]
 
-            data = {
-                "CiD": 0
-            }
+            elif tester.device_type["ChT"] == "MCCReg":
+                chems = Chemistry.objects.filter(device_type="MCC")
+                mcc_chemistries_json = serializers.serialize('json', chems)
+                data = {"CiD": 0}
+                device_conf = tester.get_cell_chemistry(data)
 
-            device_conf = tester.get_cell_chemistry(data)
-            return device_conf, mccpro_chemistries_json, tester.device_type["FwV"]
+                return device_conf, mcc_chemistries_json, tester.device_type["FwV"]
 
         elif tester.device_type and 'McC' in tester.device_type:
             chems = Chemistry.objects.filter(device_type="MCC")
@@ -281,7 +286,7 @@ def save_device_config(device_id, data):
 
         if tester.device_type and "ChT" in tester.device_type:
 
-            if data["applyToAllSlots"]:
+            if data["applyToAllSlots"] or tester.device_type["ChT"] == "MCCReg":
                 print("I am applying chemistry to all slots")
                 for slot in range(16):
 

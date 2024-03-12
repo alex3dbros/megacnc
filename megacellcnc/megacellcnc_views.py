@@ -231,7 +231,7 @@ def handle_device_action(request):
 
     request_data = {"cells": cells}
 
-    if "macro" in action and device.type == "MCCPro":
+    if "macro" in action and (device.type == "MCCPro" or device.type == "MCCReg"):
         action_type = "macro"
     else:
         action_type = "regular"
@@ -420,6 +420,21 @@ def edit_device(request):
                     "term_charging_current": dev_data[8], "discharge_resistance": dev_data[10],
                     "discharge_mode": dev_data[11], "max_low_volt_recovery_time": dev_data[13]}
             print(data)
+
+        elif task_result and device.type == "MCCReg":
+            dev_data = msgpack.unpackb(task_result)
+
+            data = {"dev_type": device.type, "max_charge_volt": round(dev_data[2] / 1000, 2),
+                    "store_volt": round(dev_data[4] / 1000, 2),
+                    "discharge_volt": round(dev_data[3] / 1000, 2), "max_temp": round(dev_data[12], 2),
+                    "discharge_cycles": dev_data[15], "firmware": firmware_version,
+                    "discharge_current": int(dev_data[9]), "charging_current": dev_data[6],
+                    "charging_timeout": dev_data[14], "device_name": device.name, "slots_count": slots_count,
+                    "chems": chems, "max_capacity": dev_data[5], "pre_charge_current": dev_data[7],
+                    "term_charging_current": dev_data[8], "discharge_resistance": dev_data[10],
+                    "discharge_mode": dev_data[11], "max_low_volt_recovery_time": dev_data[13]}
+            print(data)
+
         return JsonResponse(data, safe=False)
 
 

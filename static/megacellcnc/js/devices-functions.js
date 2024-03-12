@@ -336,7 +336,7 @@ function editDevice(deviceId) {
             inputChargingCurrent.removeAttribute('readonly');
 
 
-            if (data["dev_type"] === "MCC") {
+            if (data["dev_type"] === "MCC" || data["dev_type"] === "MCCReg") {
 
                 labelForChargingCurrent.setAttribute('title', 'Charging Current in mA (Readonly)');
                 inputChargingCurrent.setAttribute('readonly', "");
