@@ -527,9 +527,14 @@ def print_label(request):
             isDemo = int(data.get('isDemo'))
             deviceId = data.get('deviceId')
             slots = data.get('slots')
-
             printer = PrinterSettings.objects.all().first()
 
+            # Step 1: Ensure slots is a list
+            if isinstance(slots, str):
+                slots = [slots]  # Convert single string to list
+
+            # Step 2: Convert all elements in the list to integers
+            slots = [int(slot) for slot in slots]
 
             if printer:
 
@@ -569,7 +574,6 @@ def print_label(request):
                         return JsonResponse(response_data)
 
                     label_data = gather_label_data(deviceId, slots)
-
                     if printer.LabelShape == "square":
                         label = draw_square_label(label_data, printer.CustomField1)
                     else:

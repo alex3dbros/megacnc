@@ -499,13 +499,12 @@ def draw_landscape_label(label_data, custom_field1):
 
 def gather_label_data(deviceId, slots):
     device = get_object_or_404(Device, id=deviceId)
-    print(slots)
+
     filtered_slots = device.slots.filter(slot_number__in=slots).order_by('slot_number')
 
     label_data = []
 
     for slot in filtered_slots:
-        print(slot.slot_number)
         acell = slot.active_cell
         match = re.search(r'S0*(\d+)', acell.UUID)
 

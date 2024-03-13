@@ -144,7 +144,11 @@ function addActionListeners(buttonIds) {
     });
 }
 
-function sendAction(action) {
+function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+async function sendAction(action) {
     // Gather the checked device IDs
     const checkedBoxes = document.querySelectorAll('input[name="slot_number"]:checked');
     const slots_number = Array.from(checkedBoxes).map(box => box.value);
@@ -170,6 +174,7 @@ function sendAction(action) {
                 for (let i = 0; i <= slots_number.length - batch_size; i += batch_size) {
                     let batch = slots_number.slice(i, i + batch_size);
                     printLabels(batch, deviceId);
+                    await sleep(1000);
                 }
 
                 // Check if there's an uneven batch at the end
@@ -189,6 +194,7 @@ function sendAction(action) {
         } else {
             for (let i = 0; i < slots_number.length; i++) {
                 printLabels(slots_number[i], deviceId);
+                await sleep(1000);
             }
 
 
