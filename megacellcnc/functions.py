@@ -207,7 +207,7 @@ def add_new_cell(device, slot):
         available='No'
     )
     new_cell.save()
-
+    project_instance.update_total_cells()
     # Update the slot
     slot.saved = True
     slot.active_cell = new_cell
@@ -265,24 +265,24 @@ def draw_dual_label(label_data):
         qr.make(fit=True)
         qr_img = qr.make_image(fill='black', back_color='white')
         qr_img = qr_img.crop((0, 0, 350, 350))
-        qr_img = qr_img.resize((170, 170))
+        qr_img = qr_img.resize((220, 220))
 
-        label.paste(qr_img, (340, offset + 30))
+        label.paste(qr_img, (300, offset + 30))
         # QR Code Bloc End ---
 
         serial = str(l["serial"]).zfill(6)
         header_text = "%s-C:%s" % (serial, capacity)
-        label_editable.text((40, offset + -20), header_text, (0, 0, 0), font=header_font)
+        label_editable.text((10, offset + -20), header_text, (0, 0, 0), font=header_font)
 
         first_row = "I:%s T:%s" % (l["esr"], l["temp"])
-        label_editable.text((40, offset + 40), first_row, (0, 0, 0), font=left_values_font)
+        label_editable.text((10, offset + 40), first_row, (0, 0, 0), font=left_values_font)
 
         second_row = "%s/%s/%s" % (l["minV"], l["storeV"], l["maxV"])
-        label_editable.text((40, offset + 80), second_row, (0, 0, 0), font=left_values_font)
+        label_editable.text((10, offset + 80), second_row, (0, 0, 0), font=left_values_font)
 
         last_ip_num = l["ip"].split(".")[-1]
         third_row = "Mc: %s-%s" % (last_ip_num, l["slot"])
-        label_editable.text((40, offset + 130), third_row, (0, 0, 0), font=left_values_font)
+        label_editable.text((10, offset + 130), third_row, (0, 0, 0), font=left_values_font)
 
         # Adding the unit
         text_image = Image.new('RGBA', (100, 100), (255, 255, 255, 0))  # Adjust size as needed
@@ -291,10 +291,10 @@ def draw_dual_label(label_data):
         draw.text((0, 0), unit, (0, 0, 0), font=left_values_font)
         rotated_text_image = text_image.rotate(-90, expand=1, fillcolor=(255, 255, 255, 0))
 
-        label.paste(rotated_text_image, (250, offset + 80), rotated_text_image)
+        label.paste(rotated_text_image, (230, offset + 80), rotated_text_image)
 
         deep_row = "deepcyclepower.com"
-        label_editable.text((160, offset + 170), deep_row, (0, 0, 0), font=brand_font2)
+        label_editable.text((5, offset + 180), deep_row, (0, 0, 0), font=brand_font2)
 
 
         offset += 280

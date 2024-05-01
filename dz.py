@@ -446,8 +446,30 @@ dz_array = {
 							f"{folder_name}/js/plugins-init/datatables.init.js",
 							f"{folder_name}/vendor/tagify/dist/tagify.js",
 							f"{folder_name}/js/project-details.js",
+							f"{folder_name}/js/xlsx.full.min.js",
 						],
 
+						"database": [
+							f"{folder_name}/vendor/datatables/js/jquery.dataTables.min.js",
+							f"{folder_name}/vendor/datatables/js/dataTables.buttons.min.js",
+							f"{folder_name}/vendor/datatables/js/buttons.html5.min.js",
+							f"{folder_name}/vendor/datatables/js/jszip.min.js",
+							f"{folder_name}/js/plugins-init/datatables.init.js",
+							f"{folder_name}/vendor/tagify/dist/tagify.js",
+							f"{folder_name}/js/database.js",
+							f"{folder_name}/js/xlsx.full.min.js",
+
+
+							f"{folder_name}/vendor/chart.js/Chart.bundle.min.js",
+
+							f"{folder_name}/vendor/flot/jquery.flot.js",
+							f"{folder_name}/vendor/flot/jquery.flot.pie.js",
+							f"{folder_name}/vendor/flot/jquery.flot.resize.js",
+							f"{folder_name}/vendor/flot/jquery.flot.time.js",
+							f"{folder_name}/vendor/flot-spline/jquery.flot.spline.min.js",
+
+
+						],
 
 						"task_summary": [
 							f"{folder_name}/vendor/draggable/draggable.js",

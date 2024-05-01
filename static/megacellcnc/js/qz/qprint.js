@@ -1630,7 +1630,7 @@ function handleConnectionError(err) {
 
 function displayError(err) {
     console.error(err);
-    displayMessage(err, 'alert-danger');
+    //displayMessage(err, 'alert-danger');
 }
 
 function checkGroupActive(checkId, groupId, toggleId) {

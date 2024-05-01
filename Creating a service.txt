@@ -1,0 +1,58 @@
+1. Create a Service File: Create a new service file in /etc/systemd/system/ (e.g., megacnc.service). You'll need sudo privileges for this.
+
+
+[Unit]
+Description=MegaCNC Docker Service
+Requires=docker.service
+After=docker.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/bin/docker-compose -f /path/to/megacnc/docker-compose.yml up
+ExecStop=/usr/bin/docker-compose -f /path/to/megacnc/docker-compose.yml down
+
+[Install]
+WantedBy=multi-user.target
+
+
+
+2. Reload Systemd: After creating this file, reload the systemd daemon to read your new service.
+
+sudo systemctl daemon-reload
+
+3. Enable and Start the Service: Enable your service to run at boot and then start it to test.
+sudo systemctl enable megacnc.service
+sudo systemctl start megacnc.service
+
+
+
+4. Create a script, say mccservice_update.sh, with the following content:
+
+#!/bin/bash
+
+# Navigate to your project directory
+cd /path/to/megacnc
+
+# Stop the current Docker containers
+sudo docker-compose down
+
+# Pull the latest changes, force overwrite local changes
+git fetch --all
+git reset --hard origin/master
+
+# Build and start the containers
+sudo docker-compose up --build -d
+
+# Perform Django migrations
+sudo docker exec megacnc_web_1 python manage.py makemigrations
+sudo docker exec megacnc_web_1 python manage.py migrate
+
+
+
+
+
+5. Make script executable
+
+chmod +x /path/to/mccservice_update.sh
+

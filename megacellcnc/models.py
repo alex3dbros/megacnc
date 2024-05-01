@@ -11,9 +11,13 @@ class Projects(models.Model):
     Status = models.CharField(max_length=150, default='Active')
     TotalCells = models.IntegerField()
     DevCnt = models.IntegerField(default=0)
+
     def __str__(self):
         return self.Name
 
+    def update_total_cells(self):
+        self.TotalCells = self.cells.count()
+        self.save()
 
 class PrinterSettings(models.Model):
     PrinterName = models.CharField(default="", max_length=150)
@@ -30,7 +34,7 @@ class PrinterSettings(models.Model):
         return self.PrinterName
 
 class Cells(models.Model):
-    project = models.ForeignKey(Projects, on_delete=models.CASCADE)
+    project = models.ForeignKey(Projects, on_delete=models.CASCADE, related_name='cells')
     UUID = models.CharField(max_length=150)
     cell_type = models.CharField(max_length=150)
     device_ip = models.GenericIPAddressField()

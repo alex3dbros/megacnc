@@ -10,6 +10,8 @@ urlpatterns = [
     path('projectdetails/<int:project_id>/update-slots/', megacellcnc_views.get_project_slots, name='project-update-slots'),
     path('new-project/',megacellcnc_views.new_project,name="new-project"),
     path('devices/',megacellcnc_views.devices,name="devices"),
+    path('database/',megacellcnc_views.database,name="database"),
+    path('add_cell/',megacellcnc_views.add_cell,name="add_cell"),
     path('device-slots/',megacellcnc_views.device_slots,name="device-slots"),
     path('device/<int:device_id>/update-slots/', megacellcnc_views.get_updated_slots, name='update-slots'),
 

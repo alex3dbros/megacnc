@@ -78,6 +78,31 @@ let dataSet = [
 		},
 		
     });
+
+	var table = $('#database-tbl').DataTable({
+		//dom: 'Bfrtip',
+		'dom': 'ZBfrltip',
+		buttons: [
+
+			{ extend: 'excel', text: '<i class="fa-solid fa-file-excel"></i> Export Report',
+              className: 'btn btn-sm border-0'
+			}
+        ],
+		searching: false,
+		pageLength:100,
+		select: false,
+        lengthChange:false ,
+		language: {
+			paginate: {
+				next: '<i class="fa-solid fa-angle-right"></i>',
+				previous: '<i class="fa-solid fa-angle-left"></i>'
+			}
+
+		},
+
+    });
+
+
 	var table = $('#contacts-tbl').DataTable({
 		//dom: 'Bfrtip',
 		'dom': 'ZBfrltip',

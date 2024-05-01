@@ -1,0 +1,6 @@
+V 1.0.0 - Release
+V 1.0.1 - WIP
+    - Increased qr code size for Dymo 450 double label so it works fine with 25 mm x 25  mm setting
+    - Replaced placeholders on dashboard with real data
+    - Added database functionality
+    - Added ability to manually add cells

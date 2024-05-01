@@ -6,11 +6,15 @@ from django.http import JsonResponse, HttpResponseRedirect
 from django.views.decorators.http import require_POST
 from django.views.decorators.csrf import csrf_exempt
 from django.urls import reverse
-from .functions import scan_for_devices, add_new_cell, draw_dual_label, gather_label_data, draw_square_label, draw_landscape_label
+from .functions import scan_for_devices, add_new_cell, draw_dual_label, gather_label_data, draw_square_label, draw_landscape_label, generate_uuid_for_cell
 from datetime import timedelta
 import json
 from django.db import transaction
 from django.core.exceptions import ObjectDoesNotExist
+from django.db.models import Count
+from django.shortcuts import render
+
+
 
 from django.utils import timezone
 from django.db.models import F
@@ -31,18 +35,25 @@ warnings.filterwarnings('ignore')
 warnings.filterwarnings('ignore', category=pd.errors.PerformanceWarning)
 
 
-
 def index(request):
-    projects = Projects.objects.all()
-
     devices = Device.objects.all().order_by('id')
-    devices_count = Device.objects.all().count()
+    devices_count = Device.objects.count()  # A small optimization to avoid querying all then counting
     projects = Projects.objects.all()
+    # Count the total number of projects
+    total_projects = Projects.objects.count()
+
+    # Count the total number of Cells across all Projects
+    total_cells = Cells.objects.count()
+    good_cells = Cells.objects.filter(capacity__gt=1000).count()
+
     context = {
         "page_title": "Devices",
         "devices": devices,
         "devices_count": devices_count,
-        "projects": projects
+        "projects": projects,
+        "total_cells": total_cells,
+        "good_cells": good_cells,
+        "total_projects": total_projects
     }
 
     return render(request, 'megacellcnc/index.html', context)
@@ -171,6 +182,165 @@ def devices(request):
             "projects": projects
         }
         return render(request, 'megacellcnc/devices.html', context)
+
+
+def add_cell(request):
+    if request.method == 'POST':
+        project_id = int(request.POST['project_id'])
+        uuid = generate_uuid_for_cell(project_id)
+
+        cell_type = request.POST['cell_type']
+        device_type = request.POST['device_type']
+        voltage = request.POST['voltage']
+        capacity = request.POST['capacity']
+        esr = request.POST['esr']
+        esr_ac = request.POST['esr_ac']
+        min_voltage = request.POST['min_voltage']
+        store_voltage = request.POST['store_voltage']
+        max_voltage = request.POST['max_voltage']
+        testing_current = request.POST['testing_current']
+        discharge_mode = request.POST['discharge_mode']
+        project_instance = get_object_or_404(Projects, id=project_id)
+
+        # Create and save the new cell
+        new_cell = Cells(
+            project=project_instance,
+            UUID=uuid,
+            cell_type=cell_type,
+            device_ip="0.0.0.0",
+            device_mac="00:00:00:00:00",
+            device_type=device_type,
+            device_slot=0,
+            voltage=voltage,
+            capacity=capacity,
+            esr=esr,
+            esr_ac=esr_ac,
+            test_duration=0,
+            charge_duration=0,
+            discharge_duration=0,
+            cycles_count=1,
+            temp_before_test=0,
+            avg_temp_charging=0,
+            avg_temp_discharging=0,
+            max_temp_charging=0,
+            max_temp_discharging=0,
+            min_voltage=min_voltage,
+            max_voltage=max_voltage,
+            store_voltage=store_voltage,
+            testing_current=testing_current,
+            discharge_mode=discharge_mode,
+            status="N.A",
+            insertion_date=timezone.now(),
+            removal_date=timezone.now(),
+            available='Yes'
+        )
+        new_cell.save()
+        project_instance.update_total_cells()
+
+        return JsonResponse({'message': 'Cell added successfully'}, status=200)
+
+def database(request):
+
+    if request.method == 'POST':
+        print(" I received things to post")
+
+        cell_type = request.POST['cell_type']
+
+        # devices_details_str = request.POST.get('devicesDetails')
+        #
+        # # Parse the JSON string into a Python object
+        # try:
+        #     devices_details = json.loads(devices_details_str)
+        # except json.JSONDecodeError:
+        #     return JsonResponse({'error': 'Invalid JSON'}, status=400)
+        #
+        # device_prefix = request.POST.get('device_prefix')
+        # project_id = request.POST.get('project')
+        # notes = request.POST.get('notes')
+        # added_devices = 0
+        # print("this is project id: %s" % project_id)
+        # # Fetch the Projects instance corresponding to the project_id
+        # try:
+        #     project_instance = Projects.objects.get(id=project_id)
+        #     print(project_instance)
+        # except Projects.DoesNotExist:
+        #     # Handle the case where the project with the given name does not exist
+        #     print(f"Project with name '{project_id}' does not exist.")
+        #     # You might want to create a new project here or handle this error appropriately
+        #
+        # print(devices_details)
+        #
+        # for device in devices_details:
+        #     print(device)
+        #     dev_name = "%s_%s" % (device_prefix, device["name"])
+        #
+        #     # Use get_or_create to either fetch the existing device with the given MAC or create a new one
+        #     device_obj, created = Device.objects.get_or_create(
+        #         mac=device["mac"],  # Look up by MAC address
+        #         defaults={  # Provide the default values for creation
+        #             'type': device["dev_type"],
+        #             'name': dev_name,
+        #             'ip': device["ip"],
+        #             'runtime': timedelta(0),
+        #             'project': project_instance
+        #         }
+        #     )
+        #
+        #     # After adding the device, count the devices related to the project
+        #     device_count = Device.objects.filter(project=project_instance).count()
+        #
+        #     if created:
+        #         print("New device added:", device_obj)
+        #         added_devices += 1
+        #
+        #         # Create and assign the specified number of slots to the newly created device
+        #         slot_count = int(device.get("slot_count", 0))  # Default to 0 if "slot_count" is not provided
+        #         print("This is slot count: %s" % slot_count)
+        #         for slot_num in range(1, slot_count + 1):  # Starting from 1 to slot_count
+        #             Slot.objects.create(device=device_obj, slot_number=slot_num)
+        #             # Optionally add other default slot parameters if needed
+        #
+        #         with transaction.atomic():  # Ensure atomicity of the update operation
+        #             project_instance.DevCnt = device_count
+        #             project_instance.save()
+        #
+        #     else:
+        #         print("Device already exists:", device_obj)
+        #
+        # print(devices_details, device_prefix, project_id, notes)
+        # if added_devices > 1:
+        #     messages.success(request, '%s Devices added successfully!' % added_devices)
+        #
+        # if added_devices == 1:
+        #     messages.success(request, 'Device added successfully!')
+        #
+        #     # Redirect to a new URL or render the same template with context
+        # return redirect('/database/')
+        return JsonResponse({'message': 'Cell added successfully'}, status=200)
+
+    else:
+        devices = Device.objects.all().order_by('id')
+        devices_count = Device.objects.all().count()
+        projects = Projects.objects.all()
+        project_id = request.GET.get('project')
+
+        if project_id == 'all' or project_id is None:
+            cells = Cells.objects.all().order_by('id')
+            selected_project_name = "All"
+        else:
+            cells = Cells.objects.filter(project__id=project_id).order_by().order_by('id')
+            selected_project_name = Projects.objects.get(id=project_id).Name
+
+        context = {
+            "page_title":"Devices",
+            "cells": cells,
+            "devices_count": devices_count,
+            "projects": projects,
+            'selected_project_name': selected_project_name
+        }
+        return render(request, 'megacellcnc/database.html', context)
+
+
 
 
 def device_slots(request):
@@ -614,24 +784,38 @@ def get_history(request):
             device_id = data.get('device_id')
             slot_id = data.get('slot_id')
             timeframe = data.get('timeframe')
+            cell_id = -1
+
+            if device_id == -1:
+                cell_id = data.get('cell_id')
 
             if device_id is None or slot_id is None:
                 return JsonResponse({'error': 'Missing device_id or slot_id'}, status=400)
 
             device_id = int(device_id)
             slot_id = int(slot_id)
+            cell_id = int(cell_id)
 
             # Assuming you have a function or method to get the slot object.
             # Replace `Slot.objects.filter(...).first()` with your actual query method.
-            try:
-                slot = Slot.objects.get(device_id=device_id, slot_number=slot_id)
-            except ObjectDoesNotExist:
-                return JsonResponse({'error': 'Slot not found'}, status=404)
 
+            if cell_id == -1:
 
+                try:
+                    slot = Slot.objects.get(device_id=device_id, slot_number=slot_id)
+                except ObjectDoesNotExist:
+                    return JsonResponse({'error': 'Slot not found'}, status=404)
 
-            if slot.active_cell:
                 cell = slot.active_cell
+
+            else:
+
+                try:
+                    cell = Cells.objects.get(id=cell_id)
+                except ObjectDoesNotExist:
+                    return JsonResponse({'error': 'Cell not found'}, status=404)
+
+            if cell:
                 cell_test_data = CellTestData.objects.filter(cell=cell).order_by('timestamp')
                 if len(cell_test_data) == 0:
                     response_data = {'labels': [], 'volts': [], 'current': [],
@@ -702,7 +886,6 @@ def get_history(request):
         except Exception as e:
             print(str(e))
             return JsonResponse({'error': str(e)}, status=500)
-
 
 
 def project(request):

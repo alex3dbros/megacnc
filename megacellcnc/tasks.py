@@ -8,6 +8,7 @@ from django.db import transaction
 from django.core import serializers
 from itertools import groupby
 from operator import itemgetter
+from django.db.models import Avg, Max
 from django.utils import timezone
 
 logger = logging.getLogger(__name__)
@@ -33,7 +34,10 @@ def update_cell_data(device, slot):
             cell.charge_duration = slot.action_running_time
 
         if slot.state == "Started Discharging":
-            cell.discharge_duration = slot.action_running_time
+            if cell.charge_duration > 0 and slot.action_running_time > cell.charge_duration:
+                cell.discharge_duration = slot.action_running_time - cell.charge_duration
+            else:
+                cell.discharge_duration = slot.action_running_time
 
         cell.cycles_count = slot.completed_cycles
         cell.min_voltage = slot.min_volt
@@ -41,6 +45,7 @@ def update_cell_data(device, slot):
         cell.store_voltage = slot.store_volt
         cell.testing_current = device.discharge_current
         cell.status = slot.state
+        cell.test_duration = slot.action_running_time
         cell.save()
 
         record_states = ["LVC Charging", "Started Charging", "Cooldown", "Started Discharging", "ESR Reading", "Resting",
@@ -62,6 +67,33 @@ def update_cell_data(device, slot):
                 timestamp=timezone.now()
             )
             new_data.save()
+
+
+def cell_test_complete(cell):
+    cell.removal_date = timezone.now()
+    cell.status = "Removed"
+    cell.available = "Yes"
+
+    average_charge_temp_data = cell.test_data.filter(status='Started Charging').aggregate(Avg('temperature'))
+    average_charge_temperature = average_charge_temp_data.get('temperature__avg')
+
+    average_discharge_temp_data = cell.test_data.filter(status='Started Discharging').aggregate(Avg('temperature'))
+    average_discharge_temperature = average_discharge_temp_data.get('temperature__avg')
+
+    # Calculate the maximum temperature during charging
+    max_temp_charging_data = cell.test_data.filter(status='Started Charging').aggregate(Max('temperature'))
+    max_temp_charging = max_temp_charging_data.get('temperature__max')
+
+    # Calculate the maximum temperature during discharging
+    max_temp_discharging_data = cell.test_data.filter(status='Started Discharging').aggregate(Max('temperature'))
+    max_temp_discharging = max_temp_discharging_data.get('temperature__max')
+
+    cell.avg_temp_charging = average_charge_temperature
+    cell.avg_temp_discharging = average_discharge_temperature
+    cell.max_temp_charging = max_temp_charging
+    cell.max_temp_discharging = max_temp_discharging
+
+    cell.save()
 
 
 def update_slot_data(device_model, tester, device_slot_count):
@@ -108,10 +140,8 @@ def update_slot_data(device_model, tester, device_slot_count):
         if slot.saved and cell["StS"] == "Not Inserted":
             slot.saved = False
             if slot.active_cell:  # Check if there's an active cell
-                slot.active_cell.removal_date = timezone.now()
-                slot.active_cell.status = "Removed"
-                slot.active_cell.available = "Yes"
-                slot.active_cell.save()
+                cell_test_complete(slot.active_cell)
+
             slot.active_cell = None
 
         slot.esr = cell["esr"]
