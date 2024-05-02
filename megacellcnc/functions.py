@@ -526,3 +526,30 @@ def gather_label_data(deviceId, slots):
 
     return label_data
 
+
+def gather_label_cell_data(cells):
+
+    filtered_cells = Cells.objects.filter(id__in=cells).order_by('id')
+
+    label_data = []
+
+    for acell in filtered_cells:
+        match = re.search(r'S0*(\d+)', acell.UUID)
+
+        if match:
+            # Extract the number part and convert it to an integer
+            cserial = int(match.group(1))
+
+        else:
+            cserial = 0
+
+        formated_date = acell.insertion_date.strftime('%Y-%m-%d')
+
+        ldat = {"serial": cserial, "uuid": acell.UUID, "cap": acell.capacity, "esr": acell.esr,
+                "temp": acell.max_temp_discharging, "minV": acell.min_voltage,
+                "storeV": acell.store_voltage, "maxV": acell.max_voltage,
+                "ip": acell.device_ip, "slot": acell.device_slot, "date": formated_date}
+
+        label_data.append(ldat)
+
+    return label_data

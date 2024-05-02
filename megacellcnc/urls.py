@@ -12,6 +12,7 @@ urlpatterns = [
     path('devices/',megacellcnc_views.devices,name="devices"),
     path('database/',megacellcnc_views.database,name="database"),
     path('add_cell/',megacellcnc_views.add_cell,name="add_cell"),
+    path('delete-cells/',megacellcnc_views.delete_cells,name="delete-cells"),
     path('device-slots/',megacellcnc_views.device_slots,name="device-slots"),
     path('device/<int:device_id>/update-slots/', megacellcnc_views.get_updated_slots, name='update-slots'),
 

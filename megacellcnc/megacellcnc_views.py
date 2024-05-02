@@ -6,7 +6,7 @@ from django.http import JsonResponse, HttpResponseRedirect
 from django.views.decorators.http import require_POST
 from django.views.decorators.csrf import csrf_exempt
 from django.urls import reverse
-from .functions import scan_for_devices, add_new_cell, draw_dual_label, gather_label_data, draw_square_label, draw_landscape_label, generate_uuid_for_cell
+from .functions import scan_for_devices, add_new_cell, draw_dual_label, gather_label_data, draw_square_label, draw_landscape_label, generate_uuid_for_cell, gather_label_cell_data
 from datetime import timedelta
 import json
 from django.db import transaction
@@ -238,6 +238,33 @@ def add_cell(request):
         project_instance.update_total_cells()
 
         return JsonResponse({'message': 'Cell added successfully'}, status=200)
+
+
+def delete_cells(request):
+    if request.method == "POST":
+        try:
+            data = json.loads(request.body)
+            cell_ids = data.get('cell_ids')
+        except json.JSONDecodeError:
+            return JsonResponse({'error': 'Invalid JSON'}, status=400)
+
+        if len(cell_ids) > 0:
+            count, _ = Cells.objects.filter(id__in=cell_ids).delete()
+        else:
+            messages.error(request, 'No Cell Selected')
+            return JsonResponse({'error': 'No Cell selected'}, status=400)
+
+        if len(cell_ids) == 1:
+            messages.success(request, '%s Cell removed successfully!' % len(cell_ids))
+        elif len(cell_ids) > 1:
+            messages.success(request, '%s Cells removed successfully!' % len(cell_ids))
+
+        # Device.objects.filter(id__in=device_ids).delete()
+        # Redirect to a success page or back to the device list
+        return JsonResponse({'message': f'Successfully deleted {len(cell_ids)} cells.'})
+        # return HttpResponseRedirect(reverse('devices'))
+    # Handle other HTTP methods or return an error response
+
 
 def database(request):
 
@@ -720,7 +747,10 @@ def print_label(request):
                         }
                         return JsonResponse(response_data)
 
-                    label_data = gather_label_data(deviceId, slots)
+                    if deviceId != -1:
+                        label_data = gather_label_data(deviceId, slots)
+                    else:
+                        label_data = gather_label_cell_data(slots)
                     label = draw_dual_label(label_data)
 
                     response_data = {
@@ -743,7 +773,11 @@ def print_label(request):
                         }
                         return JsonResponse(response_data)
 
-                    label_data = gather_label_data(deviceId, slots)
+                    if deviceId != -1:
+                        label_data = gather_label_data(deviceId, slots)
+                    else:
+                        label_data = gather_label_cell_data(slots)
+
                     if printer.LabelShape == "square":
                         label = draw_square_label(label_data, printer.CustomField1)
                     else:

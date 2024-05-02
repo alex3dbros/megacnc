@@ -450,6 +450,11 @@ dz_array = {
 						],
 
 						"database": [
+							f"{folder_name}/js/qz/qz-tray.js",
+							f"{folder_name}/js/qz/jsrsasign-all-min.js",
+							f"{folder_name}/js/qz/qprint.js",
+
+
 							f"{folder_name}/vendor/datatables/js/jquery.dataTables.min.js",
 							f"{folder_name}/vendor/datatables/js/dataTables.buttons.min.js",
 							f"{folder_name}/vendor/datatables/js/buttons.html5.min.js",

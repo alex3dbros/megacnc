@@ -352,7 +352,7 @@ $('#database-tbl').on('click', '.expandBtn', function() {
                 <div class="card-body depostit-card p-0 text-left-align">
                     <div class="depostit-card-media d-flex justify-content-between pb-0">
                         <div>
-                            <h3>Cell ${cellID} Data - ${UUID}</h3>
+                            <h6>Cell ${cellID} Data - ${UUID}</h6>
                         </div>
                     </div>
                     <div class="cell-details mt-3 px-3">
@@ -445,4 +445,189 @@ $('#database-tbl').on('click', '.expandBtn', function() {
     initializeChart( -1, cellId);
 
 });
+
+
+
+//Delete cells
+document.getElementById('deleteCellsBtn').addEventListener('click', function() {
+    const checkedBoxes = document.querySelectorAll('input[name="cell_ids"]:checked');
+    if (checkedBoxes.length === 0) {
+        toastr.error("No Cells Selected", "Error");
+        return;
+    }
+
+    // Convert NodeList to array and map to values
+    const cellIds = Array.from(checkedBoxes).map(box => box.value);
+
+    // Show confirmation modal for deletion
+    showBulkDeleteConfirmation(cellIds);
+});
+
+// Function to display a confirmation modal for bulk deletion
+function showBulkDeleteConfirmation(cellIds) {
+    // Update modal with the number of cells being deleted
+    const modalText = document.getElementById('modalText');
+    modalText.textContent = `Are you sure you want to delete ${cellIds.length} cell(s)?`;
+
+    // Set data attribute with cell IDs on confirm button
+    const confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
+    confirmDeleteBtn.setAttribute('data-cell-ids', JSON.stringify(cellIds));
+
+    // Show modal
+    var deleteConfirmationModal = new bootstrap.Modal(document.getElementById('deleteConfirmationModal'), {
+        keyboard: false
+    });
+    deleteConfirmationModal.show();
+}
+
+// Adjusting existing code to handle bulk delete confirmation
+document.getElementById('confirmDeleteBtn').addEventListener('click', function() {
+    const cellIds = JSON.parse(this.getAttribute('data-cell-ids'));  // Retrieve array of IDs
+    deleteCells(cellIds);
+    $('#deleteConfirmationModal').modal('hide');  // Hide modal after confirmation
+});
+
+// Function to delete cells
+function deleteCells(cellIds) {
+    fetch("/delete-cells/", {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': getCookie('csrftoken'),
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ 'cell_ids': cellIds })
+    })
+    .then(response => response.json())
+    .then(data => {
+        console.log(data);  // Log response
+        location.reload();  // Reload to update UI
+    })
+    .catch(error => console.error('Error:', error));
+}
+
+
+// Delete buttons individual
+
+    // Function to show the confirmation modal
+function showDeleteConfirmation(cellId) {
+    // Set the deviceId to a data attribute on the confirm button for later use
+    document.getElementById('confirmDeleteBtn').setAttribute('data-cell-id', cellId);
+
+    // Show the modal using Bootstrap's modal method
+    var deleteConfirmationModal = new bootstrap.Modal(document.getElementById('deleteConfirmationModal'), {
+        keyboard: false
+    });
+    deleteConfirmationModal.show();
+}
+
+// Add event listeners to delete buttons
+document.querySelectorAll('.deleteCellBtn').forEach(btn => {
+    btn.addEventListener('click', function(e) {
+        e.preventDefault();  // Prevent the default link behavior
+        const cellId = this.getAttribute('data-cell-id');
+
+        showDeleteConfirmation(cellId);  // Show confirmation modal
+    });
+});
+
+// Add event listener to the confirmation button in the modal
+document.getElementById('confirmDeleteBtn').addEventListener('click', function() {
+    const cellId = this.getAttribute('data-cell-id');
+    console.log(cellId);
+    deleteCell(cellId);  // Proceed to delete the device
+    $('#deleteConfirmationModal').modal('hide');  // Hide the confirmation modal
+});
+
+    // Delete device function
+function deleteCell(cellId) {
+    fetch("/delete-cells/", {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': getCookie('csrftoken'),
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ 'cell_ids': [cellId] })  // Note that we're sending an array with a single ID
+    })
+    .then(response => response.json())
+    .then(data => {
+        console.log(data);  // Handle success response
+        location.reload();  // Optionally reload the page to update the cells list
+    })
+    .catch(error => console.error('Error:', error));
+}
+
+
+
+
+async function sendAction(action) {
+    // Gather the checked device IDs
+    const checkedBoxes = document.querySelectorAll('input[name="cell_ids"]:checked');
+    const cell_ids = Array.from(checkedBoxes).map(box => box.value);
+
+    // Make sure at least one cell is selected
+    if (cell_ids.length === 0) {
+        toastr.error('Please select cell(s)', "Error");
+        return;
+    }
+
+
+    if (action === "print") {
+
+        let doubleLabel = parseInt(includedValue($("#doubleLabel")));
+
+        if (doubleLabel === 1) {
+            let batch_size = 2;
+            console.log("this is double label");
+            console.log(cell_ids);
+            if (cell_ids.length > 1) {
+                for (let i = 0; i <= cell_ids.length - batch_size; i += batch_size) {
+                    let batch = cell_ids.slice(i, i + batch_size);
+                    printLabels(batch, -1);
+                    await sleep(1000);
+                }
+
+                // Check if there's an uneven batch at the end
+                if (cell_ids.length % batch_size !== 0) {
+                    // Get the last slot
+                    let lastBatch = cell_ids.slice(-1);
+
+                    // Print the last slot
+                    printLabels(lastBatch, -1);
+                }
+            }
+
+
+
+
+
+        } else {
+            for (let i = 0; i < cell_ids.length; i++) {
+                printLabels(cell_ids[i], -1);
+                await sleep(1000);
+            }
+
+
+        }
+
+
+    }
+
+
+}
+
+
+
+function addActionListeners(buttonIds) {
+    buttonIds.forEach(buttonId => {
+        document.getElementById(buttonId).addEventListener('click', function() {
+            const action = this.id;  // 'this' refers to the button clicked
+            sendAction(action);
+        });
+    });
+}
+
+
+// Initialize the listeners for your action buttons
+addActionListeners(['print']);
+
 
