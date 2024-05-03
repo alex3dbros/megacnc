@@ -74,7 +74,7 @@
     </div>
     <div class="container-fluid">
         <div class="row">
-            <div class="col-xl-2 col-sm-6">
+            <div class="col-xl-3 col-sm-6">
                 <div class="card box-hover">
                     <div class="card-body">
                         <div class="d-flex align-items-center">
@@ -240,7 +240,7 @@
     </div>
     <div class="offcanvas-body">
         <div class="container-fluid">
-            <form action="/add_cell/" method="post" id="add_cell_form" class="needs-validation">
+            <form action="/add-cell/" method="post" id="add_cell_form" class="needs-validation">
                 {% csrf_token %}
                 <!-- Project Dropdown -->
                 <div class="row">
@@ -405,7 +405,7 @@ $(document).ready(function() {
 
         $.ajax({
             type: 'POST',
-            url: '/add_cell/',  // The URL to the server endpoint
+            url: '/add-cell/',  // The URL to the server endpoint
             data: formData,
             beforeSend: function(xhr) {
                 xhr.setRequestHeader("X-CSRFToken", csrftoken);  // Set the CSRF token in the request header

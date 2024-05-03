@@ -4,7 +4,7 @@ import socket
 import netaddr
 import re
 from mccprolib.api import MegacellCharger
-from .models import Projects, Cells, Device
+from .models import Projects, Cells, Device, Batteries
 import re
 from datetime import datetime
 from django.shortcuts import get_object_or_404
@@ -553,3 +553,26 @@ def gather_label_cell_data(cells):
         label_data.append(ldat)
 
     return label_data
+
+
+def generate_battery_uuid():
+    # Query the last cell for the given project ID, ordered by ID to get the most recent one
+    last_battery = Batteries.objects.order_by('-id').first()
+
+    if last_battery:
+        # Extract the serial number from the last cell's UUID
+        match = re.search(r'-S(\d+)', last_battery.UUID)
+        if match:
+            serial_number = int(match.group(1)) + 1  # Increment the serial number
+        else:
+            # If for some reason the UUID format is wrong, start a new serial number
+            serial_number = 1
+    else:
+        # If there are no cells for the project, start with serial number 1
+        serial_number = 1
+
+    # Generate a new UUID using today's date and the new serial number
+    date_prefix = datetime.now().strftime('D%Y%m%d')
+    new_uuid = f"{date_prefix}-S{serial_number:06d}"  # Assuming a fixed capacity part for simplicity
+
+    return new_uuid

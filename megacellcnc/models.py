@@ -33,8 +33,10 @@ class PrinterSettings(models.Model):
     def __str__(self):
         return self.PrinterName
 
+
 class Cells(models.Model):
     project = models.ForeignKey(Projects, on_delete=models.CASCADE, related_name='cells')
+    battery = models.ForeignKey('Batteries', on_delete=models.SET_NULL, null=True, blank=True, related_name='battery_cells')
     UUID = models.CharField(max_length=150)
     cell_type = models.CharField(max_length=150)
     device_ip = models.GenericIPAddressField()
@@ -63,6 +65,8 @@ class Cells(models.Model):
     insertion_date = models.DateTimeField(default=timezone.now)
     removal_date = models.DateTimeField(null=True, blank=True)
     available = models.CharField(max_length=150)
+    bat_position = models.CharField(max_length=150, default="")
+
 
     def __str__(self):
         return self.UUID
@@ -153,3 +157,18 @@ class Slot(models.Model):
     def __str__(self):
         return f"Slot {self.slot_number} of Device {self.device.name}"
 
+
+class Batteries(models.Model):
+    name = models.CharField(max_length=150)
+    UUID = models.CharField(max_length=150)
+    series = models.IntegerField(null=True, blank=True)
+    parallel = models.IntegerField(null=True, blank=True)
+    cell_type = models.CharField(max_length=150)
+    voltage = models.FloatField()
+    capacity = models.FloatField()
+    status = models.CharField(max_length=150)
+    creation_date = models.DateTimeField(default=timezone.now)
+    available = models.CharField(max_length=150)
+
+    def __str__(self):
+        return self.UUID

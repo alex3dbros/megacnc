@@ -1,19 +1,20 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.db.models import Prefetch
-from .models import Projects, Device, Slot, Cells, CellTestData, PrinterSettings
+from .models import Projects, Device, Slot, Cells, CellTestData, PrinterSettings, Batteries
 from django.contrib import messages
 from django.http import JsonResponse, HttpResponseRedirect
 from django.views.decorators.http import require_POST
 from django.views.decorators.csrf import csrf_exempt
 from django.urls import reverse
-from .functions import scan_for_devices, add_new_cell, draw_dual_label, gather_label_data, draw_square_label, draw_landscape_label, generate_uuid_for_cell, gather_label_cell_data
+from .functions import scan_for_devices, add_new_cell, draw_dual_label, gather_label_data, draw_square_label, \
+    draw_landscape_label, generate_uuid_for_cell, gather_label_cell_data, generate_battery_uuid
 from datetime import timedelta
 import json
 from django.db import transaction
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import Count
 from django.shortcuts import render
-
+from django.views.decorators.http import require_http_methods
 
 
 from django.utils import timezone
@@ -266,109 +267,143 @@ def delete_cells(request):
     # Handle other HTTP methods or return an error response
 
 
+def get_cells(request):
+    project_id = request.GET.get('project_id')
+    if project_id == 'all':
+        cells = Cells.objects.filter(available="Yes")
+    else:
+        cells = Cells.objects.filter(project_id=project_id, available="Yes")
+
+    cells_data = []
+    for cell in cells:
+        match = re.search(r'-S(\d+)', cell.UUID)
+        if match:
+            serial_number = int(match.group(1))
+            cdata = {'id': serial_number, 'capacity': cell.capacity, 'uuid': cell.UUID}
+            cells_data.append(cdata)
+
+    return JsonResponse({'cells': cells_data})
+
+
+def get_battery_cells(request):
+    battery_id = int(request.GET.get('bat_id'))
+    print(battery_id)
+
+    battery = Batteries.objects.get(id=battery_id)
+    cells_data = []
+    for cell in battery.battery_cells.all():
+        match = re.search(r'-S(\d+)', cell.UUID)
+        if match:
+            serial_number = int(match.group(1))
+            cdata = {'id': serial_number, 'capacity': cell.capacity, 'uuid': cell.UUID, 'bat_position': cell.bat_position}
+            cells_data.append(cdata)
+
+
+    return JsonResponse({'cells': cells_data})
+
+
 def database(request):
 
-    if request.method == 'POST':
-        print(" I received things to post")
+    projects = Projects.objects.all()
+    project_id = request.GET.get('project')
 
-        cell_type = request.POST['cell_type']
-
-        # devices_details_str = request.POST.get('devicesDetails')
-        #
-        # # Parse the JSON string into a Python object
-        # try:
-        #     devices_details = json.loads(devices_details_str)
-        # except json.JSONDecodeError:
-        #     return JsonResponse({'error': 'Invalid JSON'}, status=400)
-        #
-        # device_prefix = request.POST.get('device_prefix')
-        # project_id = request.POST.get('project')
-        # notes = request.POST.get('notes')
-        # added_devices = 0
-        # print("this is project id: %s" % project_id)
-        # # Fetch the Projects instance corresponding to the project_id
-        # try:
-        #     project_instance = Projects.objects.get(id=project_id)
-        #     print(project_instance)
-        # except Projects.DoesNotExist:
-        #     # Handle the case where the project with the given name does not exist
-        #     print(f"Project with name '{project_id}' does not exist.")
-        #     # You might want to create a new project here or handle this error appropriately
-        #
-        # print(devices_details)
-        #
-        # for device in devices_details:
-        #     print(device)
-        #     dev_name = "%s_%s" % (device_prefix, device["name"])
-        #
-        #     # Use get_or_create to either fetch the existing device with the given MAC or create a new one
-        #     device_obj, created = Device.objects.get_or_create(
-        #         mac=device["mac"],  # Look up by MAC address
-        #         defaults={  # Provide the default values for creation
-        #             'type': device["dev_type"],
-        #             'name': dev_name,
-        #             'ip': device["ip"],
-        #             'runtime': timedelta(0),
-        #             'project': project_instance
-        #         }
-        #     )
-        #
-        #     # After adding the device, count the devices related to the project
-        #     device_count = Device.objects.filter(project=project_instance).count()
-        #
-        #     if created:
-        #         print("New device added:", device_obj)
-        #         added_devices += 1
-        #
-        #         # Create and assign the specified number of slots to the newly created device
-        #         slot_count = int(device.get("slot_count", 0))  # Default to 0 if "slot_count" is not provided
-        #         print("This is slot count: %s" % slot_count)
-        #         for slot_num in range(1, slot_count + 1):  # Starting from 1 to slot_count
-        #             Slot.objects.create(device=device_obj, slot_number=slot_num)
-        #             # Optionally add other default slot parameters if needed
-        #
-        #         with transaction.atomic():  # Ensure atomicity of the update operation
-        #             project_instance.DevCnt = device_count
-        #             project_instance.save()
-        #
-        #     else:
-        #         print("Device already exists:", device_obj)
-        #
-        # print(devices_details, device_prefix, project_id, notes)
-        # if added_devices > 1:
-        #     messages.success(request, '%s Devices added successfully!' % added_devices)
-        #
-        # if added_devices == 1:
-        #     messages.success(request, 'Device added successfully!')
-        #
-        #     # Redirect to a new URL or render the same template with context
-        # return redirect('/database/')
-        return JsonResponse({'message': 'Cell added successfully'}, status=200)
-
+    if project_id == 'all' or project_id is None:
+        cells = Cells.objects.all().order_by('id')
+        selected_project_name = "All"
     else:
-        devices = Device.objects.all().order_by('id')
-        devices_count = Device.objects.all().count()
-        projects = Projects.objects.all()
-        project_id = request.GET.get('project')
+        cells = Cells.objects.filter(project__id=project_id).order_by().order_by('id')
+        selected_project_name = Projects.objects.get(id=project_id).Name
 
-        if project_id == 'all' or project_id is None:
-            cells = Cells.objects.all().order_by('id')
-            selected_project_name = "All"
-        else:
-            cells = Cells.objects.filter(project__id=project_id).order_by().order_by('id')
-            selected_project_name = Projects.objects.get(id=project_id).Name
-
-        context = {
-            "page_title":"Devices",
-            "cells": cells,
-            "devices_count": devices_count,
-            "projects": projects,
-            'selected_project_name': selected_project_name
-        }
-        return render(request, 'megacellcnc/database.html', context)
+    context = {
+        "page_title":"Devices",
+        "cells": cells,
+        "projects": projects,
+        'selected_project_name': selected_project_name
+    }
+    return render(request, 'megacellcnc/database.html', context)
 
 
+def batteries(request):
+    projects = Projects.objects.all()
+    projects_data = [{'id': prj.id, 'name': prj.Name} for prj in projects]
+    batteries = Batteries.objects.annotate(cells_count=Count('battery_cells'))
+    for battery in batteries:
+        battery.series_parallel = battery.series * battery.parallel if battery.series and battery.parallel else 0
 
+    context = {
+        "page_title":"Batteries",
+        "batteries": batteries,
+        "projects": json.dumps(projects_data)
+    }
+    return render(request, 'megacellcnc/batteries.html', context)
+
+
+def add_battery(request):
+    if request.method == 'POST':
+        battery_name = request.POST['battery_name']
+        series = request.POST['series']
+        parallel = request.POST['parallel']
+        uuid = generate_battery_uuid()
+        print("I got add battery request %s "% battery_name)
+
+        new_battery = Batteries(
+
+            name=battery_name,
+            UUID=uuid,
+            series=series,
+            parallel=parallel,
+            voltage=0,
+            capacity=0,
+            status="Created",
+            available="Yes"
+
+        )
+
+        new_battery.save()
+
+        return redirect('/batteries/')
+
+
+@require_http_methods(["POST"])  # Only allow POST requests
+def save_battery_configuration(request):
+    try:
+        data = json.loads(request.body.decode('utf-8'))  # Decode and load JSON data
+
+        battery_id = data['batteryId']
+        cells_data = data['cellsData']
+
+        battery = Batteries.objects.get(id=battery_id)
+
+        print("Battery ID: ", battery_id)
+        # Example of handling the data:
+        for cell in cells_data:
+            cell_uuid = cell['cellId']
+            slot_id = cell['slotId']
+            capacity = cell['capacity']
+
+            cell = Cells.objects.get(UUID=cell_uuid)
+            cell.battery = battery
+            cell.bat_position = slot_id
+            cell.available = "No"
+            cell.save()
+
+
+
+            # Process this data, such as saving it to the database
+            print(cell_uuid, slot_id, capacity)
+
+        print("This is len cells data")
+        print(len(cells_data))
+        if len(cells_data) == 0:
+            for cell in battery.battery_cells.all():
+                cell.battery = None
+                cell.bat_position = ""
+                cell.available = "Yes"
+                cell.save()
+
+        return JsonResponse({'status': 'success', 'message': 'Pack configuration saved successfully!'})
+    except json.JSONDecodeError as e:
+        return JsonResponse({'status': 'error', 'message': 'Invalid JSON'}, status=400)
 
 def device_slots(request):
     dev_id = request.GET.get('dev_id')

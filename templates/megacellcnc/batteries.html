@@ -1,0 +1,368 @@
+{% extends 'megacellcnc/elements/layouts/admin.html' %}
+{% load static %}
+        
+{% block additional_css %}
+<style>
+
+    .tableFixHead          { overflow: auto; max-height: 300px; min-height: 50px;}
+    .tableFixHead thead th { position: sticky; top: 0; z-index: 1; }
+
+    /* Just common table stuff. Really. */
+    table  { border-collapse: collapse; width: 100%; }
+    th, td { padding: 8px 16px; }
+    th     { background:#eee; }
+
+
+    .tbl-caption {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    .heading {
+        margin-bottom: 0;
+    }
+
+    .accordion-content {
+      display: none;
+    }
+
+
+    .text-left-align {
+        text-align: left;
+    }
+
+    li.spacer {
+        height: 20px;
+        background: none;
+        border: none;
+    }
+
+
+    .list-group {
+        min-height: 50px;  /* Minimum height to ensure the list is always visible */
+        min-width: 200px;  /* Minimum width to maintain list usability */
+        border: 1px solid #ccc;  /* Optional: adds a border to make the empty list visible */
+        padding: 10px;  /* Optional: adds padding inside the list */
+        background-color: #000000;  /* Optional: light background to distinguish the area */
+    }
+
+    #left-list, #middle-list{
+    max-height: 300px;   /* Adjust based on your needs */
+    overflow-y: auto;    /* Enables vertical scrolling */
+    overflow-x: hidden;  /* Keeps the horizontal scrollbar hidden */
+    width: 100%;         /* Optional, depending on layout */
+    border: 1px solid #ccc; /* Optional, for visibility */
+    }
+
+    .sortable-cell {
+        min-height: 50px;
+        width: 100%;
+        min-width: 50px;
+        border: 1px solid #ccc;
+        padding: 10px;
+    }
+
+    .text-center {
+        text-align: center;
+    }
+
+    /* Style for the row number cells */
+    .row-number {
+        font-weight: bold;
+        width: 50px;  // Set a fixed width for uniformity
+    }
+
+    .highlight {
+        background-color: rgba(255, 255, 0, 0.53);  // Yellow background for high visibility
+        border: 2px solid #f00;  // Red border to make it stand out
+    }
+
+    .control-panel {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        width: 100%;
+    }
+
+
+    #battery-controls {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        justify-content: start;
+        padding: 10px;
+    }
+
+
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.14.0/Sortable.min.js"></script>
+
+
+
+{% endblock %}		
+{% block content %}
+
+<!--**********************************
+    Content body start
+***********************************-->
+<div class="content-body">
+
+    <!--Hidden inputs for printing-->
+    <input type="hidden" id="connectionHost" value="localhost" />
+    <input type="hidden" id="doubleLabel" value="0" />
+    <input type="hidden" id="pxlWidth" value="0" />
+    <input type="hidden" id="pxlHeight" value="0" />
+    <input type="hidden" id="pxlRotation" value="0" />
+
+
+
+    <!-- row -->	
+    <div class="page-titles">
+        <ol class="breadcrumb">
+            <li><h5 class="bc-title">{{page_title}}</h5></li>
+            <li class="breadcrumb-item"><a href="javascript:void(0)">
+                <svg width="17" height="17" viewBox="0 0 17 17" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M2.125 6.375L8.5 1.41667L14.875 6.375V14.1667C14.875 14.5424 14.7257 14.9027 14.4601 15.1684C14.1944 15.4341 13.8341 15.5833 13.4583 15.5833H3.54167C3.16594 15.5833 2.80561 15.4341 2.53993 15.1684C2.27426 14.9027 2.125 14.5424 2.125 14.1667V6.375Z" stroke="#2C2C2C" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M6.375 15.5833V8.5H10.625V15.5833" stroke="#2C2C2C" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                Home </a>
+            </li>
+            <li class="breadcrumb-item active"><a href="javascript:void(0)">{{page_title}}</a></li>
+        </ol>
+        <li>Printer Connection: <span id="qz-status" class="text-muted" style="font-weight: bold; padding-right: 30px;">Unknown</span> <a class="text-primary fs-13" data-bs-toggle="offcanvas" href="#offcanvasExample1" role="button" aria-controls="offcanvasExample1">+ Add Battery</a> </li>
+
+    </div>
+    <div class="container-fluid">
+        <div class="row">
+
+            <div class="col-xl-12 active-p">
+                <div class="card">
+                    <div class="card-body p-0">
+                        <div class="table-responsive active-projects shorting">
+
+                            <div class="tbl-caption">
+                                <h4 class="heading mb-0">Cells</h4>
+
+
+                                <div class="help-desk">
+
+
+                                    <button type="button" id="print" class="btn btn-primary" style="margin-left: 20px;">
+                                        <i class="fa-solid fa-print me-2"></i>Print
+                                    </button>
+
+                                    <button type="button" id="deleteCellsBtn" class="btn btn-danger"><i class="fa-solid fa-trash me-2"></i>Delete</button>
+                                </div>
+
+                            </div>
+
+
+
+                            <table id="batteries-tbl" class="table ItemsCheckboxSec">
+                                <thead>
+                                <tr>
+                                    <th>
+                                        <div class="form-check-all custom-checkbox ms-0">
+                                            <input type="checkbox"  class="form-check-input" id="checkCells" >
+                                            <label class="form-check-label" for="checkAll"></label>
+                                        </div>
+                                    </th>
+                                    <th>ID</th>
+                                    <th>Available</th>
+                                    <th>Name</th>
+                                    <th>Series</th>
+                                    <th>Parallel</th>
+                                    <th>Required Cells</th>
+                                    <th>Assigned Cells</th>
+                                    <th>Capacity</th>
+                                    <th>Status</th>
+                                    <th>Creation Date</th>
+                                    <th><strong></strong></th>
+
+                                </tr>
+                                </thead>
+
+
+                                <tbody>
+                                {% for battery in batteries %}
+                                <tr>
+                                    <td>
+                                        <div class="form-check custom-checkbox">
+                                            <input type="checkbox" class="form-check-input" id="customCheckBox{{ forloop.counter }}" required="" value={{cell.id}} name="cell_ids">
+                                            <label class="form-check-label" for="customCheckBox{{ forloop.counter }}"></label>
+                                        </div>
+                                    </td>
+
+                                    <td>{{ battery.id }}</td>
+                                    <td><div class="status-{{ battery.available|lower|add:'-cell' }}">{{ battery.available|capfirst }}</div></td>
+                                    <td>{{ battery.name }}</td>
+                                    <td>{{ battery.series }}</td>
+                                    <td>{{ battery.parallel }}</td>
+                                    <td>{{ battery.series_parallel }}</td>
+                                    <td>{{ battery.cells_count }}</td>
+                                    <td>{{ battery.capacity }}</td>
+                                    <td>{{ battery.status }}</td>
+                                    <td>{{ battery.creation_date|date:"d M Y" }}</td>
+                                    <td>
+                                        <div class="d-flex">
+
+                                            <button type="button" class="btn btn-primary shadow btn-xs sharp me-1 expandBtn"
+                                                data-target="#detailsRow1"
+                                                    data-battery-id="{{ battery.id }}"
+                                                    data-battery-uuid="{{ battery.UUID }}"
+                                                    data-projects="{{ projects }}"
+                                                    data-series="{{ battery.series }}"
+                                                    data-parallel="{{ battery.parallel }}"
+                                            >
+
+                                                <i class="fa fa-plus"></i>
+                                            </button>
+
+
+                                            <a href="#" class="btn btn-primary shadow btn-xs sharp me-1 editBatteryBtn" data-battery-id="{{ battery.id }}"><i class="fa fa-pencil"></i></a>
+                                            <a href="#" class="btn btn-danger shadow btn-xs sharp deleteBatteryBtn" data-battery-id="{{ battery.id }}"><i class="fa fa-trash"></i></a>
+                                        </div>
+                                    </td>
+
+                                </tr>
+
+                                {% empty %}
+                                <tr><td colspan="7" style="text-align:center;">No devices found.</td></tr>
+                                {% endfor %}
+
+                                </tbody>
+
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+
+        </div>
+    
+    </div>
+</div>
+
+<!--**********************************
+    Content body end
+***********************************-->
+<div class="offcanvas offcanvas-end customeoff" tabindex="-1" id="offcanvasExample1">
+    <div class="offcanvas-header">
+        <h5 class="modal-title" id="gridSystemModal1">Add New Battery</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close">
+            <i class="fa-solid fa-xmark"></i>
+        </button>
+    </div>
+    <div class="offcanvas-body">
+        <div class="container-fluid">
+            <form action="/add-battery/" method="post" id="add_battery_form" class="needs-validation">
+                {% csrf_token %}
+                <!-- Project Dropdown -->
+
+                <!-- Battery Name -->
+                <div class="col-xl-6 mb-3">
+                    <label for="batteryname" class="form-label">Battery Name</label>
+                    <input type="text" class="form-control" id="batteryname" name="battery_name" required>
+                </div>
+
+                <div class="row">
+
+                    <!-- Series -->
+                    <div class="col-xl-6 mb-3">
+                        <label for="series" class="form-label">Series</label>
+                        <input type="number" step="1" class="form-control" id="series" name="series" required>
+                    </div>
+
+                    <!-- Parallel -->
+                    <div class="col-xl-6 mb-3">
+                        <label for="parallel" class="form-label">Parallel</label>
+                        <input type="number" step="1" class="form-control" id="parallel" name="parallel" required>
+                    </div>
+
+                </div>
+                <!-- Submit Button -->
+                <button type="submit" class="btn btn-primary">Add Battery</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+
+
+
+<!-- Confirmation Modal -->
+<div class="modal fade" id="deleteConfirmationModal" tabindex="-1" aria-labelledby="deleteConfirmationModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteConfirmationModalLabel">Confirm Delete</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="modalText">
+                Are you sure you want to delete this cell?
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" id="confirmDeleteBtn">Delete</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
+
+
+
+{% endblock %}
+
+{% block additional_js %}
+
+
+<script>
+    jQuery(document).ready(function(){
+
+        toastr.options = {
+            timeOut: 5000,
+            closeButton: !0,
+            debug: !1,
+            newestOnTop: !0,
+            progressBar: !0,
+            positionClass: "toast-top-right",
+            preventDuplicates: !0,
+            onclick: null,
+            showDuration: "300",
+            hideDuration: "1000",
+            extendedTimeOut: "1000",
+            showEasing: "swing",
+            hideEasing: "linear",
+            showMethod: "fadeIn",
+            hideMethod: "fadeOut",
+            tapToDismiss: !1
+        };
+
+
+
+        {% if messages %}
+        {% for message in messages %}
+        // Check the message level and call the appropriate Toastr function
+        {% if message.level_tag == 'success' %}
+        toastr.success("{{ message }}", "Success");
+        {% elif message.level_tag == 'error' %}
+        toastr.error("{{ message }}", "Error");
+        {% elif message.level_tag == 'info' %}
+        toastr.info("{{ message }}", "Info");
+        {% elif message.level_tag == 'warning' %}
+        toastr.warning("{{ message }}", "Warning");
+        {% else %}
+        toastr.info("{{ message }}", "Notice");
+        {% endif %}
+        {% endfor %}
+        {% endif %}
+    });
+</script>
+
+
+{% endblock %}
+
