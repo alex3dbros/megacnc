@@ -77,6 +77,12 @@ sudo docker exec megacnc_web_1 python manage.py makemigrations
 sudo docker exec megacnc_web_1 python manage.py migrate
 ```
 
+## If it fails to do the migrations because of conflicts, run the following command for makemigrations
+
+```
+sudo docker exec -it megacnc_web_1 sh -c "echo 'y' | python manage.py makemigrations --merge"
+```
+
 
 # Support and donations are welcome
 
