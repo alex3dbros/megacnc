@@ -75,18 +75,18 @@ def cell_test_complete(cell):
     cell.available = "Yes"
 
     average_charge_temp_data = cell.test_data.filter(status='Started Charging').aggregate(Avg('temperature'))
-    average_charge_temperature = average_charge_temp_data.get('temperature__avg')
+    average_charge_temperature = average_charge_temp_data.get('temperature__avg') or 0
 
     average_discharge_temp_data = cell.test_data.filter(status='Started Discharging').aggregate(Avg('temperature'))
-    average_discharge_temperature = average_discharge_temp_data.get('temperature__avg')
+    average_discharge_temperature = average_discharge_temp_data.get('temperature__avg') or 0
 
     # Calculate the maximum temperature during charging
     max_temp_charging_data = cell.test_data.filter(status='Started Charging').aggregate(Max('temperature'))
-    max_temp_charging = max_temp_charging_data.get('temperature__max')
+    max_temp_charging = max_temp_charging_data.get('temperature__max') or 0
 
     # Calculate the maximum temperature during discharging
     max_temp_discharging_data = cell.test_data.filter(status='Started Discharging').aggregate(Max('temperature'))
-    max_temp_discharging = max_temp_discharging_data.get('temperature__max')
+    max_temp_discharging = max_temp_discharging_data.get('temperature__max') or 0
 
     cell.avg_temp_charging = average_charge_temperature
     cell.avg_temp_discharging = average_discharge_temperature
