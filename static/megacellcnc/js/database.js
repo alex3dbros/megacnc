@@ -13,6 +13,12 @@ function getCookie(name) {
     return cookieValue;
 }
 
+$(function() {
+    $("#checkCells").click(function() {
+        $(".form-check input[type='checkbox']").prop("checked", $(this).prop("checked"));
+    });
+});
+
 function formatDuration(seconds) {
     const days = Math.floor(seconds / (3600 * 24));
     seconds %= 3600 * 24;

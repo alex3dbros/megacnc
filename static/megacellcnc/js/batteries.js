@@ -692,9 +692,9 @@ function deleteCells(cellIds) {
 // Delete buttons individual
 
     // Function to show the confirmation modal
-function showDeleteConfirmation(cellId) {
+function showDeleteConfirmation(batteryId) {
     // Set the deviceId to a data attribute on the confirm button for later use
-    document.getElementById('confirmDeleteBtn').setAttribute('data-cell-id', cellId);
+    document.getElementById('confirmDeleteBtn').setAttribute('data-battery-id', batteryId);
 
     // Show the modal using Bootstrap's modal method
     var deleteConfirmationModal = new bootstrap.Modal(document.getElementById('deleteConfirmationModal'), {
@@ -704,12 +704,12 @@ function showDeleteConfirmation(cellId) {
 }
 
 // Add event listeners to delete buttons
-document.querySelectorAll('.deleteCellBtn').forEach(btn => {
+document.querySelectorAll('.deleteBatteryBtn').forEach(btn => {
     btn.addEventListener('click', function(e) {
         e.preventDefault();  // Prevent the default link behavior
-        const cellId = this.getAttribute('data-cell-id');
+        const batteryId = this.getAttribute('data-battery-id');
 
-        showDeleteConfirmation(cellId);  // Show confirmation modal
+        showDeleteConfirmation(batteryId);  // Show confirmation modal
     });
 });
 
