@@ -3,97 +3,323 @@
         
 {% block additional_css %}
 <style>
-
-    .tableFixHead          { overflow: auto; max-height: 300px; min-height: 50px;}
+    /* Table constraints */
+    .tableFixHead { overflow: auto; max-height: 300px; min-height: 50px; }
     .tableFixHead thead th { position: sticky; top: 0; z-index: 1; }
+    table { border-collapse: collapse; width: 100%; max-width: 100%; table-layout: fixed; }
+    th, td { padding: 8px 16px; overflow: hidden; text-overflow: ellipsis; }
+    .tbl-caption { display: flex; justify-content: space-between; align-items: center; }
+    .heading { margin-bottom: 0; }
+    .accordion-content { display: none; }
+    .accordion-content td { padding: 10px; }
 
-    /* Just common table stuff. Really. */
-    table  { border-collapse: collapse; width: 100%; }
-    th, td { padding: 8px 16px; }
-    th     { background:#eee; }
-
-
-    .tbl-caption {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }
-    .heading {
-        margin-bottom: 0;
-    }
-
-    .accordion-content {
-      display: none;
-    }
-
-
-    .text-left-align {
-        text-align: left;
-    }
-
-    li.spacer {
-        height: 20px;
-        background: none;
-        border: none;
-    }
-
-
-    .list-group {
-        min-height: 50px;  /* Minimum height to ensure the list is always visible */
-        min-width: 200px;  /* Minimum width to maintain list usability */
-        border: 1px solid #ccc;  /* Optional: adds a border to make the empty list visible */
-        padding: 10px;  /* Optional: adds padding inside the list */
-        background-color: #000000;  /* Optional: light background to distinguish the area */
-    }
-
-    #left-list, #middle-list{
-    max-height: 300px;   /* Adjust based on your needs */
-    overflow-y: auto;    /* Enables vertical scrolling */
-    overflow-x: hidden;  /* Keeps the horizontal scrollbar hidden */
-    width: 100%;         /* Optional, depending on layout */
-    border: 1px solid #ccc; /* Optional, for visibility */
-    }
-
-    .sortable-cell {
-        min-height: 50px;
-        width: 100%;
-        min-width: 50px;
-        border: 1px solid #ccc;
+    /* Pack Editor Container */
+    .pack-editor {
+        background: #0d1b2a;
+        border-radius: 8px;
         padding: 10px;
     }
 
-    .text-center {
-        text-align: center;
+    /* Control Bar - Compact single line */
+    .control-bar {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        align-items: center;
+        padding: 8px 10px;
+        background: #16213e;
+        border-radius: 6px;
+        margin-bottom: 8px;
+    }
+    .control-group {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+    }
+    .control-group label {
+        font-size: 8px;
+        color: #4ecca3;
+        text-transform: uppercase;
+        margin: 0;
+    }
+    .control-group select {
+        background: #0f3460;
+        border-color: #1a3a5c;
+        color: #fff;
+        min-width: 120px;
+        font-size: 11px;
+        padding: 3px 6px;
+    }
+    .control-group input {
+        background: #0f3460;
+        border-color: #1a3a5c;
+        color: #fff;
+        font-size: 11px;
+        padding: 3px 6px;
+    }
+    
+    /* Info Groups (Verfügbar/Transfer) */
+    .info-group {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        padding: 4px 8px;
+        background: #0f3460;
+        border-radius: 4px;
+    }
+    .info-label {
+        font-size: 10px;
+        color: #aaa;
+    }
+    .transfer-toggle {
+        cursor: pointer;
+        transition: background 0.2s;
+    }
+    .transfer-toggle:hover {
+        background: #1a4a7c;
+    }
+    
+    /* Control Buttons */
+    .control-buttons {
+        display: flex;
+        gap: 4px;
+        margin-left: auto;
+    }
+    .control-buttons .btn { 
+        padding: 4px 8px; 
+        font-size: 11px;
+        min-width: 32px;
     }
 
-    /* Style for the row number cells */
-    .row-number {
+    /* Transfer Panel (collapsible) */
+    .transfer-panel {
+        background: #16213e;
+        border-radius: 6px;
+        padding: 8px;
+        margin-bottom: 8px;
+    }
+    .cell-list {
+        max-height: 80px;
+        overflow-y: auto;
+        border: 1px solid #1a3a5c;
+        border-radius: 4px;
+        background-color: #0f3460;
+        padding: 4px;
+        min-height: 30px;
+    }
+    .cell-list .list-group-item {
+        padding: 2px 5px;
+        margin-bottom: 1px;
+        border-radius: 2px;
+        font-size: 9px;
+        background-color: #1a3a5c;
+        border: none;
+        cursor: move;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .cell-list .list-group-item:hover { background-color: #2a4a7c; }
+
+    /* Pack Section */
+    .pack-section {
+        background: #16213e;
+        border-radius: 6px;
+        padding: 8px;
+        overflow-x: auto;
+    }
+
+    /* Battery Grid Layout */
+    .battery-scroll-wrapper {
+        max-height: 50vh;
+        overflow-y: auto;
+    }
+    .battery-grid-layout {
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
+        min-width: max-content;
+    }
+    .series-row {
+        display: flex;
+        align-items: stretch;
+        background: #0f3460;
+        border-radius: 3px;
+    }
+    .series-fixed {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        padding: 3px 6px;
+        background: #0a2540;
+        min-width: 80px;
+        flex-shrink: 0;
+        position: sticky;
+        left: 0;
+        z-index: 1;
+    }
+    .series-label {
         font-weight: bold;
-        width: 50px;  // Set a fixed width for uniformity
+        color: #fff;
+        font-size: 10px;
+        min-width: 20px;
+    }
+    .capacity-display {
+        font-size: 9px;
+        font-weight: bold;
+        color: #4ecca3;
+    }
+    .cells-container {
+        display: flex;
+        gap: 2px;
+        padding: 3px;
+    }
+    .cell-slot {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        min-width: 40px;
+    }
+    .slot-label {
+        font-size: 6px;
+        color: #555;
+        margin-bottom: 1px;
+    }
+    .sortable-cell {
+        min-height: 22px;
+        width: 38px;
+        border: 1px dashed #3a5a7c;
+        border-radius: 2px;
+        padding: 1px;
+        margin: 0;
+        list-style: none;
+        background-color: #1a2a4a;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .sortable-cell .list-group-item {
+        padding: 1px 2px;
+        font-size: 7px;
+        margin: 0;
+        background-color: #4ecca3;
+        color: #000;
+        border: none;
+        border-radius: 1px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 100%;
     }
 
     .highlight {
-        background-color: rgba(255, 255, 0, 0.53);  // Yellow background for high visibility
-        border: 2px solid #f00;  // Red border to make it stand out
+        background-color: rgba(255, 255, 0, 0.4) !important;
+        border: 2px solid #f00 !important;
+    }
+    .defective {
+        background-color: #ff6b6b !important;
+        text-decoration: line-through;
     }
 
-    .control-panel {
-        display: flex;
-        flex-direction: column;
-        align-items: flex-start;
-        width: 100%;
+    .gap-1 { gap: 0.25rem; }
+    .gap-2 { gap: 0.5rem; }
+
+    /* Assign Status Display */
+    .assign-status {
+        background: linear-gradient(135deg, #1a3a5c 0%, #0f3460 100%);
+        border: 1px solid #4ecca3;
+        border-radius: 6px;
+        padding: 10px 15px;
+        margin-bottom: 10px;
     }
-
-
-    #battery-controls {
+    .status-content {
         display: flex;
-        flex-direction: row;
         align-items: center;
-        justify-content: start;
-        padding: 10px;
+        color: #fff;
+        font-size: 12px;
+    }
+    .status-content i {
+        color: #4ecca3;
+        font-size: 14px;
+    }
+    #status-text {
+        flex: 1;
+    }
+    .assign-status .progress {
+        background: #0a2540;
+        border-radius: 2px;
+    }
+    .phase-label {
+        font-weight: bold;
+        color: #4ecca3;
+        margin-right: 10px;
     }
 
+    /* Cell Animation States */
+    .sortable-cell.cell-placing {
+        background-color: #f1c40f !important;
+        animation: pulse-yellow 0.3s ease-out;
+    }
+    .sortable-cell.cell-placed {
+        background-color: #3498db !important;
+    }
+    .sortable-cell.cell-swap-source {
+        background-color: #e74c3c !important;
+        animation: blink-red 0.4s ease-in-out;
+    }
+    .sortable-cell.cell-swap-target {
+        background-color: #f39c12 !important;
+        animation: blink-orange 0.4s ease-in-out;
+    }
+    .sortable-cell.cell-done {
+        background-color: #27ae60 !important;
+        border-color: #2ecc71 !important;
+        border-style: solid !important;
+    }
+    .sortable-cell.cell-done .list-group-item {
+        background-color: #2ecc71 !important;
+        color: #000 !important;
+        font-weight: bold;
+    }
 
+    @keyframes pulse-yellow {
+        0% { transform: scale(1.2); box-shadow: 0 0 10px #f1c40f; }
+        100% { transform: scale(1); box-shadow: none; }
+    }
+    @keyframes blink-red {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.5; box-shadow: 0 0 8px #e74c3c; }
+    }
+    @keyframes blink-orange {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.5; box-shadow: 0 0 8px #f39c12; }
+    }
+
+    /* Cell Tooltip */
+    .cell-tooltip {
+        position: absolute;
+        background: rgba(0, 0, 0, 0.9);
+        color: #fff;
+        padding: 8px 12px;
+        border-radius: 4px;
+        font-size: 11px;
+        z-index: 1000;
+        pointer-events: none;
+        white-space: nowrap;
+        border: 1px solid #4ecca3;
+    }
+    .cell-tooltip .tooltip-row {
+        display: flex;
+        justify-content: space-between;
+        gap: 15px;
+    }
+    .cell-tooltip .tooltip-label {
+        color: #888;
+    }
+    .cell-tooltip .tooltip-value {
+        color: #4ecca3;
+        font-weight: bold;
+    }
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.14.0/Sortable.min.js"></script>
 

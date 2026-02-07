@@ -299,7 +299,13 @@ def get_cells(request):
         match = re.search(r'-S(\d+)', cell.UUID)
         if match:
             serial_number = int(match.group(1))
-            cdata = {'id': serial_number, 'capacity': cell.capacity, 'uuid': cell.UUID}
+            cdata = {
+                'id': serial_number,
+                'capacity': cell.capacity,
+                'uuid': cell.UUID,
+                'esr': cell.esr,
+                'voltage': cell.voltage
+            }
             cells_data.append(cdata)
 
     return JsonResponse({'cells': cells_data})
@@ -315,7 +321,14 @@ def get_battery_cells(request):
         match = re.search(r'-S(\d+)', cell.UUID)
         if match:
             serial_number = int(match.group(1))
-            cdata = {'id': serial_number, 'capacity': cell.capacity, 'uuid': cell.UUID, 'bat_position': cell.bat_position}
+            cdata = {
+                'id': serial_number,
+                'capacity': cell.capacity,
+                'uuid': cell.UUID,
+                'bat_position': cell.bat_position,
+                'esr': cell.esr,
+                'voltage': cell.voltage
+            }
             cells_data.append(cdata)
 
 
