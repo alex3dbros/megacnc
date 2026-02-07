@@ -17,15 +17,103 @@
         display: flex;
         justify-content: space-between;
         align-items: center;
+        gap: 20px;
     }
     .heading {
         margin-bottom: 0;
+    }
+    .pagination-center {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
     }
 
     .accordion-content {
       display: none;
     }
 
+    .column-selector-menu {
+        max-height: 400px;
+        overflow-y: auto;
+    }
+    
+    .column-selector-menu .dropdown-item {
+        cursor: pointer;
+        padding: 0.5rem 1rem;
+    }
+    
+    .column-selector-menu .dropdown-item:hover {
+        background-color: #f8f9fa;
+    }
+    
+    .column-selector-menu input[type="checkbox"] {
+        margin-right: 8px;
+        cursor: pointer;
+    }
+
+    /* Dropdown z-index fix - WICHTIG für Überlagerung */
+    .tbl-caption {
+        position: relative;
+        z-index: 5;
+    }
+    
+    .tbl-caption .dropdown-menu {
+        z-index: 1050 !important;
+    }
+
+    /* Fixed Table Header */
+    .table-wrapper {
+        max-height: calc(100vh - 280px);
+        overflow-y: auto;
+        overflow-x: auto;
+        position: relative;
+    }
+    
+    .table-wrapper thead th {
+        position: sticky;
+        top: 0;
+        z-index: 2;
+        background: #2a2a2a;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .search-highlight {
+        background-color: #fff3cd !important;
+        animation: highlight-fade 2s ease-in-out;
+    }
+    
+    @keyframes highlight-fade {
+        0% { background-color: #ffc107; }
+        100% { background-color: #fff3cd; }
+    }
+    
+    /* Hide DataTable footer elements */
+    .dataTables_info,
+    .dataTables_paginate {
+        display: none !important;
+    }
+    
+    /* Fix dropdown overflow */
+    .card {
+        overflow: visible !important;
+    }
+    
+    .card-body {
+        overflow: visible !important;
+    }
+    
+    .table-responsive {
+        overflow: visible !important;
+    }
+    
+    .active-projects.shorting {
+        overflow: visible !important;
+    }
+    
+    .table-wrapper {
+        overflow-x: auto;
+        overflow-y: auto;
+    }
 
     .text-left-align {
         text-align: left;
@@ -35,6 +123,16 @@
         height: 20px;
         background: none;
         border: none;
+    }
+
+    /* Header action icons dropdown fix */
+    .page-titles {
+        position: relative;
+        z-index: 100;
+    }
+    
+    .page-titles .dropdown-menu {
+        z-index: 1100 !important;
     }
 
 </style>
@@ -60,72 +158,162 @@
     <div class="page-titles">
         <ol class="breadcrumb">
             <li><h5 class="bc-title">{{page_title}}</h5></li>
-            <li class="breadcrumb-item"><a href="javascript:void(0)">
+            <li class="breadcrumb-item"><a href="{% url 'megacellcnc:index' %}">
                 <svg width="17" height="17" viewBox="0 0 17 17" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <path d="M2.125 6.375L8.5 1.41667L14.875 6.375V14.1667C14.875 14.5424 14.7257 14.9027 14.4601 15.1684C14.1944 15.4341 13.8341 15.5833 13.4583 15.5833H3.54167C3.16594 15.5833 2.80561 15.4341 2.53993 15.1684C2.27426 14.9027 2.125 14.5424 2.125 14.1667V6.375Z" stroke="#2C2C2C" stroke-linecap="round" stroke-linejoin="round"/>
                     <path d="M6.375 15.5833V8.5H10.625V15.5833" stroke="#2C2C2C" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
                 Home </a>
             </li>
-            <li class="breadcrumb-item active"><a href="javascript:void(0)">{{page_title}}</a></li>
+            <li class="breadcrumb-item active"><a href="{% url 'megacellcnc:database' %}">Database</a></li>
         </ol>
-        <li>Printer Connection: <span id="qz-status" class="text-muted" style="font-weight: bold; padding-right: 30px;">Unknown</span> <a class="text-primary fs-13" data-bs-toggle="offcanvas" href="#offcanvasExample1" role="button" aria-controls="offcanvasExample1">+ Add Cell</a> </li>
-
+        
+        <!-- Action Icons -->
+        <div class="d-flex align-items-center" style="gap: 15px;">
+            <a href="#" class="text-info" id="exportReport" title="Export Report"><i class="fa-solid fa-download fs-18"></i></a>
+            
+            <!-- Column Selector Dropdown -->
+            <div class="dropdown">
+                <a href="#" class="text-secondary" data-bs-toggle="dropdown" id="columnSelector" title="Columns"><i class="fa-solid fa-table-columns fs-18"></i></a>
+                <ul class="dropdown-menu column-selector-menu" aria-labelledby="columnSelector" style="z-index: 1050;">
+                    <li><label class="dropdown-item"><input type="checkbox" class="column-toggle" data-column="col-id" checked> ID</label></li>
+                    <li><label class="dropdown-item"><input type="checkbox" class="column-toggle" data-column="col-serial" checked> Serial No</label></li>
+                    <li><label class="dropdown-item"><input type="checkbox" class="column-toggle" data-column="col-uuid"> UUID</label></li>
+                    <li><label class="dropdown-item"><input type="checkbox" class="column-toggle" data-column="col-available" checked> Available</label></li>
+                    <li><label class="dropdown-item"><input type="checkbox" class="column-toggle" data-column="col-project" checked> Project</label></li>
+                    <li><label class="dropdown-item"><input type="checkbox" class="column-toggle" data-column="col-type" checked> Type</label></li>
+                    <li><label class="dropdown-item"><input type="checkbox" class="column-toggle" data-column="col-chemistry" checked> Chemistry</label></li>
+                    <li><label class="dropdown-item"><input type="checkbox" class="column-toggle" data-column="col-capacity" checked> Capacity</label></li>
+                    <li><label class="dropdown-item"><input type="checkbox" class="column-toggle" data-column="col-esr" checked> ESR</label></li>
+                    <li><label class="dropdown-item"><input type="checkbox" class="column-toggle" data-column="col-voltage"> Voltage</label></li>
+                    <li><label class="dropdown-item"><input type="checkbox" class="column-toggle" data-column="col-testdate" checked> Test Date</label></li>
+                </ul>
+            </div>
+            
+            <a href="#" class="text-primary" id="print" title="Print"><i class="fa-solid fa-print fs-18"></i></a>
+            <a href="#" class="text-muted" id="deleteCellsBtn" title="Delete selected" style="pointer-events: none; opacity: 0.4;"><i class="fa-solid fa-trash fs-18"></i></a>
+            
+            <span class="text-muted" style="margin-left: 20px;">Printer: <span id="qz-status" style="font-weight: bold;">Unknown</span></span>
+            <a class="text-primary fs-13" data-bs-toggle="offcanvas" href="#offcanvasExample1" role="button" aria-controls="offcanvasExample1">+ Add Cell</a>
+        </div>
     </div>
     <div class="container-fluid">
         <div class="row">
-            <div class="col-xl-3 col-sm-6">
-                <div class="card box-hover">
-                    <div class="card-body">
-                        <div class="d-flex align-items-center">
-                                <div class="total-projects ms-3">
-                                    <span>Project: </span>
-                                </div>
-
-                            <div class="basic-dropdown">
-                                <div class="dropdown">
-                                    <button type="button" class="btn btn-default dropdown-toggle" data-bs-toggle="dropdown">
-                                        {{ selected_project_name }}
-                                    </button>
-                                    <div class="dropdown-menu">
-                                        <a class="dropdown-item" href="{% url 'megacellcnc:database' %}?project=all">All</a>
-                                        {% for project in projects %}
-                                            <a class="dropdown-item" href="{% url 'megacellcnc:database' %}?project={{ project.id }}">{{ project.Name }}</a>
-                                        {% endfor %}
-                                    </div>
-                                </div>
-
-                            </div>
-
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-
             <div class="col-xl-12 active-p">
                 <div class="card">
                     <div class="card-body p-0">
                         <div class="table-responsive active-projects shorting">
 
-                            <div class="tbl-caption">
-                                <h4 class="heading mb-0">Cells</h4>
-
-
-                                <div class="help-desk">
-
-
-                                    <button type="button" id="print" class="btn btn-primary" style="margin-left: 20px;">
-                                        <i class="fa-solid fa-print me-2"></i>Print
-                                    </button>
-
-                                    <button type="button" id="deleteCellsBtn" class="btn btn-danger"><i class="fa-solid fa-trash me-2"></i>Delete</button>
+                            <div class="tbl-caption" style="flex-wrap: wrap; gap: 15px; position: relative; z-index: 10;">
+                                <!-- Links: Titel + Controls -->
+                                <div class="d-flex align-items-center" style="gap: 10px; position: relative; z-index: 15;">
+                                    <h4 class="heading mb-0">Cells</h4>
+                                    
+                                    <!-- Project Dropdown -->
+                                    <div class="dropdown" style="position: relative; z-index: 20;">
+                                        <button type="button" class="btn btn-secondary dropdown-toggle" data-bs-toggle="dropdown">
+                                            <i class="fa fa-folder me-2"></i>{{ selected_project_name }}
+                                        </button>
+                                        <div class="dropdown-menu" style="z-index: 1050;">
+                                            <a class="dropdown-item" href="{% url 'megacellcnc:database' %}?project=all">All</a>
+                                            {% for project in projects %}
+                                                <a class="dropdown-item" href="{% url 'megacellcnc:database' %}?project={{ project.id }}">{{ project.Name }}</a>
+                                            {% endfor %}
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Year Filter Dropdown -->
+                                    <div class="dropdown" style="position: relative; z-index: 20;">
+                                        <button type="button" class="btn btn-secondary dropdown-toggle" data-bs-toggle="dropdown" id="yearFilterBtn">
+                                            <i class="fa fa-calendar me-2"></i>{% if selected_year %}{{ selected_year }}{% else %}All Years{% endif %}
+                                        </button>
+                                        <div class="dropdown-menu" style="z-index: 1050;">
+                                            <a class="dropdown-item filter-year" href="#" data-year="">All Years</a>
+                                            {% for year in available_years %}
+                                                <a class="dropdown-item filter-year" href="#" data-year="{{ year }}">{{ year }}</a>
+                                            {% endfor %}
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Status Filter Dropdown -->
+                                    <div class="dropdown" style="position: relative; z-index: 20;">
+                                        <button type="button" class="btn btn-secondary dropdown-toggle" data-bs-toggle="dropdown" id="statusFilterBtn">
+                                            <i class="fa fa-filter me-2"></i>{% if selected_status %}{{ selected_status }}{% else %}All Status{% endif %}
+                                        </button>
+                                        <div class="dropdown-menu" style="z-index: 1050;">
+                                            <a class="dropdown-item filter-status" href="#" data-status="">All Status</a>
+                                            <a class="dropdown-item filter-status" href="#" data-status="Yes">Available</a>
+                                            <a class="dropdown-item filter-status" href="#" data-status="No">Not Available</a>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Per Page Dropdown -->
+                                    <div class="dropdown" style="position: relative; z-index: 20;">
+                                        <button type="button" class="btn btn-secondary dropdown-toggle" data-bs-toggle="dropdown" id="perPageBtn">
+                                            <i class="fa fa-list me-2"></i><span id="perPageLabel">{{ request.GET.per_page|default:'100' }}</span> / page
+                                        </button>
+                                        <div class="dropdown-menu" style="z-index: 1050;">
+                                            <a class="dropdown-item per-page-option" href="#" data-per-page="20">20 per page</a>
+                                            <a class="dropdown-item per-page-option" href="#" data-per-page="50">50 per page</a>
+                                            <a class="dropdown-item per-page-option" href="#" data-per-page="100">100 per page</a>
+                                            <a class="dropdown-item per-page-option" href="#" data-per-page="600">600 per page</a>
+                                            <a class="dropdown-item per-page-option" href="#" data-per-page="1200">1200 per page</a>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Search Field -->
+                                    <div class="input-group" style="width: 250px;">
+                                        <span class="input-group-text"><i class="fa fa-search"></i></span>
+                                        <input type="text" class="form-control" id="serialSearch" 
+                                               placeholder="Search Serial No..." value="{{ request.GET.search|default:'' }}" />
+                                        <button class="btn btn-outline-secondary" type="button" id="clearSearch" title="Clear search">
+                                            <i class="fa fa-times"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                
+                                <!-- Mitte: Pagination -->
+                                {% if cells.has_other_pages %}
+                                <div class="pagination-center">
+                                    <div class="d-flex align-items-center" style="gap: 10px;">
+                                        {% if cells.has_previous %}
+                                        <button class="btn btn-primary ajax-page-link" data-page="{{ cells.previous_page_number }}">
+                                            <i class="fa fa-chevron-left me-2"></i>Previous
+                                        </button>
+                                        {% else %}
+                                        <button class="btn btn-secondary" disabled>
+                                            <i class="fa fa-chevron-left me-2"></i>Previous
+                                        </button>
+                                        {% endif %}
+                                        
+                                        <span class="btn btn-info" style="cursor: default;">
+                                            {{ cells.number }} of {{ cells.paginator.num_pages }}
+                                        </span>
+                                        
+                                        {% if cells.has_next %}
+                                        <button class="btn btn-primary ajax-page-link" data-page="{{ cells.next_page_number }}">
+                                            Next<i class="fa fa-chevron-right ms-2"></i>
+                                        </button>
+                                        {% else %}
+                                        <button class="btn btn-secondary" disabled>
+                                            Next<i class="fa fa-chevron-right ms-2"></i>
+                                        </button>
+                                        {% endif %}
+                                    </div>
+                                    <p class="text-muted mb-0 mt-2" style="font-size: 12px;">
+                                        Showing {{ cells.start_index }} to {{ cells.end_index }} of {{ cells.paginator.count }} cells
+                                        {% if search_query %}
+                                        <span class="badge bg-info ms-2">Search: "{{ search_query }}" ({{ search_results }} result{{ search_results|pluralize }})</span>
+                                        {% endif %}
+                                    </p>
+                                </div>
+                                {% endif %}
+                                
                                 </div>
 
-                            </div>
 
 
-
+                            <div class="table-wrapper">
                             <table id="database-tbl" class="table ItemsCheckboxSec">
                                 <thead>
                                 <tr>
@@ -135,14 +323,17 @@
                                             <label class="form-check-label" for="checkAll"></label>
                                         </div>
                                     </th>
-                                    <th>ID</th>
-                                    <th>Available</th>
-                                    <th>Project</th>
-                                    <th>Type</th>
-                                    <th>Chemistry</th>
-                                    <th>Capacity</th>
-                                    <th>ESR</th>
-                                    <th>Test Date</th>
+                                    <th class="col-id">ID</th>
+                                    <th class="col-serial">Serial No</th>
+                                    <th class="col-uuid" style="display:none;">UUID</th>
+                                    <th class="col-available">Available</th>
+                                    <th class="col-project">Project</th>
+                                    <th class="col-type">Type</th>
+                                    <th class="col-chemistry">Chemistry</th>
+                                    <th class="col-capacity">Capacity</th>
+                                    <th class="col-esr">ESR</th>
+                                    <th class="col-voltage" style="display:none;">Voltage</th>
+                                    <th class="col-testdate">Test Date</th>
                                     <th><strong></strong></th>
 
                                 </tr>
@@ -159,14 +350,17 @@
                                         </div>
                                     </td>
 
-                                    <td>{{ cell.id }}</td>
-                                    <td><div class="status-{{ cell.available|lower|add:'-cell' }}">{{ cell.available|capfirst }}</div></td>
-                                    <td>{{ cell.project.Name }}</td>
-                                    <td>{{ cell.cell_type }}</td>
-                                    <td>{{ cell.min_voltage }}, {{ cell.store_voltage }}, {{ cell.max_voltage }}</td>
-                                    <td>{{ cell.capacity }}</td>
-                                    <td>{{ cell.esr }}</td>
-                                    <td>{{ cell.removal_date|date:"d M Y" }}</td>
+                                    <td class="col-id">{{ cell.id }}</td>
+                                    <td class="col-serial">{{ cell.UUID|slice:"12:"|default:"-" }}</td>
+                                    <td class="col-uuid" style="display:none;">{{ cell.UUID }}</td>
+                                    <td class="col-available"><div class="status-{{ cell.available|lower|add:'-cell' }}">{{ cell.available|capfirst }}</div></td>
+                                    <td class="col-project">{{ cell.project.Name }}</td>
+                                    <td class="col-type">{{ cell.cell_type }}</td>
+                                    <td class="col-chemistry">{{ cell.min_voltage }}, {{ cell.store_voltage }}, {{ cell.max_voltage }}</td>
+                                    <td class="col-capacity">{{ cell.capacity }}</td>
+                                    <td class="col-esr">{{ cell.esr }}</td>
+                                    <td class="col-voltage" style="display:none;">{{ cell.voltage }}</td>
+                                    <td class="col-testdate">{{ cell.removal_date|date:"d M Y" }}</td>
                                     <td>
                                         <div class="d-flex">
 
@@ -211,46 +405,13 @@
                                 </tr>
 
                                 {% empty %}
-                                <tr><td colspan="7" style="text-align:center;">No devices found.</td></tr>
+                                <tr><td colspan="13" style="text-align:center;">No cells found.</td></tr>
                                 {% endfor %}
 
                                 </tbody>
 
                             </table>
-                            
-                            <!-- Pagination Controls -->
-                            {% if cells.has_other_pages %}
-                            <nav aria-label="Page navigation" class="mt-3">
-                                <ul class="pagination justify-content-center">
-                                    {% if cells.has_previous %}
-                                    <li class="page-item">
-                                        <a class="page-link" href="?page=1{% if request.GET.project %}&project={{ request.GET.project }}{% endif %}">First</a>
-                                    </li>
-                                    <li class="page-item">
-                                        <a class="page-link" href="?page={{ cells.previous_page_number }}{% if request.GET.project %}&project={{ request.GET.project }}{% endif %}">Previous</a>
-                                    </li>
-                                    {% endif %}
-                                    
-                                    <li class="page-item active">
-                                        <span class="page-link">
-                                            Page {{ cells.number }} of {{ cells.paginator.num_pages }}
-                                        </span>
-                                    </li>
-                                    
-                                    {% if cells.has_next %}
-                                    <li class="page-item">
-                                        <a class="page-link" href="?page={{ cells.next_page_number }}{% if request.GET.project %}&project={{ request.GET.project }}{% endif %}">Next</a>
-                                    </li>
-                                    <li class="page-item">
-                                        <a class="page-link" href="?page={{ cells.paginator.num_pages }}{% if request.GET.project %}&project={{ request.GET.project }}{% endif %}">Last</a>
-                                    </li>
-                                    {% endif %}
-                                </ul>
-                                <p class="text-center text-muted">
-                                    Showing {{ cells.start_index }} to {{ cells.end_index }} of {{ cells.paginator.count }} cells
-                                </p>
-                            </nav>
-                            {% endif %}
+                            </div>
                             
                         </div>
                     </div>
@@ -386,6 +547,273 @@
 
 {% block additional_js %}
 
+<script>
+// Column Toggle Functionality
+$(document).ready(function() {
+    // Prevent dropdown from closing when clicking checkboxes
+    $('.column-selector-menu').on('click', function(e) {
+        e.stopPropagation();
+    });
+    
+    // Handle column toggle
+    $('.column-toggle').on('change', function() {
+        const columnClass = $(this).data('column');
+        const isChecked = $(this).is(':checked');
+        
+        if (isChecked) {
+            $('.' + columnClass).show();
+        } else {
+            $('.' + columnClass).hide();
+        }
+    });
+    
+    // Delete Button aktivieren/deaktivieren basierend auf Checkbox-Auswahl
+    function updateDeleteButton() {
+        const checkedCount = $('input[name="cell_ids"]:checked').length;
+        const $deleteBtn = $('#deleteCellsBtn');
+        
+        if (checkedCount > 0) {
+            $deleteBtn.css({'pointer-events': 'auto', 'opacity': '1'}).removeClass('text-muted').addClass('text-danger');
+        } else {
+            $deleteBtn.css({'pointer-events': 'none', 'opacity': '0.4'}).removeClass('text-danger').addClass('text-muted');
+        }
+    }
+    
+    // Event Listener für Checkboxen (delegiert für dynamisch geladene Inhalte)
+    $(document).on('change', 'input[name="cell_ids"]', function() {
+        updateDeleteButton();
+    });
+    
+    // "Alle auswählen" Checkbox
+    $(document).on('change', '#checkCells', function() {
+        const isChecked = $(this).is(':checked');
+        $('input[name="cell_ids"]').prop('checked', isChecked);
+        updateDeleteButton();
+    });
+    
+    // Serial Number Search with AJAX (no page reload)
+    let searchTimeout;
+    let currentSearchValue = '{{ search_query|default:"" }}';
+    let currentYearFilter = '{{ selected_year|default:"" }}';
+    let currentStatusFilter = '{{ selected_status|default:"" }}';
+    let currentPerPage = {{ request.GET.per_page|default:'100' }};
+    
+    // Input event - Debounce (1000ms)
+    $('#serialSearch').on('input', function() {
+        clearTimeout(searchTimeout);
+        const searchValue = $(this).val().trim();
+        
+        // Nur suchen ab 3 Zeichen oder wenn leer (zum Zurücksetzen)
+        if (searchValue.length >= 3 || searchValue.length === 0) {
+            searchTimeout = setTimeout(function() {
+                performAjaxSearch(searchValue);
+            }, 1000); // 1000ms Debounce
+        }
+    });
+    
+    // Enter-Taste für sofortige Suche
+    $('#serialSearch').on('keypress', function(e) {
+        if (e.which === 13) { // Enter key
+            e.preventDefault();
+            clearTimeout(searchTimeout);
+            const searchValue = $(this).val().trim();
+            if (searchValue.length >= 3 || searchValue.length === 0) {
+                performAjaxSearch(searchValue);
+            }
+        }
+    });
+    
+    // Clear Search Button
+    $('#clearSearch').on('click', function() {
+        $('#serialSearch').val('');
+        performAjaxSearch('');
+    });
+    
+    // Year Filter
+    $('.filter-year').on('click', function(e) {
+        e.preventDefault();
+        const year = $(this).data('year');
+        currentYearFilter = year;
+        $('#yearFilterBtn').html('<i class="fa fa-calendar me-2"></i>' + (year || 'All Years'));
+        performAjaxSearch(currentSearchValue, 1);
+    });
+    
+    // Status Filter
+    $('.filter-status').on('click', function(e) {
+        e.preventDefault();
+        const status = $(this).data('status');
+        currentStatusFilter = status;
+        const label = status ? (status === 'Yes' ? 'Available' : 'Not Available') : 'All Status';
+        $('#statusFilterBtn').html('<i class="fa fa-filter me-2"></i>' + label);
+        performAjaxSearch(currentSearchValue, 1);
+    });
+    
+    // Per Page Filter
+    $('.per-page-option').on('click', function(e) {
+        e.preventDefault();
+        const perPage = $(this).data('per-page');
+        currentPerPage = perPage;
+        $('#perPageLabel').text(perPage);
+        performAjaxSearch(currentSearchValue, 1);
+    });
+    
+    // AJAX Search Function (kein Page Reload!)
+    function performAjaxSearch(searchValue, page = 1) {
+        currentSearchValue = searchValue;
+        
+        // URL-Parameter für Request
+        const urlParams = new URLSearchParams(window.location.search);
+        const projectId = urlParams.get('project') || 'all';
+        
+        // Loading-Indikator
+        $('#database-tbl tbody').html('<tr><td colspan="13" class="text-center"><i class="fa fa-spinner fa-spin"></i> Searching...</td></tr>');
+        
+        // AJAX Request
+        $.ajax({
+            url: '{% url "megacellcnc:database-search-ajax" %}',
+            method: 'GET',
+            data: {
+                search: searchValue,
+                project: projectId,
+                year: currentYearFilter,
+                status: currentStatusFilter,
+                page: page,
+                per_page: currentPerPage
+            },
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            success: function(response) {
+                if (response.success) {
+                    // Update Tabelle
+                    $('#database-tbl tbody').html(response.table_html);
+                    
+                    // Update Pagination
+                    updatePagination(response);
+                    
+                    // Highlight search results
+                    if (searchValue) {
+                        highlightSearchResults();
+                    }
+                    
+                    // Update URL ohne Reload
+                    updateURLParams(searchValue, page, projectId, currentYearFilter, currentStatusFilter, currentPerPage);
+                }
+            },
+            error: function(xhr, status, error) {
+                $('#database-tbl tbody').html('<tr><td colspan="13" class="text-center text-danger">Error loading data. Please try again.</td></tr>');
+                console.error('Search error:', error);
+            }
+        });
+    }
+    
+    // Update Pagination Controls
+    function updatePagination(response) {
+        const filters = [];
+        if (currentYearFilter) filters.push(`Year: ${currentYearFilter}`);
+        if (currentStatusFilter) filters.push(currentStatusFilter === 'Yes' ? 'Available' : 'Not Available');
+        
+        const paginationHtml = `
+            <div class="d-flex align-items-center" style="gap: 10px;">
+                ${response.has_previous ? 
+                    `<button class="btn btn-primary ajax-page-link" data-page="${response.previous_page}">
+                        <i class="fa fa-chevron-left me-2"></i>Previous
+                    </button>` :
+                    `<button class="btn btn-secondary" disabled>
+                        <i class="fa fa-chevron-left me-2"></i>Previous
+                    </button>`
+                }
+                
+                <span class="btn btn-info" style="cursor: default;">
+                    ${response.page} of ${response.num_pages}
+                </span>
+                
+                ${response.has_next ?
+                    `<button class="btn btn-primary ajax-page-link" data-page="${response.next_page}">
+                        Next<i class="fa fa-chevron-right ms-2"></i>
+                    </button>` :
+                    `<button class="btn btn-secondary" disabled>
+                        Next<i class="fa fa-chevron-right ms-2"></i>
+                    </button>`
+                }
+            </div>
+            <p class="text-muted mb-0 mt-2" style="font-size: 12px;">
+                Showing ${response.start_index} to ${response.end_index} of ${response.total_cells} cells
+                ${filters.length > 0 ? `<span class="badge bg-secondary ms-2">${filters.join(', ')}</span>` : ''}
+                ${response.search_results !== null ? 
+                    `<span class="badge bg-info ms-2">Search: "${currentSearchValue}" (${response.search_results} result${response.search_results !== 1 ? 's' : ''})</span>` : 
+                    ''
+                }
+            </p>
+        `;
+        
+        $('.pagination-center').html(paginationHtml);
+        
+        // Event Listener für Pagination Links
+        $('.ajax-page-link').on('click', function(e) {
+            e.preventDefault();
+            const page = $(this).data('page');
+            performAjaxSearch(currentSearchValue, page);
+        });
+    }
+    
+    // Update URL ohne Page Reload
+    function updateURLParams(searchValue, page, projectId, yearFilter, statusFilter, perPage) {
+        const urlParams = new URLSearchParams();
+        
+        if (projectId && projectId !== 'all') {
+            urlParams.set('project', projectId);
+        }
+        
+        if (yearFilter) {
+            urlParams.set('year', yearFilter);
+        }
+        
+        if (statusFilter) {
+            urlParams.set('status', statusFilter);
+        }
+        
+        if (searchValue) {
+            urlParams.set('search', searchValue);
+        }
+        
+        if (page && page > 1) {
+            urlParams.set('page', page);
+        }
+        
+        if (perPage && perPage !== 100) {
+            urlParams.set('per_page', perPage);
+        }
+        
+        const newUrl = window.location.pathname + (urlParams.toString() ? '?' + urlParams.toString() : '');
+        window.history.pushState({}, '', newUrl);
+    }
+    
+    // Highlight search results
+    function highlightSearchResults() {
+        $('#database-tbl tbody tr').each(function() {
+            $(this).addClass('search-highlight');
+        });
+        
+        // Fade out animation nach 2 Sekunden
+        setTimeout(function() {
+            $('#database-tbl tbody tr').removeClass('search-highlight');
+        }, 2000);
+    }
+    
+    // Initial highlight wenn Seite mit Suchparameter geladen wurde
+    {% if search_query %}
+    highlightSearchResults();
+    {% endif %}
+    
+    // Event Listener für initiale Pagination-Buttons (beim ersten Laden)
+    $('.ajax-page-link').on('click', function(e) {
+        e.preventDefault();
+        const page = $(this).data('page');
+        performAjaxSearch(currentSearchValue, page);
+    });
+});
+</script>
 
 <script>
     jQuery(document).ready(function(){

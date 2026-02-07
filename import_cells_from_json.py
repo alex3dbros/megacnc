@@ -148,6 +148,9 @@ class CellImporter:
             # Available Status konvertieren
             available = self._convert_available(cell_data.get('Available', 1))
             
+            # Parse LogDate für insertion und removal_date
+            log_date = self._parse_datetime(cell_data.get('LogDate'))
+            
             # Cell erstellen
             cell = Cells(
                 UUID=uuid,
@@ -163,7 +166,8 @@ class CellImporter:
                 temp_before_test=self._safe_float(cell_data.get('temperature', 0)),
                 cycles_count=self._safe_int(cell_data.get('discharge_cycles', 0)),
                 test_duration=self._safe_float(cell_data.get('action_length', 0)),
-                insertion_date=self._parse_datetime(cell_data.get('LogDate')),
+                insertion_date=log_date,
+                removal_date=log_date,  # TestDate = LogDate
                 cell_type='18650',  # Aktuell nur dieser Type
                 device_ip=cell_data.get('charger_icc', '192.168.1.33'),
                 device_slot=self._safe_int(cell_data.get('CCiD', 0)),
@@ -179,8 +183,7 @@ class CellImporter:
                 discharge_mode='CC',
                 status='Completed',
                 bat_position='',
-                battery=None,
-                removal_date=None
+                battery=None
             )
             
             cell.save()

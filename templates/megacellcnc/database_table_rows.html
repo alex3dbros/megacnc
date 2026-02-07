@@ -1,0 +1,60 @@
+{% for cell in cells %}
+<tr>
+    <td>
+        <div class="form-check custom-checkbox">
+            <input type="checkbox" class="form-check-input" id="customCheckBox{{ forloop.counter }}" required="" value={{cell.id}} name="cell_ids">
+            <label class="form-check-label" for="customCheckBox{{ forloop.counter }}"></label>
+        </div>
+    </td>
+
+    <td class="col-id">{{ cell.id }}</td>
+    <td class="col-serial">{{ cell.UUID|slice:"12:"|default:"-" }}</td>
+    <td class="col-uuid" style="display:none;">{{ cell.UUID }}</td>
+    <td class="col-available"><div class="status-{{ cell.available|lower|add:'-cell' }}">{{ cell.available|capfirst }}</div></td>
+    <td class="col-project">{{ cell.project.Name }}</td>
+    <td class="col-type">{{ cell.cell_type }}</td>
+    <td class="col-chemistry">{{ cell.min_voltage }}, {{ cell.store_voltage }}, {{ cell.max_voltage }}</td>
+    <td class="col-capacity">{{ cell.capacity }}</td>
+    <td class="col-esr">{{ cell.esr }}</td>
+    <td class="col-voltage" style="display:none;">{{ cell.voltage }}</td>
+    <td class="col-testdate">{{ cell.removal_date|date:"d M Y" }}</td>
+    <td>
+        <div class="d-flex">
+            <button type="button" class="btn btn-primary shadow btn-xs sharp me-1 expandBtn"
+                data-target="#detailsRow1"
+                    data-cell-id="{{ cell.id }}"
+                    data-cell-uuid="{{ cell.UUID }}"
+                    data-device-ip="{{ cell.device_ip }}"
+                    data-device-mac="{{ cell.device_mac }}"
+                    data-device-type="{{ cell.device_type }}"
+                    data-device-slot="{{ cell.device_slot }}"
+                    data-cell-capacity="{{ cell.capacity }}"
+                    data-cell-esr="{{ cell.esr }}"
+                    data-cell-test-duration="{{ cell.test_duration }}"
+                    data-cell-charge-duration="{{ cell.charge_duration }}"
+                    data-cell-discharge-duration="{{ cell.discharge_duration }}"
+                    data-cell-cycles="{{ cell.cycles_count }}"
+                    data-cell-temp-before-test="{{ cell.temp_before_test }}"
+                    data-cell-avg-temp-charging="{{ cell.avg_temp_charging }}"
+                    data-cell-avg-temp-discharging="{{ cell.avg_temp_discharging }}"
+                    data-cell-max-temp-charging="{{ cell.max_temp_charging }}"
+                    data-cell-max-temp-discharging="{{ cell.max_temp_discharging }}"
+                    data-cell-min-voltage="{{ cell.min_voltage }}"
+                    data-cell-max-voltage="{{ cell.max_voltage }}"
+                    data-cell-store-voltage="{{ cell.store_voltage }}"
+                    data-cell-testing-current="{{ cell.testing_current }}"
+                    data-cell-dicharge-mode="{{ cell.discharge_mode }}"
+                    data-cell-status="{{ cell.status }}"
+                    data-cell-insertion-date="{{ cell.insertion_date|date:'Y-m-d H:i:sO' }}"
+                    data-cell-removal-date="{{ cell.removal_date|date:'Y-m-d H:i:sO' }}"
+                    data-cell-available="{{ cell.available }}">
+                <i class="fa fa-plus"></i>
+            </button>
+
+            <a href="#" class="btn btn-danger shadow btn-xs sharp deleteCellBtn" data-cell-id="{{ cell.id }}"><i class="fa fa-trash"></i></a>
+        </div>
+    </td>
+</tr>
+{% empty %}
+<tr><td colspan="13" style="text-align:center;">No cells found.</td></tr>
+{% endfor %}

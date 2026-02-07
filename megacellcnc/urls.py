@@ -11,6 +11,7 @@ urlpatterns = [
     path('new-project/',megacellcnc_views.new_project,name="new-project"),
     path('devices/',megacellcnc_views.devices,name="devices"),
     path('database/',megacellcnc_views.database,name="database"),
+    path('database/search-ajax/',megacellcnc_views.database_search_ajax,name="database-search-ajax"),
     path('batteries/',megacellcnc_views.batteries,name="batteries"),
     path('add-battery/',megacellcnc_views.add_battery,name="add-battery"),
     path('save-battery-configuration/', megacellcnc_views.save_battery_configuration,

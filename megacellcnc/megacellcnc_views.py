@@ -324,10 +324,16 @@ def get_battery_cells(request):
 
 def database(request):
     from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+    from django.db.models import Q
 
     projects = Projects.objects.all()
     project_id = request.GET.get('project')
+    search_query = request.GET.get('search', '').strip()
+    year_filter = request.GET.get('year', '')
+    status_filter = request.GET.get('status', '')
+    per_page = int(request.GET.get('per_page', 100))
 
+    # Base queryset
     if project_id == 'all' or project_id is None:
         cells_queryset = Cells.objects.all().order_by('id')
         selected_project_name = "All"
@@ -335,8 +341,45 @@ def database(request):
         cells_queryset = Cells.objects.filter(project__id=project_id).order_by('id')
         selected_project_name = Projects.objects.get(id=project_id).Name
 
-    # Pagination: 100 Zellen pro Seite
-    paginator = Paginator(cells_queryset, 100)
+    # Jahr-Filter (aus UUID extrahiert)
+    if year_filter:
+        # UUID Format: D{YYYYMMDD}-S{SerialNo}
+        # Filter nach Jahr im UUID: D2023
+        cells_queryset = cells_queryset.filter(UUID__startswith=f'D{year_filter}')
+
+    # Status-Filter (Available)
+    if status_filter:
+        cells_queryset = cells_queryset.filter(available__iexact=status_filter)
+
+    # Partial Match Suche nur in Seriennummer (ab 3 Zeichen)
+    search_results = None
+    if search_query and len(search_query) >= 3:
+        # Sucht nur im Seriennummern-Teil nach "-S"
+        # UUID Format: D{YYYYMMDD}-S{SerialNo} z.B. D20220922-S002984
+        # "104" findet: -S000104, -S010473, -S723104
+        # Aber NICHT: D20230104-S006627 (104 ist im Datum)
+        
+        cells_queryset = cells_queryset.filter(UUID__regex=rf'-S.*{search_query}')
+        search_results = cells_queryset.count()
+    
+    # Extrahiere alle verfügbaren Jahre aus UUIDs
+    # Verwende SQL für Performance statt Python-Loop
+    from django.db.models import Func, Value
+    from django.db.models.functions import Substr
+    
+    # Extrahiere Jahr aus UUID (Position 2-5: YYYY aus D{YYYYMMDD})
+    years_queryset = Cells.objects.annotate(
+        year=Substr('UUID', 2, 4)
+    ).values_list('year', flat=True).distinct()
+    
+    # Filtere gültige Jahre und sortiere
+    available_years = sorted(
+        [year for year in years_queryset if year and year.isdigit() and len(year) == 4],
+        reverse=True
+    )
+
+    # Pagination: Variable Anzahl Zellen pro Seite
+    paginator = Paginator(cells_queryset, per_page)
     page = request.GET.get('page', 1)
     
     try:
@@ -347,12 +390,84 @@ def database(request):
         cells = paginator.page(paginator.num_pages)
 
     context = {
-        "page_title":"Devices",
+        "page_title":"Database",
         "cells": cells,
         "projects": projects,
-        'selected_project_name': selected_project_name
+        'selected_project_name': selected_project_name,
+        'search_query': search_query,
+        'search_results': search_results,
+        'available_years': available_years,
+        'selected_year': year_filter,
+        'selected_status': status_filter
     }
     return render(request, 'megacellcnc/database.html', context)
+
+
+def database_search_ajax(request):
+    """AJAX endpoint for cell search without page reload"""
+    from django.core.paginator import Paginator
+    from django.template.loader import render_to_string
+    
+    if request.headers.get('X-Requested-With') != 'XMLHttpRequest':
+        return JsonResponse({'error': 'Invalid request'}, status=400)
+    
+    project_id = request.GET.get('project')
+    search_query = request.GET.get('search', '').strip()
+    year_filter = request.GET.get('year', '')
+    status_filter = request.GET.get('status', '')
+    page = request.GET.get('page', 1)
+    per_page = int(request.GET.get('per_page', 100))
+    
+    # Base queryset
+    if project_id == 'all' or project_id is None:
+        cells_queryset = Cells.objects.all().order_by('id')
+    else:
+        cells_queryset = Cells.objects.filter(project__id=project_id).order_by('id')
+    
+    # Jahr-Filter
+    if year_filter:
+        cells_queryset = cells_queryset.filter(UUID__startswith=f'D{year_filter}')
+    
+    # Status-Filter
+    if status_filter:
+        cells_queryset = cells_queryset.filter(available__iexact=status_filter)
+    
+    # Partial Match Search nur in Seriennummer
+    search_results = None
+    if search_query and len(search_query) >= 3:
+        # Sucht nur im Seriennummern-Teil nach "-S"
+        # "104" findet: -S000104, -S010473, -S723104
+        # Aber NICHT: D20230104-S006627 (104 ist im Datum)
+        cells_queryset = cells_queryset.filter(UUID__regex=rf'-S.*{search_query}')
+        search_results = cells_queryset.count()
+    
+    # Pagination mit dynamischer Seitengröße
+    paginator = Paginator(cells_queryset, per_page)
+    
+    try:
+        cells = paginator.page(page)
+    except:
+        cells = paginator.page(1)
+    
+    # Render table rows HTML
+    table_html = render_to_string('megacellcnc/database_table_rows.html', {
+        'cells': cells
+    })
+    
+    return JsonResponse({
+        'success': True,
+        'table_html': table_html,
+        'total_cells': cells_queryset.count(),
+        'page': cells.number,
+        'num_pages': paginator.num_pages,
+        'has_previous': cells.has_previous(),
+        'has_next': cells.has_next(),
+        'previous_page': cells.previous_page_number() if cells.has_previous() else None,
+        'next_page': cells.next_page_number() if cells.has_next() else None,
+        'start_index': cells.start_index(),
+        'end_index': cells.end_index(),
+        'search_results': search_results
+    })
 
 
 def batteries(request):
