@@ -367,6 +367,120 @@
         margin: 4px 0;
     }
 
+    /* Cell Replacement Highlight */
+    .sortable-cell.cell-replaced {
+        animation: replacement-pulse 0.5s ease-out 3;
+    }
+    .replacement-highlight {
+        box-shadow: 0 0 12px #4ecca3 !important;
+    }
+    @keyframes replacement-pulse {
+        0%, 100% { box-shadow: 0 0 5px #4ecca3; }
+        50% { box-shadow: 0 0 20px #4ecca3, 0 0 30px #4ecca3; }
+    }
+
+    /* History Modal */
+    .history-modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.8);
+        z-index: 2000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+        pointer-events: none;
+    }
+    .history-modal-overlay.visible {
+        opacity: 1;
+        pointer-events: auto;
+    }
+    .history-modal {
+        background: #1a1a2e;
+        border: 1px solid #4ecca3;
+        border-radius: 8px;
+        max-width: 800px;
+        width: 90%;
+        max-height: 80vh;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+    }
+    .history-modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 15px 20px;
+        border-bottom: 1px solid #333;
+        background: #0f3460;
+    }
+    .history-modal-title {
+        color: #fff;
+        margin: 0;
+        font-size: 16px;
+    }
+    .history-modal-title i {
+        color: #4ecca3;
+        margin-right: 8px;
+    }
+    .history-modal-close {
+        background: none;
+        border: none;
+        color: #888;
+        font-size: 24px;
+        cursor: pointer;
+        line-height: 1;
+    }
+    .history-modal-close:hover {
+        color: #fff;
+    }
+    .history-modal-body {
+        padding: 20px;
+        overflow-y: auto;
+    }
+    .history-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 13px;
+    }
+    .history-table th {
+        background: #0f3460;
+        color: #4ecca3;
+        padding: 10px 12px;
+        text-align: left;
+        font-weight: 600;
+    }
+    .history-table td {
+        padding: 10px 12px;
+        border-bottom: 1px solid #333;
+        color: #ddd;
+    }
+    .history-table tr:hover td {
+        background: rgba(78, 204, 163, 0.1);
+    }
+    .history-table .text-muted {
+        color: #888;
+    }
+    .no-history {
+        text-align: center;
+        padding: 40px 20px;
+        color: #888;
+    }
+    .no-history i {
+        font-size: 48px;
+        color: #4ecca3;
+        margin-bottom: 15px;
+    }
+    .no-history p {
+        font-size: 16px;
+        color: #ddd;
+        margin: 10px 0 5px;
+    }
+
     /* Workflow Result Banner */
     .result-banner {
         background: linear-gradient(135deg, #1a5a3c 0%, #0f3460 100%);

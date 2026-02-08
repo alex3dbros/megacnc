@@ -441,6 +441,7 @@ $('#batteries-tbl').on('click', '.expandBtn', function() {
                                 <button class="btn btn-warning btn-sm" id="reset-btn" title="Reset"><i class="fa fa-undo"></i></button>
                                 <button class="btn btn-primary btn-sm" id="save-btn" title="Save"><i class="fa fa-save"></i></button>
                                 <button class="btn btn-info btn-sm" id="chart-btn" title="Grafik anzeigen"><i class="fa fa-line-chart"></i></button>
+                                <button class="btn btn-secondary btn-sm" id="history-btn" title="Ersetzungs-Historie"><i class="fa fa-history"></i></button>
                                 <button class="btn btn-danger btn-sm" id="dissolve-btn" title="Pack auflösen"><i class="fa fa-trash"></i></button>
                             </div>
                         </div>
@@ -653,6 +654,11 @@ $('#batteries-tbl').on('click', '.expandBtn', function() {
         if (e.target === this) {
             closePackChart();
         }
+    });
+
+    // History Button
+    document.getElementById('history-btn').addEventListener('click', function() {
+        openReplacementHistory(batteryId);
     });
 
     // Pack auflösen Button
@@ -963,6 +969,103 @@ function closePackChart() {
     if (packChart) {
         packChart.destroy();
         packChart = null;
+    }
+}
+
+// ==================== REPLACEMENT HISTORY ====================
+
+function openReplacementHistory(batteryId) {
+    fetch(`/replacement-history/${batteryId}/`)
+        .then(r => r.json())
+        .then(data => {
+            showHistoryModal(data);
+        })
+        .catch(err => {
+            console.error('Error fetching history:', err);
+            toastr.error('Fehler beim Laden der Historie', 'Fehler');
+        });
+}
+
+function showHistoryModal(data) {
+    // Remove existing modal if any
+    const existingModal = document.getElementById('history-modal-overlay');
+    if (existingModal) existingModal.remove();
+    
+    const hasHistory = data.history && data.history.length > 0;
+    
+    let tableRows = '';
+    if (hasHistory) {
+        data.history.forEach(log => {
+            const date = new Date(log.replaced_at).toLocaleString('de-CH');
+            const oldCellId = extractCellId(log.old_cell_uuid);
+            const newCellId = extractCellId(log.new_cell_uuid);
+            tableRows += `
+                <tr>
+                    <td>${date}</td>
+                    <td>S${log.slot_series}-P${log.slot_parallel}</td>
+                    <td>${oldCellId}<br><small class="text-muted">${log.old_capacity} mAh</small></td>
+                    <td>${newCellId}<br><small class="text-muted">${log.new_capacity} mAh</small></td>
+                    <td>${log.reason}</td>
+                </tr>
+            `;
+        });
+    }
+    
+    const modalHtml = `
+        <div id="history-modal-overlay" class="history-modal-overlay">
+            <div class="history-modal">
+                <div class="history-modal-header">
+                    <h5 class="history-modal-title">
+                        <i class="fa fa-history"></i> Ersetzungs-Historie: ${data.battery_name}
+                    </h5>
+                    <button class="history-modal-close" onclick="closeHistoryModal()">×</button>
+                </div>
+                <div class="history-modal-body">
+                    ${hasHistory ? `
+                        <table class="history-table">
+                            <thead>
+                                <tr>
+                                    <th>Datum</th>
+                                    <th>Position</th>
+                                    <th>Alte Zelle</th>
+                                    <th>Neue Zelle</th>
+                                    <th>Grund</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${tableRows}
+                            </tbody>
+                        </table>
+                    ` : `
+                        <div class="no-history">
+                            <i class="fa fa-check-circle"></i>
+                            <p>Keine Ersetzungen für dieses Pack.</p>
+                            <small>Alle Original-Zellen sind noch vorhanden.</small>
+                        </div>
+                    `}
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    
+    // Show with animation
+    setTimeout(() => {
+        document.getElementById('history-modal-overlay').classList.add('visible');
+    }, 10);
+    
+    // Close on overlay click
+    document.getElementById('history-modal-overlay').addEventListener('click', function(e) {
+        if (e.target === this) closeHistoryModal();
+    });
+}
+
+function closeHistoryModal() {
+    const overlay = document.getElementById('history-modal-overlay');
+    if (overlay) {
+        overlay.classList.remove('visible');
+        setTimeout(() => overlay.remove(), 300);
     }
 }
 
@@ -1844,6 +1947,10 @@ function replaceDefectiveCell(slotId) {
         const slotSeries = slotMatch ? parseInt(slotMatch[1]) : 0;
         const slotParallel = slotMatch ? parseInt(slotMatch[2]) : 0;
         
+        // Extract Cell-IDs for display
+        const oldCellId = extractCellId(defectiveCell.dataset.itemId);
+        const newCellId = extractCellId(replacement.dataset.itemId);
+        
         // Log replacement to server
         if (currentBatteryId) {
             fetch('/log-cell-replacement/', {
@@ -1874,12 +1981,26 @@ function replaceDefectiveCell(slotId) {
         defectiveCell.style.backgroundColor = '#ffcccc';
         middleList.appendChild(defectiveCell);
 
-        // Move replacement to slot
+        // Move replacement to slot and highlight
         slot.appendChild(replacement);
+        slot.classList.add('cell-replaced');
+        replacement.classList.add('replacement-highlight');
+        
+        // Remove highlight after animation
+        setTimeout(() => {
+            slot.classList.remove('cell-replaced');
+            replacement.classList.remove('replacement-highlight');
+        }, 3000);
 
+        // Clear, detailed success message
         toastr.success(
-            `Ersatzzelle gefunden: ${replacement.dataset.capacity} mAh, ${replacement.dataset.esr} mΩ`,
-            'Ersetzt'
+            `<div style="line-height: 1.6">
+                <strong>Position:</strong> S${slotSeries}-P${slotParallel}<br>
+                <strong>Alte Zelle:</strong> ${oldCellId} (${defectiveCell.dataset.capacity} mAh)<br>
+                <strong>Neue Zelle:</strong> ${newCellId} (${replacement.dataset.capacity} mAh)
+            </div>`,
+            '✓ Zelle erfolgreich ersetzt',
+            { timeOut: 8000, escapeHtml: false }
         );
 
         updateAllCapacities();
