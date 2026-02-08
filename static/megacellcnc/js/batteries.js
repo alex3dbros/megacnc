@@ -436,6 +436,7 @@ $('#batteries-tbl').on('click', '.expandBtn', function() {
                                 <button class="btn btn-success btn-sm" id="assign-btn" title="Assign"><i class="fa fa-check"></i></button>
                                 <button class="btn btn-warning btn-sm" id="reset-btn" title="Reset"><i class="fa fa-undo"></i></button>
                                 <button class="btn btn-primary btn-sm" id="save-btn" title="Save"><i class="fa fa-save"></i></button>
+                                <button class="btn btn-danger btn-sm" id="dissolve-btn" title="Pack auflösen"><i class="fa fa-trash"></i></button>
                             </div>
                         </div>
                         
@@ -613,6 +614,67 @@ $('#batteries-tbl').on('click', '.expandBtn', function() {
         });
 
         updateAllCapacities(); // Update capacities if necessary
+    });
+
+    // Pack auflösen Button
+    document.getElementById('dissolve-btn').addEventListener('click', function() {
+        // Count current cells in pack
+        const cellsInPack = document.querySelectorAll('.sortable-cell .list-group-item').length;
+        
+        if (cellsInPack === 0) {
+            toastr.info('Pack ist bereits leer', 'Info');
+            return;
+        }
+        
+        // Show confirmation dialog
+        const confirmed = confirm(
+            `⚠️ Pack wirklich auflösen?\n\n` +
+            `${cellsInPack} Zellen werden freigegeben und\n` +
+            `stehen wieder zur Verfügung.\n\n` +
+            `Diese Aktion kann nicht rückgängig gemacht werden.`
+        );
+        
+        if (!confirmed) return;
+        
+        // Send empty cellsData to backend to release all cells
+        const payload = {
+            batteryId: batteryId,
+            cellsData: []  // Empty = release all cells
+        };
+        
+        fetch('/save-battery-configuration/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify(payload)
+        })
+        .then(response => response.json())
+        .then(data => {
+            console.log('Pack dissolved:', data);
+            
+            // Clear all slots visually
+            document.querySelectorAll('.sortable-cell').forEach(slot => {
+                slot.innerHTML = '';
+                slot.classList.remove('cell-done', 'cell-placed');
+            });
+            
+            // Clear transfer list
+            document.getElementById('middle-list').innerHTML = '';
+            
+            // Update UI
+            updateAllCapacities();
+            markSaved();
+            hideResultBanner();
+            setWorkflowStep(1);
+            
+            toastr.success(`${cellsInPack} Zellen wurden freigegeben`, 'Pack aufgelöst');
+        })
+        .catch((error) => {
+            console.error('Error:', error);
+            toastr.error('Fehler beim Auflösen des Packs', 'Fehler');
+        });
     });
 
     document.getElementById('save-btn').addEventListener('click', function() {
