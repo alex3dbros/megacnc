@@ -223,10 +223,15 @@
                     <i class="fa-solid fa-tag fs-18"></i>
                 </a>
                 <ul class="dropdown-menu">
+                    <li class="dropdown-header">Condition</li>
                     <li><a class="dropdown-item condition-option" href="#" data-condition="good"><i class="fa fa-check text-success"></i> Gut</a></li>
                     <li><a class="dropdown-item condition-option" href="#" data-condition="defective"><i class="fa fa-times text-danger"></i> Defekt</a></li>
                     <li><a class="dropdown-item condition-option" href="#" data-condition="reserved"><i class="fa fa-bookmark text-warning"></i> Reserviert</a></li>
                     <li><a class="dropdown-item condition-option" href="#" data-condition="unknown"><i class="fa fa-question text-muted"></i> Unbekannt</a></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li class="dropdown-header">Available</li>
+                    <li><a class="dropdown-item available-option" href="#" data-available="Yes"><i class="fa fa-check-circle text-success"></i> Available (Yes)</a></li>
+                    <li><a class="dropdown-item available-option" href="#" data-available="No"><i class="fa fa-ban text-danger"></i> Not Available (No)</a></li>
                 </ul>
             </div>
             
@@ -675,6 +680,47 @@ $(document).ready(function() {
         };
         return labels[condition] || condition;
     }
+    
+    // Bulk Available Update
+    $(document).on('click', '.available-option', function(e) {
+        e.preventDefault();
+        const newAvailable = $(this).data('available');
+        const checkedBoxes = $('input[name="cell_ids"]:checked');
+        
+        if (checkedBoxes.length === 0) {
+            toastr.error('Keine Zellen ausgewählt', 'Fehler');
+            return;
+        }
+        
+        const cellIds = checkedBoxes.map(function() { return $(this).val(); }).get();
+        
+        $.ajax({
+            url: '/update-cell-available/',
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({
+                cell_ids: cellIds,
+                available: newAvailable
+            }),
+            success: function(response) {
+                if (response.success) {
+                    toastr.success(response.message, 'Erfolg');
+                    // Update the available status in the UI for each selected cell
+                    checkedBoxes.each(function() {
+                        const $row = $(this).closest('tr');
+                        const $availableCell = $row.find('.col-available div');
+                        $availableCell.attr('class', 'status-' + newAvailable.toLowerCase() + '-cell');
+                        $availableCell.text(newAvailable);
+                    });
+                } else {
+                    toastr.error(response.error || 'Fehler beim Update', 'Fehler');
+                }
+            },
+            error: function(xhr) {
+                toastr.error('Serverfehler', 'Fehler');
+            }
+        });
+    });
     
     // Event Listener für Checkboxen (delegiert für dynamisch geladene Inhalte)
     $(document).on('change', 'input[name="cell_ids"]', function() {

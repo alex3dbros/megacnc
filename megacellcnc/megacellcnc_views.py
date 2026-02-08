@@ -1066,6 +1066,34 @@ def update_cell_condition(request):
         return JsonResponse({'error': str(e)}, status=500)
 
 
+@require_POST
+@csrf_exempt
+def update_cell_available(request):
+    """Bulk update cell available status"""
+    try:
+        data = json.loads(request.body)
+        cell_ids = data.get('cell_ids', [])
+        new_available = data.get('available')
+        
+        if not cell_ids:
+            return JsonResponse({'error': 'No cells selected'}, status=400)
+        
+        valid_values = ['Yes', 'No']
+        if new_available not in valid_values:
+            return JsonResponse({'error': f'Invalid value. Valid: {valid_values}'}, status=400)
+        
+        updated_count = Cells.objects.filter(id__in=cell_ids).update(available=new_available)
+        
+        return JsonResponse({
+            'success': True,
+            'updated_count': updated_count,
+            'message': f'{updated_count} Zellen auf Available="{new_available}" gesetzt'
+        })
+        
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
 def print_label(request):
     if request.method == "POST":
         try:
