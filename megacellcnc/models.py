@@ -65,6 +65,12 @@ class Cells(models.Model):
     insertion_date = models.DateTimeField(default=timezone.now)
     removal_date = models.DateTimeField(null=True, blank=True)
     available = models.CharField(max_length=150)
+    condition = models.CharField(max_length=50, default='good', choices=[
+        ('good', 'Gut'),
+        ('defective', 'Defekt'),
+        ('reserved', 'Reserviert'),
+        ('unknown', 'Unbekannt'),
+    ])
     bat_position = models.CharField(max_length=150, default="")
 
 

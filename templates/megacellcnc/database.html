@@ -87,6 +87,29 @@
         100% { background-color: #fff3cd; }
     }
     
+    /* Condition Badges */
+    .condition-badge {
+        font-size: 11px;
+        padding: 3px 8px;
+        border-radius: 4px;
+    }
+    .condition-good {
+        background-color: #28a745;
+        color: #fff;
+    }
+    .condition-defective {
+        background-color: #dc3545;
+        color: #fff;
+    }
+    .condition-reserved {
+        background-color: #ffc107;
+        color: #000;
+    }
+    .condition-unknown {
+        background-color: #6c757d;
+        color: #fff;
+    }
+    
     /* Hide DataTable footer elements */
     .dataTables_info,
     .dataTables_paginate {
@@ -180,6 +203,7 @@
                     <li><label class="dropdown-item"><input type="checkbox" class="column-toggle" data-column="col-serial" checked> Serial No</label></li>
                     <li><label class="dropdown-item"><input type="checkbox" class="column-toggle" data-column="col-uuid"> UUID</label></li>
                     <li><label class="dropdown-item"><input type="checkbox" class="column-toggle" data-column="col-available" checked> Available</label></li>
+                    <li><label class="dropdown-item"><input type="checkbox" class="column-toggle" data-column="col-condition" checked> Condition</label></li>
                     <li><label class="dropdown-item"><input type="checkbox" class="column-toggle" data-column="col-project" checked> Project</label></li>
                     <li><label class="dropdown-item"><input type="checkbox" class="column-toggle" data-column="col-type" checked> Type</label></li>
                     <li><label class="dropdown-item"><input type="checkbox" class="column-toggle" data-column="col-chemistry" checked> Chemistry</label></li>
@@ -192,6 +216,19 @@
             
             <a href="#" class="text-primary" id="print" title="Print"><i class="fa-solid fa-print fs-18"></i></a>
             <a href="#" class="text-muted" id="deleteCellsBtn" title="Delete selected" style="pointer-events: none; opacity: 0.4;"><i class="fa-solid fa-trash fs-18"></i></a>
+            
+            <!-- Bulk Condition Edit -->
+            <div class="dropdown d-inline-block" id="conditionDropdown" style="opacity: 0.4; pointer-events: none;">
+                <a href="#" class="text-muted dropdown-toggle" data-bs-toggle="dropdown" title="Set Condition">
+                    <i class="fa-solid fa-tag fs-18"></i>
+                </a>
+                <ul class="dropdown-menu">
+                    <li><a class="dropdown-item condition-option" href="#" data-condition="good"><i class="fa fa-check text-success"></i> Gut</a></li>
+                    <li><a class="dropdown-item condition-option" href="#" data-condition="defective"><i class="fa fa-times text-danger"></i> Defekt</a></li>
+                    <li><a class="dropdown-item condition-option" href="#" data-condition="reserved"><i class="fa fa-bookmark text-warning"></i> Reserviert</a></li>
+                    <li><a class="dropdown-item condition-option" href="#" data-condition="unknown"><i class="fa fa-question text-muted"></i> Unbekannt</a></li>
+                </ul>
+            </div>
             
             <span class="text-muted" style="margin-left: 20px;">Printer: <span id="qz-status" style="font-weight: bold;">Unknown</span></span>
             <a class="text-primary fs-13" data-bs-toggle="offcanvas" href="#offcanvasExample1" role="button" aria-controls="offcanvasExample1">+ Add Cell</a>
@@ -327,6 +364,7 @@
                                     <th class="col-serial">Serial No</th>
                                     <th class="col-uuid" style="display:none;">UUID</th>
                                     <th class="col-available">Available</th>
+                                    <th class="col-condition">Condition</th>
                                     <th class="col-project">Project</th>
                                     <th class="col-type">Type</th>
                                     <th class="col-chemistry">Chemistry</th>
@@ -354,6 +392,11 @@
                                     <td class="col-serial">{{ cell.UUID|slice:"12:"|default:"-" }}</td>
                                     <td class="col-uuid" style="display:none;">{{ cell.UUID }}</td>
                                     <td class="col-available"><div class="status-{{ cell.available|lower|add:'-cell' }}">{{ cell.available|capfirst }}</div></td>
+                                    <td class="col-condition">
+                                        <span class="badge condition-badge condition-{{ cell.condition|default:'good' }}">
+                                            {% if cell.condition == 'defective' %}Defekt{% elif cell.condition == 'reserved' %}Reserviert{% elif cell.condition == 'unknown' %}Unbekannt{% else %}Gut{% endif %}
+                                        </span>
+                                    </td>
                                     <td class="col-project">{{ cell.project.Name }}</td>
                                     <td class="col-type">{{ cell.cell_type }}</td>
                                     <td class="col-chemistry">{{ cell.min_voltage }}, {{ cell.store_voltage }}, {{ cell.max_voltage }}</td>
@@ -567,16 +610,70 @@ $(document).ready(function() {
         }
     });
     
-    // Delete Button aktivieren/deaktivieren basierend auf Checkbox-Auswahl
+    // Delete Button und Condition Dropdown aktivieren/deaktivieren basierend auf Checkbox-Auswahl
     function updateDeleteButton() {
         const checkedCount = $('input[name="cell_ids"]:checked').length;
         const $deleteBtn = $('#deleteCellsBtn');
+        const $conditionDropdown = $('#conditionDropdown');
         
         if (checkedCount > 0) {
             $deleteBtn.css({'pointer-events': 'auto', 'opacity': '1'}).removeClass('text-muted').addClass('text-danger');
+            $conditionDropdown.css({'pointer-events': 'auto', 'opacity': '1'}).find('a').removeClass('text-muted').addClass('text-primary');
         } else {
             $deleteBtn.css({'pointer-events': 'none', 'opacity': '0.4'}).removeClass('text-danger').addClass('text-muted');
+            $conditionDropdown.css({'pointer-events': 'none', 'opacity': '0.4'}).find('a').removeClass('text-primary').addClass('text-muted');
         }
+    }
+    
+    // Bulk Condition Update
+    $(document).on('click', '.condition-option', function(e) {
+        e.preventDefault();
+        const newCondition = $(this).data('condition');
+        const checkedBoxes = $('input[name="cell_ids"]:checked');
+        
+        if (checkedBoxes.length === 0) {
+            toastr.error('Keine Zellen ausgewählt', 'Fehler');
+            return;
+        }
+        
+        const cellIds = checkedBoxes.map(function() { return $(this).val(); }).get();
+        
+        $.ajax({
+            url: '/update-cell-condition/',
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({
+                cell_ids: cellIds,
+                condition: newCondition
+            }),
+            success: function(response) {
+                if (response.success) {
+                    toastr.success(response.message, 'Erfolg');
+                    // Update the condition badge in the UI for each selected cell
+                    checkedBoxes.each(function() {
+                        const $row = $(this).closest('tr');
+                        const $conditionCell = $row.find('.condition-badge');
+                        $conditionCell.attr('class', 'badge condition-badge condition-' + newCondition);
+                        $conditionCell.text(getConditionLabel(newCondition));
+                    });
+                } else {
+                    toastr.error(response.error || 'Fehler beim Update', 'Fehler');
+                }
+            },
+            error: function(xhr) {
+                toastr.error('Serverfehler', 'Fehler');
+            }
+        });
+    });
+    
+    function getConditionLabel(condition) {
+        const labels = {
+            'good': 'Gut',
+            'defective': 'Defekt',
+            'reserved': 'Reserviert',
+            'unknown': 'Unbekannt'
+        };
+        return labels[condition] || condition;
     }
     
     // Event Listener für Checkboxen (delegiert für dynamisch geladene Inhalte)

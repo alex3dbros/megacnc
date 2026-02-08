@@ -11,6 +11,11 @@
     <td class="col-serial">{{ cell.UUID|slice:"12:"|default:"-" }}</td>
     <td class="col-uuid" style="display:none;">{{ cell.UUID }}</td>
     <td class="col-available"><div class="status-{{ cell.available|lower|add:'-cell' }}">{{ cell.available|capfirst }}</div></td>
+    <td class="col-condition">
+        <span class="badge condition-badge condition-{{ cell.condition|default:'good' }}">
+            {% if cell.condition == 'defective' %}Defekt{% elif cell.condition == 'reserved' %}Reserviert{% elif cell.condition == 'unknown' %}Unbekannt{% else %}Gut{% endif %}
+        </span>
+    </td>
     <td class="col-project">{{ cell.project.Name }}</td>
     <td class="col-type">{{ cell.cell_type }}</td>
     <td class="col-chemistry">{{ cell.min_voltage }}, {{ cell.store_voltage }}, {{ cell.max_voltage }}</td>

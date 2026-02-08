@@ -987,6 +987,14 @@ def log_cell_replacement(request):
             reason=reason
         )
         
+        # Mark old cell as defective
+        try:
+            old_cell = Cells.objects.get(UUID=old_cell_uuid)
+            old_cell.condition = 'defective'
+            old_cell.save()
+        except Cells.DoesNotExist:
+            pass  # Cell might not exist in DB
+        
         return JsonResponse({
             'success': True,
             'log_id': log_entry.id,
@@ -1024,6 +1032,34 @@ def get_replacement_history(request, battery_id):
         return JsonResponse({
             'battery_name': battery.name,
             'history': history
+        })
+        
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+@require_POST
+@csrf_exempt
+def update_cell_condition(request):
+    """Bulk update cell conditions"""
+    try:
+        data = json.loads(request.body)
+        cell_ids = data.get('cell_ids', [])
+        new_condition = data.get('condition')
+        
+        if not cell_ids:
+            return JsonResponse({'error': 'No cells selected'}, status=400)
+        
+        valid_conditions = ['good', 'defective', 'reserved', 'unknown']
+        if new_condition not in valid_conditions:
+            return JsonResponse({'error': f'Invalid condition. Valid: {valid_conditions}'}, status=400)
+        
+        updated_count = Cells.objects.filter(id__in=cell_ids).update(condition=new_condition)
+        
+        return JsonResponse({
+            'success': True,
+            'updated_count': updated_count,
+            'message': f'{updated_count} Zellen auf "{new_condition}" gesetzt'
         })
         
     except Exception as e:
