@@ -323,6 +323,50 @@
         font-weight: bold;
     }
 
+    /* Context Menu for Cell Replacement */
+    .cell-context-menu {
+        position: fixed;
+        background: #1a1a2e;
+        border: 1px solid #4ecca3;
+        border-radius: 4px;
+        padding: 4px 0;
+        min-width: 180px;
+        z-index: 2000;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+        display: none;
+    }
+    .cell-context-menu.show {
+        display: block;
+    }
+    .cell-context-menu-item {
+        padding: 8px 16px;
+        color: #fff;
+        cursor: pointer;
+        font-size: 12px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    .cell-context-menu-item:hover {
+        background: #0f3460;
+    }
+    .cell-context-menu-item i {
+        color: #4ecca3;
+        width: 16px;
+        text-align: center;
+    }
+    .cell-context-menu-item.danger {
+        color: #ff6b6b;
+    }
+    .cell-context-menu-item.danger i {
+        color: #ff6b6b;
+    }
+    .cell-context-menu-divider {
+        height: 1px;
+        background: #333;
+        margin: 4px 0;
+    }
+
     /* Workflow Result Banner */
     .result-banner {
         background: linear-gradient(135deg, #1a5a3c 0%, #0f3460 100%);
@@ -834,8 +878,22 @@
     </div>
 </div>
 
-
-
+<!-- Cell Context Menu -->
+<div id="cell-context-menu" class="cell-context-menu">
+    <div class="cell-context-menu-item" id="ctx-replace-cell">
+        <i class="fa fa-exchange"></i>
+        <span>Zelle ersetzen</span>
+    </div>
+    <div class="cell-context-menu-item" id="ctx-show-details">
+        <i class="fa fa-info-circle"></i>
+        <span>Details anzeigen</span>
+    </div>
+    <div class="cell-context-menu-divider"></div>
+    <div class="cell-context-menu-item danger" id="ctx-remove-cell">
+        <i class="fa fa-trash"></i>
+        <span>Zelle entfernen</span>
+    </div>
+</div>
 
 
 

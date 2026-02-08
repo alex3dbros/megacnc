@@ -31,6 +31,8 @@ urlpatterns = [
     path('save-printer-settings/', megacellcnc_views.save_printer_settings, name='save-printer-settings'),
     path('get-printer-settings/', megacellcnc_views.get_printer_settings, name='get-printer-settings'),
     path('download-backup/', megacellcnc_views.download_backup, name='download-backup'),
+    path('log-cell-replacement/', megacellcnc_views.log_cell_replacement, name='log-cell-replacement'),
+    path('replacement-history/<int:battery_id>/', megacellcnc_views.get_replacement_history, name='replacement-history'),
     path('print-label/', megacellcnc_views.print_label, name='print-label'),
 
     path('save-cell/', megacellcnc_views.save_cell, name='save-cell'),

@@ -1,4 +1,5 @@
 let capacityUpdateInterval;
+let currentBatteryId = null;  // Stores the currently open battery ID
 
 function getCookie(name) {
     let cookieValue = null;
@@ -384,7 +385,10 @@ $('#batteries-tbl').on('click', '.expandBtn', function() {
     var projects = $(this).data('projects');
     var series = $(this).data('series');
     var parallel = $(this).data('parallel');
-    var required_cells_count = series * parallel
+    var required_cells_count = series * parallel;
+    
+    // Store battery ID globally for replacement logging
+    currentBatteryId = batteryId;
 
     // Hide and remove all other accordion contents except for the current one
     $allAccordions.not($nextRow).hide().remove();
@@ -1835,6 +1839,35 @@ function replaceDefectiveCell(slotId) {
 
     const replacement = findReplacementCell(defectiveCell);
     if (replacement) {
+        // Parse slot position from ID (format: cell-S-P)
+        const slotMatch = slotId.match(/cell-(\d+)-(\d+)/);
+        const slotSeries = slotMatch ? parseInt(slotMatch[1]) : 0;
+        const slotParallel = slotMatch ? parseInt(slotMatch[2]) : 0;
+        
+        // Log replacement to server
+        if (currentBatteryId) {
+            fetch('/log-cell-replacement/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    battery_id: currentBatteryId,
+                    old_cell_uuid: defectiveCell.dataset.itemId,
+                    new_cell_uuid: replacement.dataset.itemId,
+                    slot_series: slotSeries,
+                    slot_parallel: slotParallel,
+                    old_capacity: parseFloat(defectiveCell.dataset.capacity),
+                    new_capacity: parseFloat(replacement.dataset.capacity),
+                    old_esr: parseFloat(defectiveCell.dataset.esr) || null,
+                    new_esr: parseFloat(replacement.dataset.esr) || null,
+                    reason: 'defective'
+                })
+            }).then(r => r.json()).then(data => {
+                if (data.success) {
+                    console.log('Replacement logged:', data.message);
+                }
+            }).catch(err => console.error('Log failed:', err));
+        }
+        
         // Move defective cell to middle-list (or mark as defective)
         const middleList = document.getElementById('middle-list');
         defectiveCell.classList.add('defective');
@@ -1853,8 +1886,92 @@ function replaceDefectiveCell(slotId) {
     }
 }
 
+// ==================== CONTEXT MENU ====================
 
+let contextMenuTarget = null;
+let contextMenuSlot = null;
 
+function setupCellContextMenu() {
+    const contextMenu = document.getElementById('cell-context-menu');
+    if (!contextMenu) return;
+
+    // Right-click on cells in battery layout
+    document.addEventListener('contextmenu', function(e) {
+        const cell = e.target.closest('.sortable-cell .list-group-item');
+        const slot = e.target.closest('.sortable-cell');
+        
+        if (cell && slot) {
+            e.preventDefault();
+            contextMenuTarget = cell;
+            contextMenuSlot = slot;
+            
+            // Position menu
+            contextMenu.style.left = e.clientX + 'px';
+            contextMenu.style.top = e.clientY + 'px';
+            contextMenu.classList.add('show');
+        } else {
+            hideContextMenu();
+        }
+    });
+
+    // Hide on click outside
+    document.addEventListener('click', function(e) {
+        if (!contextMenu.contains(e.target)) {
+            hideContextMenu();
+        }
+    });
+
+    // Hide on scroll
+    document.addEventListener('scroll', hideContextMenu, true);
+
+    // Replace cell action
+    document.getElementById('ctx-replace-cell').addEventListener('click', function() {
+        if (contextMenuSlot) {
+            replaceDefectiveCell(contextMenuSlot.id);
+        }
+        hideContextMenu();
+    });
+
+    // Show details action
+    document.getElementById('ctx-show-details').addEventListener('click', function() {
+        if (contextMenuTarget) {
+            const uuid = contextMenuTarget.dataset.itemId;
+            const cap = contextMenuTarget.dataset.capacity;
+            const esr = contextMenuTarget.dataset.esr || 'N/A';
+            const voltage = contextMenuTarget.dataset.voltage || 'N/A';
+            
+            toastr.info(
+                `UUID: ${uuid}<br>Kapazität: ${cap} mAh<br>ESR: ${esr} mΩ<br>Spannung: ${voltage} V`,
+                'Zell-Details',
+                { timeOut: 10000, escapeHtml: false }
+            );
+        }
+        hideContextMenu();
+    });
+
+    // Remove cell action
+    document.getElementById('ctx-remove-cell').addEventListener('click', function() {
+        if (contextMenuTarget && contextMenuSlot) {
+            const middleList = document.getElementById('middle-list');
+            middleList.appendChild(contextMenuTarget);
+            updateAllCapacities();
+            toastr.success('Zelle zurück in Transfer-Liste verschoben', 'Entfernt');
+        }
+        hideContextMenu();
+    });
+}
+
+function hideContextMenu() {
+    const contextMenu = document.getElementById('cell-context-menu');
+    if (contextMenu) {
+        contextMenu.classList.remove('show');
+    }
+    contextMenuTarget = null;
+    contextMenuSlot = null;
+}
+
+// Initialize context menu when DOM is ready
+document.addEventListener('DOMContentLoaded', setupCellContextMenu);
 
 
 

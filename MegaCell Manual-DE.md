@@ -201,6 +201,69 @@ Der erweiterte Algorithmus optimiert **zwei Metriken gleichzeitig**:
 - Tausch wird nur durchgeführt wenn der Score sinkt
 - Wiederholt bis keine Verbesserung mehr möglich
 
+#### Visuelle Animations-Feedback
+
+Während des Balancings zeigt das Battery Layout:
+
+| Phase | Visualisierung |
+|-------|----------------|
+| **Serpentine** | Zellen blinken gelb beim Platzieren, dann blau |
+| **Swap** | Getauschte Zellen blinken orange |
+| **Fertig** | Alle Zellen werden grün |
+
+Der **Status-Banner** zeigt live:
+- Aktuelle Phase (1 oder 2)
+- Fortschritt in Prozent
+- Anzahl Iterationen und Swaps
+- Score-Reduktion (z.B. "-96.9%")
+
+#### Score-Interpretation
+
+Der Score misst die **Ungleichmässigkeit** zwischen den Serien:
+
+| Score | Bedeutung |
+|-------|-----------|
+| **Hoch** | Serien unterscheiden sich stark (schlecht) |
+| **Niedrig** | Serien sind ähnlich (gut) |
+
+**Was bedeutet "-96.9%"?**
+
+Das ist die **Reduktion** gegenüber dem Startwert:
+- Initial Score: 10.0 (nach Serpentine)
+- Final Score: 0.31 (nach Balancing)
+- Reduktion: **-96.9%**
+
+| Reduktion | Bewertung |
+|-----------|-----------|
+| < 50% | Wenig Potenzial (war schon gut) |
+| 50-80% | Gute Verbesserung |
+| 80-95% | Sehr gute Verbesserung |
+| > 95% | Exzellent |
+
+#### Kapazitäts-Abweichung (mAh StdDev)
+
+Die **Standardabweichung** misst, wie unterschiedlich die Gesamtkapazitäten der Serien sind.
+
+**Beispiel 10S4P Pack:**
+- S1: 10'200 mAh, S2: 10'201 mAh, S3: 10'199 mAh...
+- StdDev = 0.2 mAh → praktisch identisch
+
+| StdDev | Bewertung |
+|--------|-----------|
+| < 1 mAh | Perfekt |
+| 1-10 mAh | Sehr gut |
+| 10-50 mAh | Gut |
+| > 100 mAh | Verbesserungswürdig |
+
+#### Widerstands-Abweichung (ESR StdDev)
+
+| StdDev | Bewertung |
+|--------|-----------|
+| < 0.1 mΩ | Perfekt |
+| 0.1-0.5 mΩ | Sehr gut |
+| 0.5-1 mΩ | Gut |
+| > 1 mΩ | Verbesserungswürdig |
+
 #### Warum ESR-Balancing wichtig ist
 
 Bei Parallelschaltung gilt:
@@ -231,8 +294,15 @@ Wenn immer nur die "besten" Zellen gepickt werden, bleibt für zukünftige Proje
 
 Falls beim physischen Bau eine Zelle defekt wird (fallen gelassen, Lötproblem):
 
-#### Funktion
-Die Funktion `findReplacementCell` durchsucht den Reserve-Pool (nicht zugewiesene Zellen) und findet die beste Übereinstimmung.
+#### Kontextmenü (Rechtsklick)
+
+**Rechtsklick auf eine Zelle im Battery Layout** öffnet ein Menü:
+
+| Option | Funktion |
+|--------|----------|
+| **Zelle ersetzen** | Findet beste Ersatzzelle aus Reserve-Pool |
+| **Details anzeigen** | Zeigt UUID, Kapazität, ESR, Spannung |
+| **Zelle entfernen** | Verschiebt Zelle zurück in Transfer-Liste |
 
 #### Matching-Kriterien
 - **Delta Kapazität**: Differenz zur defekten Zelle minimieren
@@ -240,9 +310,29 @@ Die Funktion `findReplacementCell` durchsucht den Reserve-Pool (nicht zugewiesen
 - **Gewichtung**: 60% Kapazität, 40% ESR
 
 #### Verwendung
-1. Defekte Zelle im Layout identifizieren
-2. Ersatzzelle wird automatisch aus Reserve vorgeschlagen
-3. Gruppenstatistik wird aktualisiert
+1. **Rechtsklick** auf die defekte Zelle im Layout
+2. "Zelle ersetzen" wählen
+3. System findet automatisch die beste Ersatzzelle
+4. Ersetzung wird protokolliert
+
+#### Ersetzungs-Historie
+
+Jede Zellen-Ersetzung wird automatisch in der Datenbank protokolliert:
+
+| Feld | Beschreibung |
+|------|-------------|
+| Alte Zelle | UUID, Kapazität, ESR |
+| Neue Zelle | UUID, Kapazität, ESR |
+| Position | Serie (S) und Parallel (P) Slot |
+| Zeitstempel | Wann ersetzt |
+| Grund | z.B. "defective" |
+
+**API zum Abrufen der Historie:**
+```
+GET /replacement-history/<battery_id>/
+```
+
+Dies ermöglicht volle Nachvollziehbarkeit aller Zellen-Änderungen im Pack.
 
 ### Pack Chart - Grafische Analyse
 
@@ -352,21 +442,29 @@ Konfiguriert den Labeldrucker (z.B. Dymo).
 
 #### Backup wiederherstellen
 
+⚠️ **Wichtig:** Vor dem Restore müssen die Datenbank-Tabellen existieren!
+
 **Linux / macOS:**
 ```bash
-# Backup entpacken
+# 1. Tabellen erstellen (falls neue Installation)
+docker-compose exec web python manage.py migrate
+
+# 2. Backup entpacken
 gunzip megacnc_backup_XXXXXX.json.gz
 
-# Wiederherstellen
+# 3. Daten wiederherstellen
 docker-compose exec web python manage.py loaddata megacnc_backup_XXXXXX.json
 ```
 
 **Windows (PowerShell):**
 ```powershell
-# Mit 7-Zip entpacken
+# 1. Tabellen erstellen (falls neue Installation)
+docker exec megacnc-web-1 python manage.py migrate
+
+# 2. Mit 7-Zip entpacken
 7z e megacnc_backup_XXXXXX.json.gz
 
-# In Container kopieren und wiederherstellen
+# 3. In Container kopieren und wiederherstellen
 docker cp megacnc_backup_XXXXXX.json megacnc-web-1:/app/
 docker exec megacnc-web-1 python manage.py loaddata megacnc_backup_XXXXXX.json
 ```
@@ -410,8 +508,8 @@ docker exec megacnc-web-1 python manage.py loaddata megacnc_backup_XXXXXX.json
 2. Auto Select für repräsentative Auswahl nutzen
 3. Assign für automatisches Balancing
 4. Console (F12) prüfen für Balancing-Statistik:
-   - Capacity StdDev: < 50 mAh ist gut
-   - Resistance StdDev: < 1 mΩ ist gut
+   - Capacity StdDev: < 10 mAh = sehr gut, < 1 mAh = perfekt
+   - Resistance StdDev: < 0.5 mΩ = sehr gut, < 0.1 mΩ = perfekt
 
 ### Sicherheit
 - Zellen vor Parallelschaltung auf gleiche Spannung bringen (Store-Funktion)

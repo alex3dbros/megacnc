@@ -1,6 +1,6 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.db.models import Prefetch
-from .models import Projects, Device, Slot, Cells, CellTestData, PrinterSettings, Batteries
+from .models import Projects, Device, Slot, Cells, CellTestData, PrinterSettings, Batteries, CellReplacementLog
 from django.contrib import messages
 from django.http import JsonResponse, HttpResponseRedirect
 from django.views.decorators.http import require_POST
@@ -949,6 +949,82 @@ def download_backup(request):
         response['Content-Length'] = len(buffer.getvalue())
         
         return response
+        
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+@require_POST
+@csrf_exempt
+def log_cell_replacement(request):
+    """Log a cell replacement in a battery pack"""
+    try:
+        data = json.loads(request.body)
+        
+        battery_id = data.get('battery_id')
+        old_cell_uuid = data.get('old_cell_uuid')
+        new_cell_uuid = data.get('new_cell_uuid')
+        slot_series = data.get('slot_series')
+        slot_parallel = data.get('slot_parallel')
+        old_capacity = data.get('old_capacity')
+        new_capacity = data.get('new_capacity')
+        old_esr = data.get('old_esr')
+        new_esr = data.get('new_esr')
+        reason = data.get('reason', 'defective')
+        
+        battery = get_object_or_404(Batteries, id=battery_id)
+        
+        log_entry = CellReplacementLog.objects.create(
+            battery=battery,
+            old_cell_uuid=old_cell_uuid,
+            new_cell_uuid=new_cell_uuid,
+            slot_series=slot_series,
+            slot_parallel=slot_parallel,
+            old_capacity=old_capacity,
+            new_capacity=new_capacity,
+            old_esr=old_esr,
+            new_esr=new_esr,
+            reason=reason
+        )
+        
+        return JsonResponse({
+            'success': True,
+            'log_id': log_entry.id,
+            'message': f'Ersetzung protokolliert: {old_cell_uuid} → {new_cell_uuid}'
+        })
+        
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+@csrf_exempt
+def get_replacement_history(request, battery_id):
+    """Get replacement history for a battery pack"""
+    try:
+        battery = get_object_or_404(Batteries, id=battery_id)
+        logs = battery.replacement_logs.all()
+        
+        history = []
+        for log in logs:
+            history.append({
+                'id': log.id,
+                'old_cell_uuid': log.old_cell_uuid,
+                'new_cell_uuid': log.new_cell_uuid,
+                'slot_series': log.slot_series,
+                'slot_parallel': log.slot_parallel,
+                'old_capacity': log.old_capacity,
+                'new_capacity': log.new_capacity,
+                'old_esr': log.old_esr,
+                'new_esr': log.new_esr,
+                'reason': log.reason,
+                'replaced_at': log.replaced_at.isoformat(),
+                'replaced_by': log.replaced_by
+            })
+        
+        return JsonResponse({
+            'battery_name': battery.name,
+            'history': history
+        })
         
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
