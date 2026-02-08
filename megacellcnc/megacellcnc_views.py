@@ -299,9 +299,7 @@ def delete_batteries(request):
             # First release all cells from these batteries
             Cells.objects.filter(battery_id__in=battery_ids).update(
                 battery=None, 
-                available="Yes",
-                slot_series=None,
-                slot_parallel=None
+                available="Yes"
             )
             # Then delete the batteries
             count, _ = Batteries.objects.filter(id__in=battery_ids).delete()
