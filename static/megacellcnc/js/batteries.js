@@ -439,6 +439,28 @@ $('#batteries-tbl').on('click', '.expandBtn', function() {
                             </div>
                         </div>
                         
+                        <!-- Workflow Indicator -->
+                        <div id="workflow-indicator" class="workflow-indicator">
+                            <div class="workflow-step" id="step-select" data-step="1">
+                                <span class="step-icon">①</span> Zellen wählen
+                            </div>
+                            <span class="workflow-arrow">→</span>
+                            <div class="workflow-step" id="step-auto" data-step="2">
+                                <span class="step-icon">②</span> Auto-Select
+                            </div>
+                            <span class="workflow-arrow">→</span>
+                            <div class="workflow-step" id="step-assign" data-step="3">
+                                <span class="step-icon">③</span> Assign
+                            </div>
+                            <span class="workflow-arrow">→</span>
+                            <div class="workflow-step" id="step-save" data-step="4">
+                                <span class="step-icon">④</span> Speichern
+                            </div>
+                            <div id="unsaved-indicator" class="unsaved-indicator">
+                                <i class="fa fa-exclamation-triangle"></i> Nicht gespeichert
+                            </div>
+                        </div>
+                        
                         <!-- Status Display -->
                         <div id="assign-status" class="assign-status" style="display:none;">
                             <div class="status-content">
@@ -449,6 +471,9 @@ $('#batteries-tbl').on('click', '.expandBtn', function() {
                                 <div id="status-progress" class="progress-bar bg-success" style="width:0%"></div>
                             </div>
                         </div>
+                        
+                        <!-- Result Banner (shown after balancing) -->
+                        <div id="result-banner" class="result-banner" style="display:none;"></div>
                         
                         <!-- Hidden Transfer List (collapsible) -->
                         <div id="transfer-panel" class="transfer-panel" style="display:none;">
@@ -541,9 +566,14 @@ $('#batteries-tbl').on('click', '.expandBtn', function() {
 
             updateLeftListUI();
             updateAllCapacities();
+            
+            // Update workflow step
+            setWorkflowStep(3); // Ready for Assign
+            toastr.info(`${required_cells_count - calculateNeededItems(required_cells_count)} Zellen ausgewählt`, 'Auto-Select');
         });
 
     document.getElementById('assign-btn').addEventListener('click', function() {
+        setWorkflowStep(3); // Assign in progress
         const btn = this;
         const spinner = document.getElementById('assign-spinner');
         const originalText = btn.innerHTML;
@@ -617,11 +647,13 @@ $('#batteries-tbl').on('click', '.expandBtn', function() {
         .then(response => response.json())
         .then(data => {
             console.log('Success:', data);
-            toastr.success('Pack configuration saved successfully!', "Success");
+            toastr.success('Pack erfolgreich gespeichert!', "Gespeichert");
+            markSaved();
+            hideResultBanner();
         })
         .catch((error) => {
             console.error('Error:', error);
-            toastr.error("Error saving pack configuration", "Error");
+            toastr.error("Fehler beim Speichern", "Fehler");
         });
     });
 
@@ -698,6 +730,100 @@ function hideStatus() {
 function delay(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
+
+// ============================================
+// WORKFLOW MANAGEMENT
+// ============================================
+let hasUnsavedChanges = false;
+
+function setWorkflowStep(stepNumber) {
+    document.querySelectorAll('.workflow-step').forEach(step => {
+        const num = parseInt(step.dataset.step);
+        step.classList.remove('completed', 'active');
+        if (num < stepNumber) {
+            step.classList.add('completed');
+        } else if (num === stepNumber) {
+            step.classList.add('active');
+        }
+    });
+}
+
+function markUnsaved() {
+    hasUnsavedChanges = true;
+    const indicator = document.getElementById('unsaved-indicator');
+    const saveBtn = document.getElementById('save-btn');
+    if (indicator) indicator.classList.add('visible');
+    if (saveBtn) saveBtn.classList.add('needs-save');
+}
+
+function markSaved() {
+    hasUnsavedChanges = false;
+    const indicator = document.getElementById('unsaved-indicator');
+    const saveBtn = document.getElementById('save-btn');
+    if (indicator) indicator.classList.remove('visible');
+    if (saveBtn) saveBtn.classList.remove('needs-save');
+    setWorkflowStep(5); // Beyond last step = all done
+}
+
+function showResultBanner(stats) {
+    const banner = document.getElementById('result-banner');
+    if (!banner) return;
+    
+    banner.innerHTML = `
+        <div class="result-header">
+            <i class="fa fa-check-circle result-icon"></i>
+            <span class="result-title">Balancing abgeschlossen!</span>
+        </div>
+        <div class="result-stats">
+            <div class="stat-item">
+                <span class="stat-value">${stats.cells}</span>
+                <span class="stat-label">Zellen</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-value">${stats.iterations}</span>
+                <span class="stat-label">Iterationen</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-value">${stats.swaps}</span>
+                <span class="stat-label">Swaps</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-value">σ ${stats.stdDev}</span>
+                <span class="stat-label">mAh Abweichung</span>
+            </div>
+        </div>
+        <div class="result-actions">
+            <button class="btn btn-action btn-save-now" onclick="document.getElementById('save-btn').click()">
+                <i class="fa fa-save"></i> Jetzt Speichern
+            </button>
+            <button class="btn btn-action btn-outline-light" onclick="document.getElementById('reset-btn').click(); hideResultBanner();">
+                <i class="fa fa-undo"></i> Neu verteilen
+            </button>
+            <button class="btn btn-action btn-outline-secondary" onclick="hideResultBanner()">
+                <i class="fa fa-times"></i> Schließen
+            </button>
+        </div>
+    `;
+    banner.style.display = 'block';
+    
+    // Mark as unsaved and update workflow
+    markUnsaved();
+    setWorkflowStep(4); // Step 4: Save
+}
+
+function hideResultBanner() {
+    const banner = document.getElementById('result-banner');
+    if (banner) banner.style.display = 'none';
+}
+
+// Unsaved changes warning
+window.addEventListener('beforeunload', function(e) {
+    if (hasUnsavedChanges) {
+        e.preventDefault();
+        e.returnValue = 'Änderungen wurden noch nicht gespeichert. Wirklich verlassen?';
+        return e.returnValue;
+    }
+});
 
 // ============================================
 // CHECKPOINT SYSTEM
@@ -909,8 +1035,15 @@ async function resumeFromCheckpoint(checkpoint) {
     setupCellTooltips();
     updateAllCapacities();
 
-    updateStatus('✓ Fertig (fortgesetzt)', `${currentIteration} Iter, ${currentTotalSwaps} Swaps, σ=${capStdDev.toFixed(1)}mAh`, 100);
-    setTimeout(hideStatus, 3000);
+    hideStatus();
+    
+    // Show result banner
+    showResultBanner({
+        cells: series * parallel,
+        iterations: currentIteration,
+        swaps: currentTotalSwaps,
+        stdDev: capStdDev.toFixed(1)
+    });
 }
 
 // Get slot element by series and parallel index
@@ -1217,10 +1350,16 @@ async function assignCellsToPack(series, parallel) {
     
     updateAllCapacities();
 
-    updateStatus('✓ Fertig', `${iteration} Iterationen, ${totalSwaps} Swaps, σ=${capStdDev.toFixed(1)}mAh`, 100);
+    // Hide status and show result banner
+    hideStatus();
     
-    // Hide status after delay
-    setTimeout(hideStatus, 3000);
+    // Show result banner with stats
+    showResultBanner({
+        cells: requiredCells,
+        iterations: iteration,
+        swaps: totalSwaps,
+        stdDev: capStdDev.toFixed(1)
+    });
 }
 
 
