@@ -37181,3 +37181,21 @@ html[dir="rtl"] [direction="rtl"][data-sidebar-style="compact"]:not([data-layout
 
 
 /*# sourceMappingURL=style-rtl.css.map */
+
+/* Sidebar Toggle Arrow */
+.sidebar-toggle .arrow-icon {
+  font-size: 24px;
+  color: #5D78FF;
+  transition: transform 0.3s ease;
+  display: inline-block;
+  font-weight: bold;
+  line-height: 1;
+}
+
+.sidebar-toggle.is-active .arrow-icon {
+  transform: rotate(180deg);
+}
+
+.hamburger.sidebar-toggle .line {
+  display: none;
+}
