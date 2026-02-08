@@ -913,53 +913,36 @@ def get_printer_settings(request):
 
 
 def download_backup(request):
-    """Download a database backup as gzipped SQL file"""
-    import subprocess
+    """Download a database backup as gzipped SQL file using Django's dumpdata"""
     import gzip
-    from io import BytesIO
+    from io import BytesIO, StringIO
     from django.http import HttpResponse
     from datetime import datetime
+    from django.core.management import call_command
     
     try:
-        # Database connection info from environment
-        import os
-        db_url = os.environ.get('DATABASE_URL', 'postgres://postgres:MccAdmin@db:5432/mcccnc')
-        
-        # Parse DATABASE_URL
-        # Format: postgres://user:password@host:port/dbname
-        import re
-        match = re.match(r'postgres://([^:]+):([^@]+)@([^:]+):(\d+)/(.+)', db_url)
-        if match:
-            db_user, db_pass, db_host, db_port, db_name = match.groups()
-        else:
-            db_user, db_pass, db_host, db_port, db_name = 'postgres', 'MccAdmin', 'db', '5432', 'mcccnc'
-        
-        # Set password for pg_dump
-        env = os.environ.copy()
-        env['PGPASSWORD'] = db_pass
-        
-        # Run pg_dump
-        result = subprocess.run(
-            ['pg_dump', '-h', db_host, '-p', db_port, '-U', db_user, db_name],
-            capture_output=True,
-            env=env,
-            timeout=120
+        # Use Django's dumpdata to export all data as JSON
+        output = StringIO()
+        call_command(
+            'dumpdata',
+            '--natural-foreign',
+            '--natural-primary',
+            '--exclude=contenttypes',
+            '--exclude=auth.permission',
+            '--indent=2',
+            stdout=output
         )
         
-        if result.returncode != 0:
-            return JsonResponse({
-                'error': 'Backup failed',
-                'details': result.stderr.decode()
-            }, status=500)
+        dump_data = output.getvalue().encode('utf-8')
         
         # Compress with gzip
         buffer = BytesIO()
         with gzip.GzipFile(fileobj=buffer, mode='wb') as gz:
-            gz.write(result.stdout)
+            gz.write(dump_data)
         
         # Create response
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-        filename = f'megacnc_backup_{timestamp}.sql.gz'
+        filename = f'megacnc_backup_{timestamp}.json.gz'
         
         response = HttpResponse(buffer.getvalue(), content_type='application/gzip')
         response['Content-Disposition'] = f'attachment; filename="{filename}"'
@@ -967,8 +950,6 @@ def download_backup(request):
         
         return response
         
-    except subprocess.TimeoutExpired:
-        return JsonResponse({'error': 'Backup timeout - database too large'}, status=500)
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
 
