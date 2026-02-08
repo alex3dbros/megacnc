@@ -699,6 +699,220 @@ function delay(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+// ============================================
+// CHECKPOINT SYSTEM
+// ============================================
+const CHECKPOINT_KEY = 'megacell_assign_checkpoint';
+
+function saveCheckpoint(series, parallel, seriesArrays, iteration, totalSwaps, scoreHistory) {
+    try {
+        // Convert cell elements to serializable format
+        const cellPositions = seriesArrays.map(seriesArr => 
+            seriesArr.map(cell => ({
+                itemId: cell.dataset.itemId,
+                capacity: cell.dataset.capacity,
+                esr: cell.dataset.esr,
+                voltage: cell.dataset.voltage
+            }))
+        );
+        
+        const checkpoint = {
+            series,
+            parallel,
+            cellPositions,
+            iteration,
+            totalSwaps,
+            scoreHistory,
+            timestamp: Date.now()
+        };
+        
+        localStorage.setItem(CHECKPOINT_KEY, JSON.stringify(checkpoint));
+        console.log(`[Checkpoint] Saved at iteration ${iteration}`);
+    } catch (e) {
+        console.warn('[Checkpoint] Failed to save:', e);
+    }
+}
+
+function loadCheckpoint() {
+    try {
+        const data = localStorage.getItem(CHECKPOINT_KEY);
+        if (!data) return null;
+        
+        const checkpoint = JSON.parse(data);
+        
+        // Check if checkpoint is recent (< 1 hour old)
+        const age = Date.now() - checkpoint.timestamp;
+        if (age > 3600000) {
+            clearCheckpoint();
+            return null;
+        }
+        
+        return checkpoint;
+    } catch (e) {
+        console.warn('[Checkpoint] Failed to load:', e);
+        return null;
+    }
+}
+
+function clearCheckpoint() {
+    localStorage.removeItem(CHECKPOINT_KEY);
+    console.log('[Checkpoint] Cleared');
+}
+
+function hasCheckpoint() {
+    return loadCheckpoint() !== null;
+}
+
+async function resumeFromCheckpoint(checkpoint) {
+    const { series, parallel, cellPositions, iteration, totalSwaps, scoreHistory } = checkpoint;
+    
+    updateStatus('Wiederherstellung', `Lade Checkpoint von Iteration ${iteration}...`, 10);
+    await delay(300);
+    
+    // Get all cells from middle-list and create lookup
+    const allCells = Array.from(document.querySelectorAll('#middle-list .list-group-item'));
+    const cellLookup = {};
+    allCells.forEach(cell => {
+        cellLookup[cell.dataset.itemId] = cell;
+    });
+    
+    // Clear all slots
+    document.querySelectorAll('.sortable-cell').forEach(slot => {
+        slot.innerHTML = '';
+        slot.classList.remove('cell-placing', 'cell-placed', 'cell-done');
+    });
+    
+    // Restore cell positions
+    let seriesArrays = [];
+    for (let s = 0; s < series; s++) {
+        seriesArrays[s] = [];
+        for (let p = 0; p < parallel; p++) {
+            const cellData = cellPositions[s][p];
+            const cell = cellLookup[cellData.itemId];
+            
+            if (cell) {
+                seriesArrays[s].push(cell);
+                const slot = getSlot(s, p);
+                placeCellInSlot(cell, slot, false);
+                slot.classList.add('cell-placed');
+            }
+            
+            // Update progress
+            const progress = 10 + ((s * parallel + p) / (series * parallel)) * 30;
+            updateStatus('Wiederherstellung', `Stelle Zellen wieder her... (S${s+1}P${p+1})`, progress);
+        }
+    }
+    
+    updateStatus('Wiederherstellung', `Checkpoint geladen. Setze bei Iteration ${iteration} fort...`, 45);
+    await delay(500);
+    
+    // Continue with remaining iterations
+    const maxIterations = 100;
+    const earlyStopThreshold = 0.005;
+    let improved = true;
+    let currentIteration = iteration;
+    let currentTotalSwaps = totalSwaps;
+    let previousScore = scoreHistory[scoreHistory.length - 1]?.score || calculateBalancingScore(seriesArrays);
+    let initialScore = scoreHistory[0]?.score || previousScore;
+    
+    console.log(`[Resume] Continuing from iteration ${currentIteration}, score ${previousScore.toFixed(4)}`);
+    
+    while (improved && currentIteration < maxIterations) {
+        improved = false;
+        currentIteration++;
+        
+        let currentScore = calculateBalancingScore(seriesArrays);
+        let iterationSwaps = 0;
+
+        for (let a = 0; a < series; a++) {
+            for (let b = a + 1; b < series; b++) {
+                for (let i = 0; i < seriesArrays[a].length; i++) {
+                    for (let j = 0; j < seriesArrays[b].length; j++) {
+                        let temp = seriesArrays[a][i];
+                        seriesArrays[a][i] = seriesArrays[b][j];
+                        seriesArrays[b][j] = temp;
+
+                        let newScore = calculateBalancingScore(seriesArrays);
+
+                        if (newScore < currentScore) {
+                            currentScore = newScore;
+                            improved = true;
+                            currentTotalSwaps++;
+                            iterationSwaps++;
+                            
+                            if (currentTotalSwaps % 5 === 0) {
+                                const slotA = getSlot(a, i);
+                                const slotB = getSlot(b, j);
+                                await animateSwap(slotA, slotB);
+                                
+                                const cellA = slotA.firstChild;
+                                const cellB = slotB.firstChild;
+                                if (cellA && cellB) {
+                                    slotA.innerHTML = '';
+                                    slotB.innerHTML = '';
+                                    slotA.appendChild(cellB);
+                                    slotB.appendChild(cellA);
+                                }
+                            }
+                        } else {
+                            seriesArrays[b][j] = seriesArrays[a][i];
+                            seriesArrays[a][i] = temp;
+                        }
+                    }
+                }
+            }
+        }
+        
+        const improvement = previousScore > 0 ? ((previousScore - currentScore) / previousScore) * 100 : 0;
+        console.log(`[Score] Iter ${currentIteration}: ${currentScore.toFixed(4)} (-${improvement.toFixed(2)}%)`);
+        
+        if (improved && improvement < earlyStopThreshold && currentIteration > iteration + 5) {
+            console.log(`[Score] Early stop after resume`);
+            break;
+        }
+        
+        previousScore = currentScore;
+        
+        if (currentIteration % 10 === 0) {
+            saveCheckpoint(series, parallel, seriesArrays, currentIteration, currentTotalSwaps, scoreHistory);
+        }
+        
+        const progress = 46 + ((currentIteration - iteration) / (maxIterations - iteration)) * 45;
+        const scoreReduction = ((initialScore - currentScore) / initialScore * 100).toFixed(1);
+        updateStatus('Phase 2 (fortgesetzt)', `Iter ${currentIteration} | ${currentTotalSwaps} Swaps | -${scoreReduction}%`, progress);
+        
+        if (currentIteration % 2 === 0) await delay(15);
+    }
+    
+    clearCheckpoint();
+    
+    // Finalize
+    updateStatus('Finalisierung', 'Berechne Statistiken...', 92);
+    await delay(100);
+
+    for (let s = 0; s < series; s++) {
+        for (let p = 0; p < parallel; p++) {
+            const slot = getSlot(s, p);
+            const cell = seriesArrays[s][p];
+            if (slot && cell && slot.firstChild !== cell) {
+                placeCellInSlot(cell, slot, false);
+            }
+        }
+    }
+
+    const finalCapacities = seriesArrays.map(s => calculateGroupCapacity(s));
+    const capStdDev = calculateStdDev(finalCapacities);
+    
+    console.log('Resume complete:', currentIteration, 'total iterations,', currentTotalSwaps, 'total swaps');
+
+    markAllCellsDone();
+    setupCellTooltips();
+    updateAllCapacities();
+
+    updateStatus('✓ Fertig (fortgesetzt)', `${currentIteration} Iter, ${currentTotalSwaps} Swaps, σ=${capStdDev.toFixed(1)}mAh`, 100);
+    setTimeout(hideStatus, 3000);
+}
+
 // Get slot element by series and parallel index
 function getSlot(s, p) {
     return document.getElementById(`cell-${s + 1}-${p + 1}`);
@@ -711,9 +925,8 @@ function placeCellInSlot(cell, slot, animate = true) {
     // Extract Cell-ID for display
     const cellId = extractCellId(cell.dataset.itemId || '');
     
-    // Update cell display to show just the ID
+    // Update cell display to show just the ID (no title - we use custom tooltip)
     cell.textContent = cellId;
-    cell.title = `${cell.dataset.capacity}mAh | ${cell.dataset.esr}mΩ | ${cell.dataset.voltage}V`;
     
     slot.innerHTML = '';
     slot.appendChild(cell);
@@ -784,6 +997,26 @@ function setupCellTooltips() {
 
 // Assign Cells to pack with Visual Animation
 async function assignCellsToPack(series, parallel) {
+    // Check for existing checkpoint
+    const checkpoint = loadCheckpoint();
+    if (checkpoint && checkpoint.series === series && checkpoint.parallel === parallel) {
+        const age = Math.round((Date.now() - checkpoint.timestamp) / 60000);
+        const resume = confirm(
+            `Checkpoint gefunden!\n\n` +
+            `Iteration: ${checkpoint.iteration}\n` +
+            `Swaps: ${checkpoint.totalSwaps}\n` +
+            `Alter: ${age} Minuten\n\n` +
+            `Fortsetzen?`
+        );
+        
+        if (resume) {
+            await resumeFromCheckpoint(checkpoint);
+            return;
+        } else {
+            clearCheckpoint();
+        }
+    }
+    
     const cells = Array.from(document.querySelectorAll('#middle-list .list-group-item'));
     const requiredCells = series * parallel;
 
@@ -843,22 +1076,32 @@ async function assignCellsToPack(series, parallel) {
     await delay(300);
 
     // ============================================
-    // PHASE 2: Multi-Objective Swap Balancing
+    // PHASE 2: Multi-Objective Swap Balancing with Score Tracking
     // ============================================
     updateStatus('Phase 2', 'Swap-Balancing startet...', 46);
     await delay(200);
 
-    const maxIterations = 50; // Reduced for visual feedback
+    const maxIterations = 100;
+    const earlyStopThreshold = 0.005; // Stop if improvement < 0.5%
     let improved = true;
     let iteration = 0;
     let totalSwaps = 0;
     let visualSwaps = 0;
+    
+    // Score tracking
+    let scoreHistory = [];
+    let initialScore = calculateBalancingScore(seriesArrays);
+    let previousScore = initialScore;
+    scoreHistory.push({ iteration: 0, score: initialScore, improvement: 0 });
+    
+    console.log(`[Score] Initial: ${initialScore.toFixed(4)}`);
 
     while (improved && iteration < maxIterations) {
         improved = false;
         iteration++;
         
         let currentScore = calculateBalancingScore(seriesArrays);
+        let iterationSwaps = 0;
 
         for (let a = 0; a < series; a++) {
             for (let b = a + 1; b < series; b++) {
@@ -875,16 +1118,15 @@ async function assignCellsToPack(series, parallel) {
                             currentScore = newScore;
                             improved = true;
                             totalSwaps++;
+                            iterationSwaps++;
                             
                             // Visual swap in DOM (every Nth swap for performance)
-                            if (totalSwaps % 3 === 0 || totalSwaps < 20) {
+                            if (totalSwaps % 5 === 0 || totalSwaps < 10) {
                                 const slotA = getSlot(a, i);
                                 const slotB = getSlot(b, j);
                                 
-                                // Animate the swap
                                 await animateSwap(slotA, slotB);
                                 
-                                // Swap in DOM
                                 const cellA = slotA.firstChild;
                                 const cellB = slotB.firstChild;
                                 if (cellA && cellB) {
@@ -906,13 +1148,36 @@ async function assignCellsToPack(series, parallel) {
             }
         }
         
-        // Update status
+        // Track score improvement
+        const improvement = previousScore > 0 ? ((previousScore - currentScore) / previousScore) * 100 : 0;
+        scoreHistory.push({ iteration, score: currentScore, improvement, swaps: iterationSwaps });
+        
+        console.log(`[Score] Iter ${iteration}: ${currentScore.toFixed(4)} (${improvement > 0 ? '-' : '+'}${Math.abs(improvement).toFixed(2)}%, ${iterationSwaps} swaps)`);
+        
+        // Early stop if improvement is negligible
+        if (improved && improvement < earlyStopThreshold && iteration > 5) {
+            console.log(`[Score] Early stop: Improvement ${improvement.toFixed(3)}% < ${earlyStopThreshold}%`);
+            break;
+        }
+        
+        previousScore = currentScore;
+        
+        // Save checkpoint every 10 iterations
+        if (iteration % 10 === 0) {
+            saveCheckpoint(series, parallel, seriesArrays, iteration, totalSwaps, scoreHistory);
+        }
+        
+        // Update status with score info
         const progress = 46 + (iteration / maxIterations) * 45;
-        updateStatus('Phase 2', `Iteration ${iteration}/${maxIterations} (${totalSwaps} Swaps)`, progress);
+        const scoreReduction = ((initialScore - currentScore) / initialScore * 100).toFixed(1);
+        updateStatus('Phase 2', `Iter ${iteration} | ${totalSwaps} Swaps | Score -${scoreReduction}%`, progress);
         
         // Allow UI to breathe
-        if (iteration % 2 === 0) await delay(20);
+        if (iteration % 2 === 0) await delay(15);
     }
+    
+    // Clear checkpoint on successful completion
+    clearCheckpoint();
 
     // ============================================
     // PHASE 3: Finalize
