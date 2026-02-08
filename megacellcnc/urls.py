@@ -35,6 +35,7 @@ urlpatterns = [
     path('replacement-history/<int:battery_id>/', megacellcnc_views.get_replacement_history, name='replacement-history'),
     path('update-cell-condition/', megacellcnc_views.update_cell_condition, name='update-cell-condition'),
     path('update-cell-available/', megacellcnc_views.update_cell_available, name='update-cell-available'),
+    path('get-cell-id-by-uuid/', megacellcnc_views.get_cell_id_by_uuid, name='get-cell-id-by-uuid'),
     path('print-label/', megacellcnc_views.print_label, name='print-label'),
 
     path('save-cell/', megacellcnc_views.save_cell, name='save-cell'),

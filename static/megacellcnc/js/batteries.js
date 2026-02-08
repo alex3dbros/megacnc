@@ -442,6 +442,8 @@ $('#batteries-tbl').on('click', '.expandBtn', function() {
                                 <button class="btn btn-primary btn-sm" id="save-btn" title="Save"><i class="fa fa-save"></i></button>
                                 <button class="btn btn-info btn-sm" id="chart-btn" title="Grafik anzeigen"><i class="fa fa-line-chart"></i></button>
                                 <button class="btn btn-secondary btn-sm" id="history-btn" title="Ersetzungs-Historie"><i class="fa fa-history"></i></button>
+                                <button class="btn btn-secondary btn-sm" id="print-pack-btn" title="Labels drucken"><i class="fa fa-print"></i></button>
+                                <button class="btn btn-secondary btn-sm" id="export-pack-btn" title="Zellenliste exportieren"><i class="fa fa-download"></i></button>
                                 <button class="btn btn-danger btn-sm" id="dissolve-btn" title="Pack auflösen"><i class="fa fa-trash"></i></button>
                             </div>
                         </div>
@@ -659,6 +661,16 @@ $('#batteries-tbl').on('click', '.expandBtn', function() {
     // History Button
     document.getElementById('history-btn').addEventListener('click', function() {
         openReplacementHistory(batteryId);
+    });
+
+    // Print Pack Button
+    document.getElementById('print-pack-btn').addEventListener('click', function() {
+        printPackLabels();
+    });
+
+    // Export Pack Button
+    document.getElementById('export-pack-btn').addEventListener('click', function() {
+        exportPackCells(UUID);
     });
 
     // Pack auflösen Button
@@ -1067,6 +1079,126 @@ function closeHistoryModal() {
         overlay.classList.remove('visible');
         setTimeout(() => overlay.remove(), 300);
     }
+}
+
+// ==================== PACK PRINT & EXPORT ====================
+
+function getPackCells() {
+    const cells = [];
+    const cellElements = document.querySelectorAll('.sortable-cell .list-group-item');
+    
+    cellElements.forEach(cell => {
+        const slot = cell.closest('.sortable-cell');
+        const slotId = slot ? slot.id : '';
+        const slotMatch = slotId.match(/cell-(\d+)-(\d+)/);
+        
+        cells.push({
+            cellId: extractCellId(cell.dataset.itemId),
+            uuid: cell.dataset.itemId,
+            capacity: parseFloat(cell.dataset.capacity) || 0,
+            esr: parseFloat(cell.dataset.esr) || 0,
+            voltage: parseFloat(cell.dataset.voltage) || 0,
+            series: slotMatch ? parseInt(slotMatch[1]) : 0,
+            parallel: slotMatch ? parseInt(slotMatch[2]) : 0
+        });
+    });
+    
+    return cells;
+}
+
+async function printPackLabels() {
+    const cells = getPackCells();
+    
+    if (cells.length === 0) {
+        toastr.error('Keine Zellen im Pack', 'Fehler');
+        return;
+    }
+    
+    toastr.info(`Drucke ${cells.length} Labels...`, 'Drucken');
+    
+    // Get cell database IDs for printing
+    const cellIds = [];
+    for (const cell of cells) {
+        // We need to get the database ID from UUID
+        try {
+            const response = await fetch(`/get-cell-id-by-uuid/?uuid=${encodeURIComponent(cell.uuid)}`);
+            const data = await response.json();
+            if (data.cell_id) {
+                cellIds.push(data.cell_id);
+            }
+        } catch (e) {
+            console.error('Error getting cell ID:', e);
+        }
+    }
+    
+    if (cellIds.length === 0) {
+        toastr.error('Keine druckbaren Zellen gefunden', 'Fehler');
+        return;
+    }
+    
+    // Print using existing function
+    let doubleLabel = parseInt(includedValue($("#doubleLabel")));
+    
+    if (doubleLabel === 1) {
+        for (let i = 0; i < cellIds.length; i += 2) {
+            const batch = cellIds.slice(i, i + 2);
+            printLabels(batch, -1);
+            await sleep(1000);
+        }
+    } else {
+        for (let i = 0; i < cellIds.length; i++) {
+            printLabels([cellIds[i]], -1);
+            await sleep(1000);
+        }
+    }
+    
+    toastr.success(`${cellIds.length} Labels gedruckt`, 'Fertig');
+}
+
+function exportPackCells(packUUID) {
+    const cells = getPackCells();
+    
+    if (cells.length === 0) {
+        toastr.error('Keine Zellen im Pack', 'Fehler');
+        return;
+    }
+    
+    // Sort by Cell-ID
+    cells.sort((a, b) => a.cellId.localeCompare(b.cellId));
+    
+    // Create CSV content
+    const headers = ['Cell-ID', 'UUID', 'Position', 'Capacity (mAh)', 'ESR (mΩ)', 'Voltage (V)'];
+    const rows = cells.map(c => [
+        c.cellId,
+        c.uuid,
+        `S${c.series}-P${c.parallel}`,
+        c.capacity,
+        c.esr,
+        c.voltage
+    ]);
+    
+    let csvContent = headers.join(';') + '\n';
+    rows.forEach(row => {
+        csvContent += row.join(';') + '\n';
+    });
+    
+    // Add summary
+    csvContent += '\n';
+    csvContent += `Total Cells;${cells.length}\n`;
+    csvContent += `Total Capacity;${cells.reduce((sum, c) => sum + c.capacity, 0).toFixed(0)} mAh\n`;
+    csvContent += `Avg Capacity;${(cells.reduce((sum, c) => sum + c.capacity, 0) / cells.length).toFixed(1)} mAh\n`;
+    csvContent += `Avg ESR;${(cells.reduce((sum, c) => sum + c.esr, 0) / cells.length).toFixed(2)} mΩ\n`;
+    
+    // Download
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `pack_${packUUID}_cells.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+    
+    toastr.success(`${cells.length} Zellen exportiert`, 'Export');
 }
 
 function buildSeriesSelector(seriesCount) {

@@ -1066,6 +1066,20 @@ def update_cell_condition(request):
         return JsonResponse({'error': str(e)}, status=500)
 
 
+def get_cell_id_by_uuid(request):
+    """Get cell database ID by UUID"""
+    uuid = request.GET.get('uuid', '')
+    
+    if not uuid:
+        return JsonResponse({'error': 'UUID required'}, status=400)
+    
+    try:
+        cell = Cells.objects.get(UUID=uuid)
+        return JsonResponse({'cell_id': cell.id, 'uuid': cell.UUID})
+    except Cells.DoesNotExist:
+        return JsonResponse({'error': 'Cell not found'}, status=404)
+
+
 @require_POST
 @csrf_exempt
 def update_cell_available(request):
