@@ -468,7 +468,135 @@
     .unsaved-indicator.visible {
         display: flex;
     }
+
+    /* Chart Modal */
+    .chart-modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.85);
+        z-index: 2000;
+        display: none;
+        align-items: center;
+        justify-content: center;
+    }
+    .chart-modal-overlay.visible {
+        display: flex;
+    }
+    .chart-modal {
+        background: #16213e;
+        border-radius: 10px;
+        width: 95%;
+        max-width: 1400px;
+        max-height: 90vh;
+        overflow: hidden;
+        box-shadow: 0 10px 50px rgba(0,0,0,0.5);
+        border: 1px solid #4ecca3;
+    }
+    .chart-modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 15px 20px;
+        background: #0f3460;
+        border-bottom: 1px solid #1a3a5c;
+    }
+    .chart-modal-title {
+        color: #fff;
+        font-size: 16px;
+        font-weight: bold;
+    }
+    .chart-modal-close {
+        background: none;
+        border: none;
+        color: #fff;
+        font-size: 24px;
+        cursor: pointer;
+        padding: 0 10px;
+    }
+    .chart-modal-close:hover {
+        color: #e74c3c;
+    }
+    .chart-modal-body {
+        padding: 20px;
+        max-height: calc(90vh - 120px);
+        overflow-y: auto;
+    }
+    .chart-controls {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 15px;
+        flex-wrap: wrap;
+    }
+    .chart-toggle {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 12px;
+        background: #0f3460;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: all 0.2s;
+        border: 2px solid transparent;
+    }
+    .chart-toggle:hover {
+        background: #1a4a7c;
+    }
+    .chart-toggle.active {
+        border-color: var(--toggle-color, #4ecca3);
+    }
+    .chart-toggle input {
+        display: none;
+    }
+    .chart-toggle .toggle-indicator {
+        width: 12px;
+        height: 12px;
+        border-radius: 2px;
+        background: var(--toggle-color, #4ecca3);
+        opacity: 0.3;
+    }
+    .chart-toggle.active .toggle-indicator {
+        opacity: 1;
+    }
+    .chart-toggle .toggle-label {
+        font-size: 12px;
+        color: #fff;
+    }
+    .chart-container {
+        background: #0d1b2a;
+        border-radius: 8px;
+        padding: 15px;
+        height: 400px;
+    }
+    .series-selector {
+        display: flex;
+        gap: 5px;
+        margin-bottom: 15px;
+        flex-wrap: wrap;
+    }
+    .series-btn {
+        padding: 4px 10px;
+        font-size: 11px;
+        border-radius: 3px;
+        border: 1px solid #3a5a7c;
+        background: #0f3460;
+        color: #fff;
+        cursor: pointer;
+    }
+    .series-btn.active {
+        background: #4ecca3;
+        color: #000;
+        border-color: #4ecca3;
+    }
+    .series-btn:hover {
+        background: #1a4a7c;
+    }
 </style>
+
+<!-- Chart.js from CDN -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.14.0/Sortable.min.js"></script>
 
 

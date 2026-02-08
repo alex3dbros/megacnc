@@ -436,6 +436,7 @@ $('#batteries-tbl').on('click', '.expandBtn', function() {
                                 <button class="btn btn-success btn-sm" id="assign-btn" title="Assign"><i class="fa fa-check"></i></button>
                                 <button class="btn btn-warning btn-sm" id="reset-btn" title="Reset"><i class="fa fa-undo"></i></button>
                                 <button class="btn btn-primary btn-sm" id="save-btn" title="Save"><i class="fa fa-save"></i></button>
+                                <button class="btn btn-info btn-sm" id="chart-btn" title="Grafik anzeigen"><i class="fa fa-line-chart"></i></button>
                                 <button class="btn btn-danger btn-sm" id="dissolve-btn" title="Pack auflösen"><i class="fa fa-trash"></i></button>
                             </div>
                         </div>
@@ -487,6 +488,23 @@ $('#batteries-tbl').on('click', '.expandBtn', function() {
                         <!-- Battery Pack Layout -->
                         <div class="pack-section">
                             <div id="battery-pack-container"></div>
+                        </div>
+                    </div>
+                    
+                    <!-- Chart Modal -->
+                    <div id="chart-modal-overlay" class="chart-modal-overlay">
+                        <div class="chart-modal">
+                            <div class="chart-modal-header">
+                                <span class="chart-modal-title"><i class="fa fa-line-chart me-2"></i>Pack Analyse - ${series}S${parallel}P</span>
+                                <button class="chart-modal-close" id="chart-modal-close">&times;</button>
+                            </div>
+                            <div class="chart-modal-body">
+                                <div class="series-selector" id="series-selector"></div>
+                                <div class="chart-controls" id="chart-controls"></div>
+                                <div class="chart-container">
+                                    <canvas id="pack-chart"></canvas>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </td>
@@ -614,6 +632,23 @@ $('#batteries-tbl').on('click', '.expandBtn', function() {
         });
 
         updateAllCapacities(); // Update capacities if necessary
+    });
+
+    // Chart Button
+    document.getElementById('chart-btn').addEventListener('click', function() {
+        openPackChart(series, parallel);
+    });
+    
+    // Chart Modal Close
+    document.getElementById('chart-modal-close').addEventListener('click', function() {
+        closePackChart();
+    });
+    
+    // Close modal on overlay click
+    document.getElementById('chart-modal-overlay').addEventListener('click', function(e) {
+        if (e.target === this) {
+            closePackChart();
+        }
     });
 
     // Pack auflösen Button
@@ -876,6 +911,256 @@ function showResultBanner(stats) {
 function hideResultBanner() {
     const banner = document.getElementById('result-banner');
     if (banner) banner.style.display = 'none';
+}
+
+// ============================================
+// CHART FUNCTIONALITY
+// ============================================
+let packChart = null;
+let chartDatasets = {};
+let selectedSeries = 'all';
+
+const chartColors = {
+    capacity: { color: '#4ecca3', label: 'Kapazität (mAh)' },
+    esr: { color: '#e74c3c', label: 'ESR (mΩ)' },
+    voltage: { color: '#3498db', label: 'Spannung (V)' }
+};
+
+function openPackChart(series, parallel) {
+    const overlay = document.getElementById('chart-modal-overlay');
+    if (!overlay) return;
+    
+    overlay.classList.add('visible');
+    
+    // Build series selector
+    buildSeriesSelector(series);
+    
+    // Build chart controls (toggles)
+    buildChartControls();
+    
+    // Collect data and render chart
+    setTimeout(() => {
+        collectChartData(series, parallel);
+        renderPackChart(parallel);
+    }, 100);
+}
+
+function closePackChart() {
+    const overlay = document.getElementById('chart-modal-overlay');
+    if (overlay) overlay.classList.remove('visible');
+    
+    if (packChart) {
+        packChart.destroy();
+        packChart = null;
+    }
+}
+
+function buildSeriesSelector(seriesCount) {
+    const container = document.getElementById('series-selector');
+    if (!container) return;
+    
+    let html = '<button class="series-btn active" data-series="all">Alle Serien</button>';
+    for (let s = 1; s <= seriesCount; s++) {
+        html += `<button class="series-btn" data-series="${s}">S${s}</button>`;
+    }
+    container.innerHTML = html;
+    
+    // Event listeners
+    container.querySelectorAll('.series-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            container.querySelectorAll('.series-btn').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            selectedSeries = this.dataset.series;
+            updateChartVisibility();
+        });
+    });
+}
+
+function buildChartControls() {
+    const container = document.getElementById('chart-controls');
+    if (!container) return;
+    
+    let html = '';
+    for (const [key, config] of Object.entries(chartColors)) {
+        html += `
+            <label class="chart-toggle active" style="--toggle-color: ${config.color}" data-metric="${key}">
+                <input type="checkbox" checked>
+                <span class="toggle-indicator"></span>
+                <span class="toggle-label">${config.label}</span>
+            </label>
+        `;
+    }
+    container.innerHTML = html;
+    
+    // Event listeners
+    container.querySelectorAll('.chart-toggle').forEach(toggle => {
+        toggle.addEventListener('click', function() {
+            this.classList.toggle('active');
+            const checkbox = this.querySelector('input');
+            checkbox.checked = !checkbox.checked;
+            updateChartVisibility();
+        });
+    });
+}
+
+function collectChartData(seriesCount, parallelCount) {
+    chartDatasets = {};
+    
+    for (let s = 1; s <= seriesCount; s++) {
+        chartDatasets[s] = {
+            capacity: [],
+            esr: [],
+            voltage: [],
+            labels: []
+        };
+        
+        for (let p = 1; p <= parallelCount; p++) {
+            const slot = document.getElementById(`cell-${s}-${p}`);
+            const cell = slot ? slot.querySelector('.list-group-item') : null;
+            
+            chartDatasets[s].labels.push(`P${p}`);
+            
+            if (cell) {
+                chartDatasets[s].capacity.push(parseFloat(cell.dataset.capacity) || 0);
+                chartDatasets[s].esr.push(parseFloat(cell.dataset.esr) || 0);
+                chartDatasets[s].voltage.push(parseFloat(cell.dataset.voltage) || 0);
+            } else {
+                chartDatasets[s].capacity.push(null);
+                chartDatasets[s].esr.push(null);
+                chartDatasets[s].voltage.push(null);
+            }
+        }
+    }
+}
+
+function renderPackChart(parallelCount) {
+    const canvas = document.getElementById('pack-chart');
+    if (!canvas) return;
+    
+    const ctx = canvas.getContext('2d');
+    
+    if (packChart) {
+        packChart.destroy();
+    }
+    
+    const labels = Array.from({ length: parallelCount }, (_, i) => `P${i + 1}`);
+    const datasets = buildChartDatasets();
+    
+    packChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: datasets
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: {
+                mode: 'index',
+                intersect: false
+            },
+            plugins: {
+                legend: {
+                    display: false  // We use custom toggles
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(0,0,0,0.9)',
+                    titleColor: '#4ecca3',
+                    bodyColor: '#fff',
+                    borderColor: '#4ecca3',
+                    borderWidth: 1
+                }
+            },
+            scales: {
+                x: {
+                    grid: { color: 'rgba(255,255,255,0.1)' },
+                    ticks: { color: '#888' }
+                },
+                y: {
+                    grid: { color: 'rgba(255,255,255,0.1)' },
+                    ticks: { color: '#888' }
+                },
+                y1: {
+                    position: 'right',
+                    grid: { display: false },
+                    ticks: { color: '#e74c3c' }
+                }
+            }
+        }
+    });
+}
+
+function buildChartDatasets() {
+    const datasets = [];
+    const activeMetrics = getActiveMetrics();
+    const seriesToShow = selectedSeries === 'all' 
+        ? Object.keys(chartDatasets) 
+        : [selectedSeries];
+    
+    seriesToShow.forEach((seriesNum, idx) => {
+        const data = chartDatasets[seriesNum];
+        if (!data) return;
+        
+        const opacity = selectedSeries === 'all' ? 0.7 : 1;
+        const lineWidth = selectedSeries === 'all' ? 1 : 2;
+        
+        if (activeMetrics.includes('capacity')) {
+            datasets.push({
+                label: `S${seriesNum} Kapazität`,
+                data: data.capacity,
+                borderColor: chartColors.capacity.color,
+                backgroundColor: `${chartColors.capacity.color}33`,
+                borderWidth: lineWidth,
+                tension: 0.3,
+                pointRadius: selectedSeries === 'all' ? 0 : 3,
+                yAxisID: 'y'
+            });
+        }
+        
+        if (activeMetrics.includes('esr')) {
+            datasets.push({
+                label: `S${seriesNum} ESR`,
+                data: data.esr,
+                borderColor: chartColors.esr.color,
+                backgroundColor: `${chartColors.esr.color}33`,
+                borderWidth: lineWidth,
+                tension: 0.3,
+                pointRadius: selectedSeries === 'all' ? 0 : 3,
+                yAxisID: 'y1'
+            });
+        }
+        
+        if (activeMetrics.includes('voltage')) {
+            datasets.push({
+                label: `S${seriesNum} Spannung`,
+                data: data.voltage,
+                borderColor: chartColors.voltage.color,
+                backgroundColor: `${chartColors.voltage.color}33`,
+                borderWidth: lineWidth,
+                tension: 0.3,
+                pointRadius: selectedSeries === 'all' ? 0 : 3,
+                yAxisID: 'y'
+            });
+        }
+    });
+    
+    return datasets;
+}
+
+function getActiveMetrics() {
+    const active = [];
+    document.querySelectorAll('#chart-controls .chart-toggle.active').forEach(toggle => {
+        active.push(toggle.dataset.metric);
+    });
+    return active;
+}
+
+function updateChartVisibility() {
+    if (!packChart) return;
+    
+    const datasets = buildChartDatasets();
+    packChart.data.datasets = datasets;
+    packChart.update();
 }
 
 // Unsaved changes warning
