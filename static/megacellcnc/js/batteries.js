@@ -382,6 +382,7 @@ $('#batteries-tbl').on('click', '.expandBtn', function() {
 
     var batteryId = $(this).data('battery-id');
     var UUID = $(this).data('battery-uuid');
+    var batteryName = $(this).data('battery-name');
     var projects = $(this).data('projects');
     var series = $(this).data('series');
     var parallel = $(this).data('parallel');
@@ -670,7 +671,7 @@ $('#batteries-tbl').on('click', '.expandBtn', function() {
 
     // Export Pack Button
     document.getElementById('export-pack-btn').addEventListener('click', function() {
-        exportPackCells(UUID);
+        exportPackCells(batteryName);
     });
 
     // Pack auflösen Button
@@ -1155,7 +1156,7 @@ async function printPackLabels() {
     toastr.success(`${cellIds.length} Labels gedruckt`, 'Fertig');
 }
 
-function exportPackCells(packUUID) {
+function exportPackCells(packName) {
     const cells = getPackCells();
     
     if (cells.length === 0) {
@@ -1165,6 +1166,9 @@ function exportPackCells(packUUID) {
     
     // Sort by Cell-ID
     cells.sort((a, b) => a.cellId.localeCompare(b.cellId));
+    
+    // Sanitize pack name for filename
+    const safePackName = packName.replace(/[^a-zA-Z0-9_-]/g, '_');
     
     // Create CSV content
     const headers = ['Cell-ID', 'UUID', 'Position', 'Capacity (mAh)', 'ESR (mΩ)', 'Voltage (V)'];
@@ -1194,7 +1198,7 @@ function exportPackCells(packUUID) {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `pack_${packUUID}_cells.csv`;
+    link.download = `${safePackName}_cells.csv`;
     link.click();
     URL.revokeObjectURL(url);
     
@@ -2312,28 +2316,32 @@ document.querySelectorAll('.deleteBatteryBtn').forEach(btn => {
 
 // Add event listener to the confirmation button in the modal
 document.getElementById('confirmDeleteBtn').addEventListener('click', function() {
-    const cellId = this.getAttribute('data-cell-id');
-    console.log(cellId);
-    deleteCell(cellId);  // Proceed to delete the device
+    const batteryId = this.getAttribute('data-battery-id');
+    console.log(batteryId);
+    deleteBattery(batteryId);  // Proceed to delete the battery pack
     $('#deleteConfirmationModal').modal('hide');  // Hide the confirmation modal
 });
 
-    // Delete device function
-function deleteCell(cellId) {
-    fetch("/delete-cells/", {
+    // Delete battery pack function
+function deleteBattery(batteryId) {
+    fetch("/delete-batteries/", {
         method: 'POST',
         headers: {
             'X-CSRFToken': getCookie('csrftoken'),
             'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ 'cell_ids': [cellId] })  // Note that we're sending an array with a single ID
+        body: JSON.stringify({ 'battery_ids': [batteryId] })
     })
     .then(response => response.json())
     .then(data => {
-        console.log(data);  // Handle success response
-        location.reload();  // Optionally reload the page to update the cells list
+        console.log(data);
+        toastr.success('Battery-Pack gelöscht', 'Erfolg');
+        location.reload();
     })
-    .catch(error => console.error('Error:', error));
+    .catch(error => {
+        console.error('Error:', error);
+        toastr.error('Fehler beim Löschen', 'Fehler');
+    });
 }
 
 

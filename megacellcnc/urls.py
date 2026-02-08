@@ -20,6 +20,7 @@ urlpatterns = [
     path('get-cells/',megacellcnc_views.get_cells,name="get-cells"),
     path('get-battery-cells/',megacellcnc_views.get_battery_cells,name="get-battery-cells"),
     path('delete-cells/',megacellcnc_views.delete_cells,name="delete-cells"),
+    path('delete-batteries/',megacellcnc_views.delete_batteries,name="delete-batteries"),
     path('device-slots/',megacellcnc_views.device_slots,name="device-slots"),
     path('device/<int:device_id>/update-slots/', megacellcnc_views.get_updated_slots, name='update-slots'),
 

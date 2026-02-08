@@ -287,6 +287,33 @@ def delete_cells(request):
     # Handle other HTTP methods or return an error response
 
 
+def delete_batteries(request):
+    if request.method == "POST":
+        try:
+            data = json.loads(request.body)
+            battery_ids = data.get('battery_ids', [])
+        except json.JSONDecodeError:
+            return JsonResponse({'error': 'Invalid JSON'}, status=400)
+
+        if len(battery_ids) > 0:
+            # First release all cells from these batteries
+            Cells.objects.filter(battery_id__in=battery_ids).update(
+                battery=None, 
+                available="Yes",
+                slot_series=None,
+                slot_parallel=None
+            )
+            # Then delete the batteries
+            count, _ = Batteries.objects.filter(id__in=battery_ids).delete()
+            messages.success(request, f'{count} Battery-Pack(s) gelöscht!')
+            return JsonResponse({'message': f'Successfully deleted {count} battery pack(s).'})
+        else:
+            messages.error(request, 'No Battery Pack Selected')
+            return JsonResponse({'error': 'No Battery Pack selected'}, status=400)
+
+    return JsonResponse({'error': 'Invalid request method'}, status=405)
+
+
 def get_cells(request):
     project_id = request.GET.get('project_id')
     if project_id == 'all':
