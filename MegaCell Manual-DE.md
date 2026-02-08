@@ -1,8 +1,8 @@
-# MegaCell CNC - Benutzerhandbuch
+# Giga CN - Benutzerhandbuch
 
 ## Übersicht
 
-MegaCell CNC ist eine Webanwendung zur Verwaltung von Batteriezellen-Tests und Battery Pack-Konfiguration.
+Giga CN (Fork von MegaCell CNC) ist eine Webanwendung zur Verwaltung von Batteriezellen-Tests und Battery Pack-Konfiguration.
 
 ---
 
@@ -124,7 +124,61 @@ Speichert den abgeschlossenen Test in der Datenbank. Die Zelle erhält eine UUID
 
 ---
 
-## 5. Batteries
+## 5. Database
+
+### Zweck
+Übersicht aller getesteten Zellen mit Filter- und Bearbeitungsfunktionen.
+
+### Spalten
+| Spalte | Beschreibung |
+|--------|-------------|
+| ID | Datenbank-ID |
+| Serial No | Cell-ID (aus UUID) |
+| Available | Verfügbar für Packs (Yes/No) |
+| Condition | Zustand der Zelle |
+| Project | Zugehöriges Projekt |
+| Type | Zelltyp (18650, 21700, etc.) |
+| Capacity | Gemessene Kapazität (mAh) |
+| ESR | Innenwiderstand (mΩ) |
+| Test Date | Datum des Tests |
+
+### Condition (Zellenzustand)
+
+Neues Feld zur Klassifizierung von Zellen:
+
+| Zustand | Farbe | Bedeutung |
+|---------|-------|-----------|
+| **Gut** | 🟢 Grün | Normal, verwendbar |
+| **Defekt** | 🔴 Rot | Beschädigt, nicht verwenden |
+| **Reserviert** | 🟡 Gelb | Für bestimmten Zweck reserviert |
+| **Unbekannt** | ⚫ Grau | Status unklar |
+
+### Bulk-Edit (Massenbearbeitung)
+
+Mehrere Zellen gleichzeitig bearbeiten:
+
+1. **Zellen auswählen** (Checkboxen links)
+2. **Tag-Icon** klicken (erscheint bei Auswahl)
+3. **Status wählen**:
+   - Condition: Gut / Defekt / Reserviert / Unbekannt
+   - Available: Yes / No
+
+### Filter & Suche
+
+| Filter | Funktion |
+|--------|----------|
+| **Serial Search** | Suche nach Cell-ID |
+| **Project** | Nur Zellen eines Projekts |
+| **Year** | Nach Testjahr filtern |
+| **Status** | Available/Not Available |
+
+### Spalten ein-/ausblenden
+
+Klick auf **Spalten-Icon** → Checkboxen für jede Spalte.
+
+---
+
+## 6. Batteries
 
 ### Zweck
 Battery Packs aus getesteten Zellen zusammenstellen.
@@ -172,10 +226,49 @@ Jede Zelle zeigt: `Cell-ID - Kapazität mAh - ESR mΩ`
 - **Assign**: Verteilt Zellen automatisch auf das Pack
 
 #### Rechte Seite - Battery Pack Layout
-- **Search by UUID**: Zelle per Barcode-Scan finden
 - **Reset Cells**: Alle Zellen zurück in Transfer-Liste
 - **Save Pack**: Konfiguration in Datenbank speichern
 - **Layout-Grid**: Drag & Drop zum manuellen Platzieren
+
+#### Pack-Toolbar Buttons
+
+| Button | Icon | Funktion |
+|--------|------|----------|
+| **Auto Select** | ✨ | Wählt Zellen automatisch aus |
+| **Assign** | ✓ | Verteilt Zellen mit Balancing |
+| **Reset** | ↩ | Setzt alle Zellen zurück |
+| **Save** | 💾 | Speichert Pack-Konfiguration |
+| **Chart** | 📊 | Zeigt grafische Analyse |
+| **History** | 🕐 | Zeigt Ersetzungs-Historie |
+| **Print** | 🖨️ | Druckt Labels für alle Pack-Zellen |
+| **Export** | ⬇️ | Exportiert Zellenliste als CSV |
+| **Auflösen** | 🗑️ | Löst Pack auf, gibt Zellen frei |
+
+### Pack Export (CSV)
+
+Der **Export-Button** erstellt eine CSV-Datei mit allen Zellen im Pack.
+
+#### Inhalt
+```csv
+Cell-ID;UUID;Position;Capacity (mAh);ESR (mΩ);Voltage (V)
+012559;D20230620-S012559;S1-P1;2450;12.5;3.65
+012560;D20230620-S012560;S1-P2;2445;12.8;3.64
+...
+
+Total Cells;540
+Total Capacity;1323000 mAh
+Avg Capacity;2450.0 mAh
+Avg ESR;12.34 mΩ
+```
+
+- Sortiert nach Cell-ID
+- Zusammenfassung mit Totalen und Durchschnittswerten
+
+### Pack Labels drucken
+
+Der **Print-Button** druckt Labels für alle Zellen im aktuellen Pack.
+- Verwendet die Drucker-Einstellungen aus Settings
+- Unterstützt Single- und Dual-Label-Modus
 
 ### Multi-Objective Balancing-Algorithmus (Assign-Button)
 
@@ -404,7 +497,7 @@ Bei grossen Packs (500+ Zellen) wird der Balancing-Fortschritt automatisch gesic
 
 ---
 
-## 6. Settings
+## 7. Settings
 
 Die Settings-Seite ist in Tabs organisiert:
 
@@ -519,7 +612,7 @@ docker exec megacnc-web-1 python manage.py loaddata megacnc_backup_XXXXXX.json
 
 ---
 
-## 7. Deployment & Administration
+## 8. Deployment & Administration
 
 ### Docker Images zu GitHub Container Registry pushen
 
