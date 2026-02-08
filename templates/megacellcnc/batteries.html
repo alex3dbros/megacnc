@@ -584,14 +584,36 @@
         background: #0f3460;
         color: #fff;
         cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        transition: all 0.15s;
+    }
+    .series-btn .series-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        opacity: 0.4;
     }
     .series-btn.active {
-        background: #4ecca3;
-        color: #000;
-        border-color: #4ecca3;
+        background: #1a4a7c;
+        border-color: var(--series-color, #4ecca3);
+    }
+    .series-btn.active .series-dot {
+        opacity: 1;
+        box-shadow: 0 0 4px var(--series-color, #4ecca3);
     }
     .series-btn:hover {
         background: #1a4a7c;
+    }
+    .series-btn[data-series="all"],
+    .series-btn[data-series="none"] {
+        background: #0a2540;
+        border-color: #1a3a5c;
+    }
+    .series-btn[data-series="all"]:hover,
+    .series-btn[data-series="none"]:hover {
+        background: #1a3a5c;
     }
 </style>
 

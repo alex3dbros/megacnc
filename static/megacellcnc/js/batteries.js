@@ -918,13 +918,20 @@ function hideResultBanner() {
 // ============================================
 let packChart = null;
 let chartDatasets = {};
-let selectedSeries = 'all';
+let selectedSeriesSet = new Set(); // Multi-select
+let totalSeriesCount = 0;
 
 const chartColors = {
     capacity: { color: '#4ecca3', label: 'Kapazität (mAh)' },
     esr: { color: '#e74c3c', label: 'ESR (mΩ)' },
     voltage: { color: '#3498db', label: 'Spannung (V)' }
 };
+
+// Different colors for each series
+const seriesColors = [
+    '#4ecca3', '#e74c3c', '#3498db', '#f39c12', '#9b59b6',
+    '#1abc9c', '#e67e22', '#2ecc71', '#e91e63', '#00bcd4'
+];
 
 function openPackChart(series, parallel) {
     const overlay = document.getElementById('chart-modal-overlay');
@@ -959,18 +966,62 @@ function buildSeriesSelector(seriesCount) {
     const container = document.getElementById('series-selector');
     if (!container) return;
     
-    let html = '<button class="series-btn active" data-series="all">Alle Serien</button>';
+    totalSeriesCount = seriesCount;
+    
+    // Start with all series selected
+    selectedSeriesSet.clear();
     for (let s = 1; s <= seriesCount; s++) {
-        html += `<button class="series-btn" data-series="${s}">S${s}</button>`;
+        selectedSeriesSet.add(s);
+    }
+    
+    let html = '<button class="series-btn active" data-series="all">Alle</button>';
+    html += '<button class="series-btn" data-series="none">Keine</button>';
+    for (let s = 1; s <= seriesCount; s++) {
+        const color = seriesColors[(s - 1) % seriesColors.length];
+        html += `<button class="series-btn active" data-series="${s}" style="--series-color: ${color}">
+            <span class="series-dot" style="background:${color}"></span>S${s}
+        </button>`;
     }
     container.innerHTML = html;
     
     // Event listeners
     container.querySelectorAll('.series-btn').forEach(btn => {
-        btn.addEventListener('click', function() {
-            container.querySelectorAll('.series-btn').forEach(b => b.classList.remove('active'));
-            this.classList.add('active');
-            selectedSeries = this.dataset.series;
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            const series = this.dataset.series;
+            
+            if (series === 'all') {
+                // Select all
+                selectedSeriesSet.clear();
+                for (let s = 1; s <= seriesCount; s++) {
+                    selectedSeriesSet.add(s);
+                }
+                container.querySelectorAll('.series-btn[data-series]').forEach(b => {
+                    if (b.dataset.series !== 'all' && b.dataset.series !== 'none') {
+                        b.classList.add('active');
+                    }
+                });
+            } else if (series === 'none') {
+                // Deselect all
+                selectedSeriesSet.clear();
+                container.querySelectorAll('.series-btn[data-series]').forEach(b => {
+                    if (b.dataset.series !== 'all' && b.dataset.series !== 'none') {
+                        b.classList.remove('active');
+                    }
+                });
+            } else {
+                // Toggle individual series
+                const seriesNum = parseInt(series);
+                if (selectedSeriesSet.has(seriesNum)) {
+                    selectedSeriesSet.delete(seriesNum);
+                    this.classList.remove('active');
+                } else {
+                    selectedSeriesSet.add(seriesNum);
+                    this.classList.add('active');
+                }
+            }
+            
+            console.log('Selected series:', Array.from(selectedSeriesSet));
             updateChartVisibility();
         });
     });
@@ -983,21 +1034,21 @@ function buildChartControls() {
     let html = '';
     for (const [key, config] of Object.entries(chartColors)) {
         html += `
-            <label class="chart-toggle active" style="--toggle-color: ${config.color}" data-metric="${key}">
-                <input type="checkbox" checked>
+            <div class="chart-toggle active" style="--toggle-color: ${config.color}" data-metric="${key}">
                 <span class="toggle-indicator"></span>
                 <span class="toggle-label">${config.label}</span>
-            </label>
+            </div>
         `;
     }
     container.innerHTML = html;
     
-    // Event listeners
+    // Event listeners - use mousedown to prevent any interference
     container.querySelectorAll('.chart-toggle').forEach(toggle => {
-        toggle.addEventListener('click', function() {
+        toggle.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
             this.classList.toggle('active');
-            const checkbox = this.querySelector('input');
-            checkbox.checked = !checkbox.checked;
+            console.log('Toggle metric:', this.dataset.metric, 'active:', this.classList.contains('active'));
             updateChartVisibility();
         });
     });
@@ -1093,27 +1144,32 @@ function renderPackChart(parallelCount) {
 function buildChartDatasets() {
     const datasets = [];
     const activeMetrics = getActiveMetrics();
-    const seriesToShow = selectedSeries === 'all' 
-        ? Object.keys(chartDatasets) 
-        : [selectedSeries];
+    const seriesToShow = Array.from(selectedSeriesSet).sort((a, b) => a - b);
     
-    seriesToShow.forEach((seriesNum, idx) => {
+    if (seriesToShow.length === 0) return datasets;
+    
+    const isMultiple = seriesToShow.length > 1;
+    const isManySelected = seriesToShow.length > 3;
+    
+    seriesToShow.forEach((seriesNum) => {
         const data = chartDatasets[seriesNum];
         if (!data) return;
         
-        const opacity = selectedSeries === 'all' ? 0.7 : 1;
-        const lineWidth = selectedSeries === 'all' ? 1 : 2;
+        const seriesColor = seriesColors[(seriesNum - 1) % seriesColors.length];
+        const lineWidth = isManySelected ? 1.5 : 2;
+        const pointRadius = isManySelected ? 0 : 3;
         
         if (activeMetrics.includes('capacity')) {
             datasets.push({
                 label: `S${seriesNum} Kapazität`,
                 data: data.capacity,
-                borderColor: chartColors.capacity.color,
-                backgroundColor: `${chartColors.capacity.color}33`,
+                borderColor: isMultiple ? seriesColor : chartColors.capacity.color,
+                backgroundColor: `${isMultiple ? seriesColor : chartColors.capacity.color}33`,
                 borderWidth: lineWidth,
                 tension: 0.3,
-                pointRadius: selectedSeries === 'all' ? 0 : 3,
-                yAxisID: 'y'
+                pointRadius: pointRadius,
+                yAxisID: 'y',
+                borderDash: [] // solid line for capacity
             });
         }
         
@@ -1121,12 +1177,13 @@ function buildChartDatasets() {
             datasets.push({
                 label: `S${seriesNum} ESR`,
                 data: data.esr,
-                borderColor: chartColors.esr.color,
-                backgroundColor: `${chartColors.esr.color}33`,
+                borderColor: isMultiple ? seriesColor : chartColors.esr.color,
+                backgroundColor: `${isMultiple ? seriesColor : chartColors.esr.color}33`,
                 borderWidth: lineWidth,
                 tension: 0.3,
-                pointRadius: selectedSeries === 'all' ? 0 : 3,
-                yAxisID: 'y1'
+                pointRadius: pointRadius,
+                yAxisID: 'y1',
+                borderDash: [5, 5] // dashed line for ESR
             });
         }
         
@@ -1134,12 +1191,13 @@ function buildChartDatasets() {
             datasets.push({
                 label: `S${seriesNum} Spannung`,
                 data: data.voltage,
-                borderColor: chartColors.voltage.color,
-                backgroundColor: `${chartColors.voltage.color}33`,
+                borderColor: isMultiple ? seriesColor : chartColors.voltage.color,
+                backgroundColor: `${isMultiple ? seriesColor : chartColors.voltage.color}33`,
                 borderWidth: lineWidth,
                 tension: 0.3,
-                pointRadius: selectedSeries === 'all' ? 0 : 3,
-                yAxisID: 'y'
+                pointRadius: pointRadius,
+                yAxisID: 'y',
+                borderDash: [2, 2] // dotted line for voltage
             });
         }
     });
