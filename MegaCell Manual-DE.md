@@ -244,6 +244,62 @@ Die Funktion `findReplacementCell` durchsucht den Reserve-Pool (nicht zugewiesen
 2. Ersatzzelle wird automatisch aus Reserve vorgeschlagen
 3. Gruppenstatistik wird aktualisiert
 
+### Pack Chart - Grafische Analyse
+
+Der **Chart-Button** (📊) öffnet eine interaktive Grafik zur Analyse der Zellenwerte im Pack.
+
+#### Funktionen
+| Element | Beschreibung |
+|---------|-------------|
+| **Serien-Auswahl** | Multi-Select: Eine oder mehrere Serien zum Vergleich wählen |
+| **Metrik-Toggle** | Capacity, ESR, Voltage einzeln ein-/ausblenden |
+| **X-Achse** | Parallel-Slots (P1, P2, P3, ...) |
+| **Y-Achsen** | Links: Capacity (mAh) / Rechts: ESR (mΩ), Voltage (V) |
+
+#### Verwendung
+1. Pack öffnen (Editor)
+2. Chart-Button klicken
+3. Serien auswählen (Mehrfachauswahl mit Strg/Cmd)
+4. Metriken per Toggle ein-/ausblenden
+5. Hover über Datenpunkte für Details
+
+### Pack auflösen
+
+Der **Pack auflösen**-Button gibt alle zugewiesenen Zellen wieder frei.
+
+#### Ablauf
+1. Button "Pack auflösen" klicken
+2. Bestätigungsdialog erscheint
+3. Bei Bestätigung: Alle Zellen werden freigegeben
+4. Zellen sind wieder für andere Packs verfügbar
+
+⚠️ **Achtung:** Diese Aktion kann nicht rückgängig gemacht werden!
+
+### Workflow-Anzeige
+
+Der Editor zeigt den aktuellen Workflow-Status:
+
+| Schritt | Status |
+|---------|--------|
+| 1. Zellen auswählen | Auto Select oder manuell |
+| 2. Zellen zuweisen | Assign-Button |
+| 3. Speichern | Save-Button (pulsiert wenn ungespeichert) |
+
+Nach dem Balancing erscheint ein **Result-Banner** mit:
+- Balancing-Ergebnis (Score, Iterationen, Swaps)
+- **Save**: Pack speichern
+- **Reset**: Zellen zurücksetzen
+- **Close**: Banner schliessen
+
+### Checkpoint-System
+
+Bei grossen Packs (500+ Zellen) wird der Balancing-Fortschritt automatisch gesichert.
+
+#### Funktionen
+- Automatische Speicherung nach jeder Iteration
+- Bei Absturz/Reload: Dialog zur Wiederaufnahme
+- Zeigt Score-Entwicklung während des Balancings
+
 ### Use Case: Battery Pack erstellen
 
 1. **Batterie erstellen**: "+ Add Battery" → Name, Series, Parallel eingeben
@@ -252,14 +308,17 @@ Die Funktion `findReplacementCell` durchsucht den Reserve-Pool (nicht zugewiesen
 4. **Filter setzen**: Min/Max Capacity für gewünschten Bereich
 5. **Auto Select**: Klicken → Zellen werden in Transfer-Liste verschoben
 6. **Assign**: Klicken → automatische Verteilung mit Balancing
-7. **Optional**: Drag & Drop zum manuellen Anpassen
-8. **Save Pack**: Konfiguration speichern
+7. **Workflow beobachten**: Status-Banner zeigt Fortschritt
+8. **Chart prüfen**: Grafische Analyse der Verteilung
+9. **Save Pack**: Konfiguration speichern (Button pulsiert)
 
 ---
 
 ## 6. Settings
 
-### Printer Settings Wizard
+Die Settings-Seite ist in Tabs organisiert:
+
+### Tab: Printer
 
 Konfiguriert den Labeldrucker (z.B. Dymo).
 
@@ -283,6 +342,36 @@ Konfiguriert den Labeldrucker (z.B. Dymo).
 
 - **Test Print**: Testausdruck
 - **Save**: Einstellungen speichern
+
+### Tab: Backup & Restore
+
+#### Backup erstellen
+- Klick auf **"Backup herunterladen"**
+- Erstellt eine komprimierte JSON-Datei (`.json.gz`)
+- Enthält alle Projekte, Zellen, Batterien, Einstellungen
+
+#### Backup wiederherstellen
+
+**Linux / macOS:**
+```bash
+# Backup entpacken
+gunzip megacnc_backup_XXXXXX.json.gz
+
+# Wiederherstellen
+docker-compose exec web python manage.py loaddata megacnc_backup_XXXXXX.json
+```
+
+**Windows (PowerShell):**
+```powershell
+# Mit 7-Zip entpacken
+7z e megacnc_backup_XXXXXX.json.gz
+
+# In Container kopieren und wiederherstellen
+docker cp megacnc_backup_XXXXXX.json megacnc-web-1:/app/
+docker exec megacnc-web-1 python manage.py loaddata megacnc_backup_XXXXXX.json
+```
+
+⚠️ **Achtung:** Ein Restore überschreibt alle aktuellen Daten!
 
 ---
 
@@ -329,3 +418,59 @@ Konfiguriert den Labeldrucker (z.B. Dymo).
 - Defekte Zellen (hoher ESR, niedrige Kapazität) aussortieren
 - Temperaturlimits einhalten
 - Bei Ersatz: Immer Zelle mit ähnlichen Werten verwenden
+
+---
+
+## 7. Deployment & Administration
+
+### Docker Images zu GitHub Container Registry pushen
+
+Das Script `deploy-ghcr.sh` automatisiert den Image-Push.
+
+#### Voraussetzungen
+1. GitHub Personal Access Token erstellen:
+   - https://github.com/settings/tokens/new
+   - Berechtigungen: `write:packages`, `read:packages`
+
+2. Token als Umgebungsvariable setzen:
+```bash
+export GHCR_TOKEN="ghp_xxxxxxxxxxxx"
+# Oder in ~/.bashrc für Persistenz
+```
+
+#### Verwendung
+```bash
+# Mit automatischer Versionsnummer (Datum)
+./deploy-ghcr.sh
+
+# Mit spezifischer Version
+./deploy-ghcr.sh v1.0.0
+```
+
+#### Was das Script macht
+1. Optional: Datenbank-Backup erstellen
+2. Login bei ghcr.io
+3. Docker Image bauen
+4. Image taggen (Version + latest)
+5. Push zu `ghcr.io/USERNAME/megacnc`
+
+### Auf Produktionsserver deployen
+
+```bash
+# Image pullen
+docker pull ghcr.io/USERNAME/megacnc:latest
+
+# In docker-compose.yml ändern:
+# Von: build: .
+# Zu:  image: ghcr.io/USERNAME/megacnc:latest
+
+# Container neustarten
+docker-compose down
+docker-compose up -d
+```
+
+### Datenbank migrieren (Dev → Prod)
+
+1. **Backup auf Dev erstellen** (Settings → Backup & Restore)
+2. **Backup-Datei auf Prod kopieren**
+3. **Restore auf Prod ausführen** (siehe Backup & Restore Anleitung)
