@@ -18,22 +18,22 @@ fi
 
 # Push current branch
 echo "⬆️  Pushing $CURRENT_BRANCH..."
-git push origin "$CURRENT_BRANCH"
+git push fork "$CURRENT_BRANCH"
 
 # Switch to main and merge
 echo "🔀 Switching to main..."
 git checkout main
 
 echo "⬇️  Pulling latest main..."
-git pull origin main
+git pull fork main
 
 echo "🔀 Merging $CURRENT_BRANCH into main..."
 git merge "$CURRENT_BRANCH" --no-edit
 
 echo "⬆️  Pushing main..."
-git push origin main
+git push fork main
 
-# Return to original branch
+# Return to forkal branch
 echo "↩️  Returning to $CURRENT_BRANCH..."
 git checkout "$CURRENT_BRANCH"
 
