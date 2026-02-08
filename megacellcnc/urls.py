@@ -30,6 +30,7 @@ urlpatterns = [
     path('save-device-settings/', megacellcnc_views.save_device_settings, name='save-device-settings'),
     path('save-printer-settings/', megacellcnc_views.save_printer_settings, name='save-printer-settings'),
     path('get-printer-settings/', megacellcnc_views.get_printer_settings, name='get-printer-settings'),
+    path('download-backup/', megacellcnc_views.download_backup, name='download-backup'),
     path('print-label/', megacellcnc_views.print_label, name='print-label'),
 
     path('save-cell/', megacellcnc_views.save_cell, name='save-cell'),
