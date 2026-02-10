@@ -811,7 +811,7 @@
             </li>
             <li class="breadcrumb-item active"><a href="javascript:void(0)">{{page_title}}</a></li>
         </ol>
-        <li>Printer Connection: <span id="qz-status" class="text-muted" style="font-weight: bold; padding-right: 30px;">Unknown</span> <a class="text-primary fs-13" data-bs-toggle="offcanvas" href="#offcanvasExample1" role="button" aria-controls="offcanvasExample1">+ Add Battery</a> </li>
+        <li>Printer Connection: <span id="qz-status" class="text-muted" style="font-weight: bold;">Unknown</span></li>
 
     </div>
     <div class="container-fluid">
@@ -827,13 +827,15 @@
 
 
                                 <div class="help-desk">
+                                    <button type="button" class="btn btn-success" data-bs-toggle="offcanvas" href="#offcanvasExample1" role="button" aria-controls="offcanvasExample1">
+                                        <i class="fa-solid fa-plus me-2"></i>Add Battery-Pack
+                                    </button>
 
-
-                                    <button type="button" id="print" class="btn btn-primary" style="margin-left: 20px;">
+                                    <button type="button" id="print" class="btn btn-primary" style="margin-left: 20px;" disabled>
                                         <i class="fa-solid fa-print me-2"></i>Print
                                     </button>
 
-                                    <button type="button" id="deleteCellsBtn" class="btn btn-danger"><i class="fa-solid fa-trash me-2"></i>Delete</button>
+                                    <button type="button" id="deleteCellsBtn" class="btn btn-danger" disabled><i class="fa-solid fa-trash me-2"></i>Delete</button>
                                 </div>
 
                             </div>
@@ -1019,6 +1021,18 @@
 
 <script>
     jQuery(document).ready(function(){
+        
+        // Enable/disable Print and Delete buttons based on checkbox selection
+        function updateButtonStates() {
+            const checkedBoxes = document.querySelectorAll('#batteries-tbl tbody input[type="checkbox"]:checked');
+            const hasSelection = checkedBoxes.length > 0;
+            document.getElementById('print').disabled = !hasSelection;
+            document.getElementById('deleteCellsBtn').disabled = !hasSelection;
+        }
+        
+        // Listen to checkbox changes
+        $('#batteries-tbl').on('change', 'input[type="checkbox"]', updateButtonStates);
+        $('#checkCells').on('change', updateButtonStates);
 
         toastr.options = {
             timeOut: 5000,
