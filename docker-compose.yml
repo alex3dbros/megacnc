@@ -8,16 +8,19 @@ services:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=MccAdmin
     volumes:
-      - postgres_data:/var/lib/postgresql # Korrigiertes Volume-Mapping
+      - postgres_data:/var/lib/postgresql
+    ports:
+      - "5432:5432"
 
   redis:
     image: "redis:alpine"
+    ports:
+      - "6379:6379"
 
   web:
     build: .
     command: gunicorn dashboard.wsgi:application --bind 0.0.0.0:8000
-    ports:
-      - "8000:8000"
+    network_mode: host
     volumes:
       - .:/app
       - /home/heinz/Dokumente/megacell/test:/data
@@ -25,36 +28,38 @@ services:
       - db
       - redis
     environment:
-      - DATABASE_URL=postgres://postgres:MccAdmin@db:5432/mcccnc  # Hostname auf "db" geändert
-      - REDIS_URL=redis://redis:6379/0  # Hostname auf "redis" geändert
+      - DATABASE_URL=postgres://postgres:MccAdmin@localhost:5432/mcccnc
+      - REDIS_URL=redis://localhost:6379/0
     cap_add:
       - NET_ADMIN
 
   celeryworker:
     build: .
     command: celery -A dashboard worker --loglevel=info
+    network_mode: host
     volumes:
       - .:/app
       - /home/heinz/Dokumente/megacell/test:/data
     depends_on:
       - db
       - redis
-    environment: # Umgebungsvariablen hinzugefügt
-      - DATABASE_URL=postgres://postgres:MccAdmin@db:5432/mcccnc
-      - REDIS_URL=redis://redis:6379/0
+    environment:
+      - DATABASE_URL=postgres://postgres:MccAdmin@localhost:5432/mcccnc
+      - REDIS_URL=redis://localhost:6379/0
 
   celerybeat:
     build: .
     command: celery -A dashboard beat --loglevel=info --scheduler django_celery_beat.schedulers:DatabaseScheduler
+    network_mode: host
     volumes:
       - .:/app
       - /home/heinz/Dokumente/megacell/test:/data
     depends_on:
       - db
       - redis
-    environment: # Umgebungsvariablen hinzugefügt
-      - DATABASE_URL=postgres://postgres:MccAdmin@db:5432/mcccnc
-      - REDIS_URL=redis://redis:6379/0
+    environment:
+      - DATABASE_URL=postgres://postgres:MccAdmin@localhost:5432/mcccnc
+      - REDIS_URL=redis://localhost:6379/0
 
 volumes:
   postgres_data:

@@ -3,6 +3,10 @@
 
 var current_device_id = 0;
 
+// Fix aria-hidden focus issue on modal close
+document.getElementById('deviceSettingsModal').addEventListener('hide.bs.modal', function () {
+    document.activeElement.blur();
+});
 
 $(function() {
     $("#checkDevices").click(function() {

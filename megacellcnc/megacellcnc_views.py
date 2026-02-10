@@ -797,8 +797,8 @@ def new_device(request):
 def edit_device(request):
     if request.method == "POST":
         try:
-            data = json.loads(request.body)
-            device_id = int(data.get('device_id'))
+            req_data = json.loads(request.body)
+            device_id = int(req_data.get('device_id'))
         except json.JSONDecodeError:
             return JsonResponse({'error': 'Invalid JSON'}, status=400)
 
@@ -807,9 +807,14 @@ def edit_device(request):
         slots_count = device.slots.all().count()
 
         # Get device chemistry settings depending on device type
+        try:
+            result_async = get_device_config.delay(device_id)
+            task_result, chems, firmware_version = result_async.get(timeout=30)
+        except Exception as e:
+            return JsonResponse({'error': f'Failed to get device config: {str(e)}'}, status=500)
 
-        result_async = get_device_config.delay(device_id)
-        task_result, chems, firmware_version = result_async.get()  # Be cautious with get(), it can lead to deadlocks
+        if not task_result:
+            return JsonResponse({'error': 'Device not responding or offline'}, status=503)
 
         # Use the task result in your response or further processing
 
@@ -825,7 +830,12 @@ def edit_device(request):
                     "discharge_mode": 0, "max_low_volt_recovery_time": 120}
 
         elif task_result and device.type == "MCCPro":
-            dev_data = msgpack.unpackb(task_result)
+            print(f"DEBUG task_result type: {type(task_result)}, value: {task_result[:100] if isinstance(task_result, bytes) else task_result}")
+            unpacker = msgpack.Unpacker(raw=False, strict_map_key=False)
+            unpacker.feed(task_result)
+            dev_data = list(unpacker)
+            print(f"DEBUG unpacked data: {dev_data}")
+            dev_data = dev_data[-1] if len(dev_data) > 1 else dev_data[0]
 
             data = {"dev_type": device.type, "max_charge_volt": round(dev_data[2] / 1000, 2),
                     "store_volt": round(dev_data[4] / 1000, 2),
@@ -839,7 +849,9 @@ def edit_device(request):
             print(data)
 
         elif task_result and device.type == "MCCReg":
-            dev_data = msgpack.unpackb(task_result)
+            unpacker = msgpack.Unpacker(raw=False, strict_map_key=False)
+            unpacker.feed(task_result)
+            dev_data = next(unpacker)
 
             data = {"dev_type": device.type, "max_charge_volt": round(dev_data[2] / 1000, 2),
                     "store_volt": round(dev_data[4] / 1000, 2),
@@ -851,6 +863,9 @@ def edit_device(request):
                     "term_charging_current": dev_data[8], "discharge_resistance": dev_data[10],
                     "discharge_mode": dev_data[11], "max_low_volt_recovery_time": dev_data[13]}
             print(data)
+
+        else:
+            return JsonResponse({'error': f'Unknown device type: {device.type}'}, status=400)
 
         return JsonResponse(data, safe=False)
 
