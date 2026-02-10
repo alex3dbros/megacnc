@@ -237,7 +237,9 @@ function updateSeriesCapacityById(seriesId) {
     });
 
     const capacityDisplay = document.getElementById(`capacity-${seriesId}`);
-    capacityDisplay.textContent = `${totalCapacity.toFixed(2)} mAh`;
+    if (capacityDisplay) {
+        capacityDisplay.textContent = `${totalCapacity.toFixed(2)} mAh`;
+    }
 }
 
 
