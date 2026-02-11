@@ -463,7 +463,6 @@ $('#batteries-tbl').on('click', '.expandBtn', function() {
                                 </div>
                             </div>
                             <div class="utility-buttons">
-                                <button class="btn btn-warning btn-sm" id="reset-btn" title="Reset"><i class="fa fa-undo"></i></button>
                                 <button class="btn btn-info btn-sm" id="chart-btn" title="Grafik anzeigen"><i class="fa fa-line-chart"></i></button>
                                 <button class="btn btn-secondary btn-sm" id="history-btn" title="Ersetzungs-Historie"><i class="fa fa-history"></i></button>
                                 <button class="btn btn-secondary btn-sm" id="print-pack-btn" title="Labels drucken"><i class="fa fa-print"></i></button>
@@ -725,21 +724,6 @@ $('#batteries-tbl').on('click', '.expandBtn', function() {
         checkForResume(batteryId, series, parallel);
 
     capacityUpdateInterval = setInterval(updateAllCapacities, 1000);
-
-
-    document.getElementById('reset-btn').addEventListener('click', function() {
-        const slots = document.querySelectorAll('.sortable-cell');
-        const middleList = document.getElementById('middle-list');
-
-        slots.forEach(slot => {
-            // Move each cell in the slot back to the middle list
-            while (slot.firstChild) {
-                middleList.appendChild(slot.firstChild);
-            }
-        });
-
-        updateAllCapacities(); // Update capacities if necessary
-    });
 
     // Chart Button
     document.getElementById('chart-btn').addEventListener('click', function() {
@@ -1166,9 +1150,6 @@ function showResultBanner(stats) {
         <div class="result-actions">
             <button class="btn btn-action btn-save-now" onclick="document.getElementById('step-btn-5').click()">
                 <i class="fa fa-save"></i> Jetzt Speichern
-            </button>
-            <button class="btn btn-action btn-outline-light" onclick="document.getElementById('reset-btn').click(); hideResultBanner();">
-                <i class="fa fa-undo"></i> Neu verteilen
             </button>
             <button class="btn btn-action btn-outline-secondary" onclick="hideResultBanner()">
                 <i class="fa fa-times"></i> Schließen
