@@ -2002,7 +2002,7 @@ async function serpentineDistribution(series, parallel) {
 // ============================================
 // SWAP BALANCING (Step 4: Balancing)
 // ============================================
-async function swapBalancing(series, parallel) {
+async function swapBalancing(series, parallel, resumeIteration = 0, resumeSwaps = 0) {
     let seriesArrays = currentSeriesArrays;
     
     if (!seriesArrays) {
@@ -2018,19 +2018,20 @@ async function swapBalancing(series, parallel) {
         }
     }
 
-    updateStatus('Balancing', 'Swap-Optimierung startet...', 5);
+    const isResume = resumeIteration > 0;
+    updateStatus('Balancing', isResume ? `Fortsetzen ab Iteration ${resumeIteration}...` : 'Swap-Optimierung startet...', 5);
     await delay(200);
 
     const maxIterations = 100;
     const earlyStopThreshold = 0.005;
     let improved = true;
-    let iteration = 0;
-    let totalSwaps = 0;
+    let iteration = resumeIteration;
+    let totalSwaps = resumeSwaps;
     
     let scoreHistory = [];
     let initialScore = calculateBalancingScore(seriesArrays);
     let previousScore = initialScore;
-    scoreHistory.push({ iteration: 0, score: initialScore, improvement: 0 });
+    scoreHistory.push({ iteration: iteration, score: initialScore, improvement: 0 });
 
     while (improved && iteration < maxIterations) {
         if (balancingStopped) break;
@@ -2273,9 +2274,40 @@ function restoreFromCheckpoint(checkpoint) {
     currentSeriesArrays = seriesArrays;
     updateAllCapacities();
     
-    // Set workflow to the saved step
-    setWorkflowStep(checkpoint.step);
-    toastr.info(`Fortgesetzt bei Step ${checkpoint.step}`, 'Wiederhergestellt');
+    // If step 4 (Balancing), auto-start the balancing with resume data
+    if (checkpoint.step === 4) {
+        toastr.info('Balancing wird fortgesetzt...', 'Wiederhergestellt');
+        setStepProcessing(4);
+        
+        // Auto-start balancing with checkpoint data
+        (async function() {
+            try {
+                const result = await swapBalancing(
+                    checkpoint.series, 
+                    checkpoint.parallel, 
+                    checkpoint.iteration || 0, 
+                    checkpoint.totalSwaps || 0
+                );
+                if (result.stopped) {
+                    showStopDialog(checkpoint.series, checkpoint.parallel, result.seriesArrays, 4);
+                } else {
+                    setWorkflowStep(5);
+                    toastr.success('Balancing abgeschlossen!', 'Fertig');
+                }
+            } catch (error) {
+                if (!balancingStopped) {
+                    console.error('Balancing error:', error);
+                    toastr.error('Fehler beim Balancing: ' + error.message, 'Fehler');
+                    hideStatus();
+                    setWorkflowStep(4);
+                }
+            }
+        })();
+    } else {
+        // Set workflow to the saved step
+        setWorkflowStep(checkpoint.step);
+        toastr.info(`Fortgesetzt bei Step ${checkpoint.step}`, 'Wiederhergestellt');
+    }
 }
 
 // Legacy function - kept for compatibility
