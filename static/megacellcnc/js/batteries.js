@@ -2152,12 +2152,13 @@ function showStopDialog(series, parallel, seriesArrays, stoppedAtStep) {
     
     const dialogHtml = `
         <div id="stop-dialog-overlay" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.8);z-index:3000;display:flex;align-items:center;justify-content:center;">
-            <div style="background:#16213e;border-radius:10px;padding:30px;max-width:400px;border:2px solid #f39c12;text-align:center;">
+            <div style="background:#16213e;border-radius:10px;padding:30px;max-width:450px;border:2px solid #f39c12;text-align:center;">
                 <i class="fa fa-exclamation-triangle" style="font-size:48px;color:#f39c12;margin-bottom:15px;"></i>
                 <h4 style="color:#fff;margin-bottom:15px;">Prozess gestoppt</h4>
-                <p style="color:#ccc;margin-bottom:25px;">Möchten Sie den aktuellen Stand speichern oder verwerfen?</p>
-                <div style="display:flex;gap:15px;justify-content:center;">
-                    <button id="stop-save-btn" class="btn btn-success"><i class="fa fa-save me-2"></i>Speichern</button>
+                <p style="color:#ccc;margin-bottom:15px;">Was möchten Sie tun?</p>
+                <div style="display:flex;flex-direction:column;gap:10px;">
+                    <button id="stop-save-db-btn" class="btn btn-success"><i class="fa fa-database me-2"></i>In Datenbank speichern</button>
+                    <button id="stop-save-checkpoint-btn" class="btn btn-warning"><i class="fa fa-pause me-2"></i>Später fortsetzen (Checkpoint)</button>
                     <button id="stop-discard-btn" class="btn btn-danger"><i class="fa fa-trash me-2"></i>Verwerfen</button>
                 </div>
             </div>
@@ -2166,12 +2167,20 @@ function showStopDialog(series, parallel, seriesArrays, stoppedAtStep) {
     
     document.body.insertAdjacentHTML('beforeend', dialogHtml);
     
-    document.getElementById('stop-save-btn').addEventListener('click', function() {
-        // Save checkpoint with step info
+    // Save directly to database
+    document.getElementById('stop-save-db-btn').addEventListener('click', function() {
+        document.getElementById('stop-dialog-overlay').remove();
+        clearStepCheckpoint();
+        // Trigger the actual save (Step 5 button)
+        document.getElementById('step-btn-5').click();
+    });
+    
+    // Save checkpoint for later resume
+    document.getElementById('stop-save-checkpoint-btn').addEventListener('click', function() {
         saveStepCheckpoint(series, parallel, seriesArrays, stoppedAtStep, 0, 0);
         document.getElementById('stop-dialog-overlay').remove();
         setWorkflowStep(5);
-        toastr.info('Stand gespeichert. Klicken Sie auf Speichern.', 'Gespeichert');
+        toastr.info('Checkpoint gespeichert. Beim nächsten Öffnen können Sie fortfahren.', 'Checkpoint');
     });
     
     document.getElementById('stop-discard-btn').addEventListener('click', function() {
