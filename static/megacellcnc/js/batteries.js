@@ -476,8 +476,21 @@ $('#batteries-tbl').on('click', '.expandBtn', function() {
                             </button>
                             <span class="step-arrow">→</span>
                             <button class="step-btn" id="step-btn-4" data-step="4" disabled>
-                                <span class="step-num">④</span> Speichern
+                                <span class="step-num">④</span> Balancing
                             </button>
+                            <span class="step-arrow">→</span>
+                            <button class="step-btn" id="step-btn-5" data-step="5" disabled>
+                                <span class="step-num">⑤</span> Speichern
+                            </button>
+                            <!-- Balancing Controls -->
+                            <div id="balancing-controls" class="balancing-controls" style="display:none;">
+                                <button class="btn btn-warning btn-sm" id="pause-btn" title="Pause">
+                                    <i class="fa fa-pause"></i>
+                                </button>
+                                <button class="btn btn-danger btn-sm" id="stop-btn" title="Stop">
+                                    <i class="fa fa-stop"></i>
+                                </button>
+                            </div>
                             <div id="unsaved-indicator" class="unsaved-indicator">
                                 <i class="fa fa-exclamation-triangle"></i> Nicht gespeichert
                             </div>
@@ -624,24 +637,62 @@ $('#batteries-tbl').on('click', '.expandBtn', function() {
             toastr.info(`${required_cells_count - calculateNeededItems(required_cells_count)} Zellen ausgewählt`, 'Auto-Select');
         });
 
-        // Step 3: Assign
+        // Step 3: Assign - moves cells to pack and starts balancing
         document.getElementById('step-btn-3').addEventListener('click', function() {
             setStepProcessing(3);
-            const btn = this;
             
-            // Run async assignment
+            // Move to Step 4 (Balancing) and start automatically
+            setTimeout(() => {
+                setWorkflowStep(4);
+                document.getElementById('step-btn-4').click();
+            }, 500);
+        });
+        
+        // Step 4: Balancing
+        document.getElementById('step-btn-4').addEventListener('click', function() {
+            setStepProcessing(4);
+            balancingPaused = false;
+            balancingStopped = false;
+            
+            // Run async balancing
             (async function() {
                 try {
                     await assignCellsToPack(series, parallel);
-                    setWorkflowStep(4); // Ready to save
-                    toastr.success('Zellen erfolgreich verteilt!', 'Balancing abgeschlossen');
+                    if (!balancingStopped) {
+                        setWorkflowStep(5); // Ready to save
+                        toastr.success('Zellen erfolgreich verteilt!', 'Balancing abgeschlossen');
+                    }
                 } catch (error) {
-                    console.error('Assign error:', error);
-                    toastr.error('Fehler beim Zuweisen: ' + error.message, 'Fehler');
-                    hideStatus();
-                    setWorkflowStep(3); // Stay at step 3
+                    console.error('Balancing error:', error);
+                    if (!balancingStopped) {
+                        toastr.error('Fehler beim Balancing: ' + error.message, 'Fehler');
+                        hideStatus();
+                        setWorkflowStep(4);
+                    }
                 }
             })();
+        });
+        
+        // Pause Button
+        document.getElementById('pause-btn').addEventListener('click', function() {
+            balancingPaused = !balancingPaused;
+            const icon = this.querySelector('i');
+            if (balancingPaused) {
+                icon.className = 'fa fa-play';
+                this.title = 'Fortsetzen';
+                toastr.warning('Balancing pausiert', 'Pause');
+            } else {
+                icon.className = 'fa fa-pause';
+                this.title = 'Pause';
+                toastr.info('Balancing fortgesetzt', 'Fortgesetzt');
+            }
+        });
+        
+        // Stop Button
+        document.getElementById('stop-btn').addEventListener('click', function() {
+            balancingStopped = true;
+            setWorkflowStep(5); // Move to save with current state
+            toastr.warning('Balancing gestoppt. Aktueller Zustand kann gespeichert werden.', 'Gestoppt');
         });
 
     capacityUpdateInterval = setInterval(updateAllCapacities, 1000);
@@ -754,9 +805,9 @@ $('#batteries-tbl').on('click', '.expandBtn', function() {
         });
     });
 
-    // Step 4: Save
-    document.getElementById('step-btn-4').addEventListener('click', function() {
-        setStepProcessing(4);
+    // Step 5: Save
+    document.getElementById('step-btn-5').addEventListener('click', function() {
+        setStepProcessing(5);
         
         const cellsData = [];
         const seriesSlots = document.querySelectorAll('.sortable-cell');
@@ -879,13 +930,16 @@ function delay(ms) {
 // ============================================
 let hasUnsavedChanges = false;
 let currentWizardStep = 1;
+let balancingPaused = false;
+let balancingStopped = false;
 
 const wizardInstructions = {
     1: { step: 'Schritt 1:', text: 'Wählen Sie ein Projekt aus und geben Sie optional Min/Max Kapazität ein. Dann klicken Sie auf "Zellen wählen".' },
     2: { step: 'Schritt 2:', text: 'Klicken Sie auf "Auto-Select" um die besten Zellen automatisch auszuwählen.' },
-    3: { step: 'Schritt 3:', text: 'Klicken Sie auf "Assign" um die Zellen optimal im Pack zu verteilen.' },
-    4: { step: 'Schritt 4:', text: 'Überprüfen Sie die Verteilung und klicken Sie auf "Speichern" um die Änderungen zu sichern.' },
-    5: { step: 'Fertig!', text: 'Das Battery Pack wurde erfolgreich gespeichert.' }
+    3: { step: 'Schritt 3:', text: 'Klicken Sie auf "Assign" um die Zellen in das Pack zu übernehmen.' },
+    4: { step: 'Schritt 4:', text: 'Balancing läuft... Die Zellen werden optimal im Pack verteilt. Sie können Pause oder Stop klicken.' },
+    5: { step: 'Schritt 5:', text: 'Überprüfen Sie die Verteilung und klicken Sie auf "Speichern" um die Änderungen zu sichern.' },
+    6: { step: 'Fertig!', text: 'Das Battery Pack wurde erfolgreich gespeichert.' }
 };
 
 function setWorkflowStep(stepNumber) {
@@ -913,6 +967,12 @@ function setWorkflowStep(stepNumber) {
         }
     });
     
+    // Show/hide balancing controls
+    const balancingControls = document.getElementById('balancing-controls');
+    if (balancingControls) {
+        balancingControls.style.display = (stepNumber === 4) ? 'flex' : 'none';
+    }
+    
     // Update field glow effects
     const projectGroup = document.getElementById('project-group');
     const mahGroup = document.getElementById('mah-group');
@@ -936,7 +996,7 @@ function setStepProcessing(stepNumber) {
 function markUnsaved() {
     hasUnsavedChanges = true;
     const indicator = document.getElementById('unsaved-indicator');
-    const saveBtn = document.getElementById('step-btn-4');
+    const saveBtn = document.getElementById('step-btn-5');
     if (indicator) indicator.classList.add('visible');
     if (saveBtn) saveBtn.classList.add('needs-save');
 }
@@ -944,10 +1004,10 @@ function markUnsaved() {
 function markSaved() {
     hasUnsavedChanges = false;
     const indicator = document.getElementById('unsaved-indicator');
-    const saveBtn = document.getElementById('step-btn-4');
+    const saveBtn = document.getElementById('step-btn-5');
     if (indicator) indicator.classList.remove('visible');
     if (saveBtn) saveBtn.classList.remove('needs-save');
-    setWorkflowStep(5); // Beyond last step = all done
+    setWorkflowStep(6); // Beyond last step = all done
 }
 
 function showResultBanner(stats) {
@@ -978,7 +1038,7 @@ function showResultBanner(stats) {
             </div>
         </div>
         <div class="result-actions">
-            <button class="btn btn-action btn-save-now" onclick="document.getElementById('step-btn-4').click()">
+            <button class="btn btn-action btn-save-now" onclick="document.getElementById('step-btn-5').click()">
                 <i class="fa fa-save"></i> Jetzt Speichern
             </button>
             <button class="btn btn-action btn-outline-light" onclick="document.getElementById('reset-btn').click(); hideResultBanner();">
@@ -993,7 +1053,7 @@ function showResultBanner(stats) {
     
     // Mark as unsaved and update workflow
     markUnsaved();
-    setWorkflowStep(4); // Step 4: Save
+    setWorkflowStep(5); // Step 5: Save
 }
 
 function hideResultBanner() {
@@ -1943,6 +2003,17 @@ async function assignCellsToPack(series, parallel) {
     console.log(`[Score] Initial: ${initialScore.toFixed(4)}`);
 
     while (improved && iteration < maxIterations) {
+        // Check for stop
+        if (balancingStopped) {
+            console.log('[Balancing] Stopped by user');
+            break;
+        }
+        
+        // Check for pause
+        while (balancingPaused && !balancingStopped) {
+            await delay(100);
+        }
+        
         improved = false;
         iteration++;
         
@@ -1953,6 +2024,9 @@ async function assignCellsToPack(series, parallel) {
             for (let b = a + 1; b < series; b++) {
                 for (let i = 0; i < seriesArrays[a].length; i++) {
                     for (let j = 0; j < seriesArrays[b].length; j++) {
+                        // Check for stop in inner loop
+                        if (balancingStopped) break;
+                        
                         // Try swap
                         let temp = seriesArrays[a][i];
                         seriesArrays[a][i] = seriesArrays[b][j];
