@@ -773,6 +773,175 @@
     .series-btn[data-series="none"]:hover {
         background: #1a3a5c;
     }
+
+    /* === WIZARD UX STYLES === */
+    
+    /* Instruction Banner */
+    .instruction-banner {
+        background: linear-gradient(135deg, #1a3a5c 0%, #0f3460 100%);
+        border: 2px solid #4ecca3;
+        border-radius: 8px;
+        padding: 12px 20px;
+        margin-bottom: 10px;
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        animation: bannerGlow 2s ease-in-out infinite;
+    }
+    .instruction-banner .banner-icon {
+        font-size: 24px;
+        color: #4ecca3;
+    }
+    .instruction-banner .banner-text {
+        color: #fff;
+        font-size: 14px;
+        font-weight: 500;
+    }
+    .instruction-banner .banner-step {
+        color: #4ecca3;
+        font-weight: bold;
+        margin-right: 8px;
+    }
+    @keyframes bannerGlow {
+        0%, 100% { box-shadow: 0 0 10px rgba(78, 204, 163, 0.3); }
+        50% { box-shadow: 0 0 25px rgba(78, 204, 163, 0.6); }
+    }
+
+    /* Field Active Glow Effect */
+    .field-active {
+        animation: fieldPulse 1.5s ease-in-out infinite;
+        box-shadow: 0 0 15px rgba(78, 204, 163, 0.8) !important;
+        border-color: #4ecca3 !important;
+    }
+    @keyframes fieldPulse {
+        0%, 100% { box-shadow: 0 0 10px rgba(78, 204, 163, 0.5); }
+        50% { box-shadow: 0 0 25px rgba(78, 204, 163, 1); }
+    }
+    .control-group.field-active label {
+        color: #fff;
+        font-weight: bold;
+    }
+
+    /* Step Buttons - New clickable workflow */
+    .step-buttons {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        margin-bottom: 10px;
+        padding: 10px 12px;
+        background: #16213e;
+        border-radius: 6px;
+    }
+    .step-btn {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 8px 16px;
+        border-radius: 6px;
+        border: 2px solid #1a3a5c;
+        background: #0a1628;
+        color: #666;
+        font-size: 12px;
+        font-weight: 500;
+        cursor: not-allowed;
+        transition: all 0.3s ease;
+    }
+    .step-btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+    .step-btn.active {
+        background: linear-gradient(135deg, #4ecca3 0%, #3db892 100%);
+        color: #0d1b2a;
+        border-color: #4ecca3;
+        cursor: pointer;
+        animation: stepGlow 1.5s ease-in-out infinite;
+    }
+    .step-btn.active:hover {
+        transform: scale(1.05);
+    }
+    .step-btn.processing {
+        background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);
+        color: #fff;
+        border-color: #f39c12;
+        cursor: wait;
+        animation: stepProcessing 0.5s ease-in-out infinite;
+    }
+    .step-btn.completed {
+        background: #0f3460;
+        color: #4ecca3;
+        border-color: #4ecca3;
+        cursor: default;
+    }
+    .step-btn .step-num {
+        font-weight: bold;
+        font-size: 14px;
+    }
+    .step-arrow {
+        color: #3a5a7c;
+        font-size: 16px;
+    }
+    @keyframes stepGlow {
+        0%, 100% { box-shadow: 0 0 10px rgba(78, 204, 163, 0.5); }
+        50% { box-shadow: 0 0 25px rgba(78, 204, 163, 1); }
+    }
+    @keyframes stepProcessing {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.6; }
+    }
+
+    /* Utility Buttons (reduced set on the right) */
+    .utility-buttons {
+        display: flex;
+        gap: 5px;
+        margin-left: auto;
+    }
+    .utility-buttons .btn {
+        padding: 6px 10px;
+    }
+
+    /* Control Bar Redesign */
+    .control-bar-new {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 15px;
+        align-items: center;
+        padding: 12px 15px;
+        background: #16213e;
+        border-radius: 6px;
+        margin-bottom: 10px;
+    }
+    .filter-section {
+        display: flex;
+        gap: 15px;
+        align-items: center;
+        flex: 1;
+    }
+    .filter-group {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+    .filter-group label {
+        font-size: 10px;
+        color: #4ecca3;
+        text-transform: uppercase;
+        font-weight: 600;
+    }
+    .filter-group select,
+    .filter-group input {
+        background: #0f3460;
+        border: 2px solid #1a3a5c;
+        color: #fff;
+        border-radius: 4px;
+        padding: 6px 10px;
+        font-size: 12px;
+    }
+    .info-badges {
+        display: flex;
+        gap: 15px;
+        align-items: center;
+    }
 </style>
 
 <!-- Chart.js from CDN -->

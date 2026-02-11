@@ -416,33 +416,43 @@ $('#batteries-tbl').on('click', '.expandBtn', function() {
             <tr class="accordion-content" data-battery-number="${batteryId}">
                 <td colspan="${colspan}">
                     <div class="pack-editor">
-                        <!-- Compact Control Bar -->
-                        <div class="control-bar">
-                            <div class="control-group">
-                                <label>Projekt</label>
-                                <select id="project-dropdown" class="form-select form-select-sm"></select>
+                        <!-- Instruction Banner -->
+                        <div id="instruction-banner" class="instruction-banner">
+                            <i class="fa fa-lightbulb-o banner-icon"></i>
+                            <div class="banner-text">
+                                <span class="banner-step">Schritt 1:</span>
+                                <span id="instruction-text">Wählen Sie ein Projekt aus, von dem Sie die Zellen verwenden möchten.</span>
                             </div>
-                            <div class="control-group">
-                                <label>mAh Filter</label>
-                                <div class="d-flex gap-1">
-                                    <input type="number" id="min-capacity-input" class="form-control form-control-sm" placeholder="Min" style="width:65px">
-                                    <input type="number" id="max-capacity-input" class="form-control form-control-sm" placeholder="Max" style="width:65px">
+                        </div>
+                        
+                        <!-- Control Bar - Redesigned -->
+                        <div class="control-bar-new">
+                            <div class="filter-section">
+                                <div class="filter-group" id="project-group">
+                                    <label>Projekt</label>
+                                    <select id="project-dropdown"></select>
+                                </div>
+                                <div class="filter-group" id="mah-group">
+                                    <label>Kapazität (mAh)</label>
+                                    <div class="d-flex gap-1">
+                                        <input type="number" id="min-capacity-input" placeholder="Min" style="width:70px">
+                                        <input type="number" id="max-capacity-input" placeholder="Max" style="width:70px">
+                                    </div>
+                                </div>
+                                <div class="info-badges">
+                                    <div class="info-group">
+                                        <span class="info-label">Verfügbar:</span>
+                                        <span class="badge bg-secondary" id="available-count">0</span>
+                                    </div>
+                                    <div class="info-group transfer-toggle" id="transfer-toggle">
+                                        <span class="info-label">Transfer:</span>
+                                        <span class="badge bg-success" id="transfer-count">0</span>
+                                        <i class="fa fa-chevron-down ms-1"></i>
+                                    </div>
                                 </div>
                             </div>
-                            <div class="info-group">
-                                <span class="info-label">Verfügbar:</span>
-                                <span class="badge bg-secondary" id="available-count">0</span>
-                            </div>
-                            <div class="info-group transfer-toggle" id="transfer-toggle">
-                                <span class="info-label">Transfer:</span>
-                                <span class="badge bg-success" id="transfer-count">0</span>
-                                <i class="fa fa-chevron-down ms-1"></i>
-                            </div>
-                            <div class="control-buttons">
-                                <button class="btn btn-primary btn-sm" id="auto-select-btn" title="Auto-Select"><i class="fa fa-magic"></i></button>
-                                <button class="btn btn-success btn-sm" id="assign-btn" title="Assign"><i class="fa fa-check"></i></button>
+                            <div class="utility-buttons">
                                 <button class="btn btn-warning btn-sm" id="reset-btn" title="Reset"><i class="fa fa-undo"></i></button>
-                                <button class="btn btn-primary btn-sm" id="save-btn" title="Save"><i class="fa fa-save"></i></button>
                                 <button class="btn btn-info btn-sm" id="chart-btn" title="Grafik anzeigen"><i class="fa fa-line-chart"></i></button>
                                 <button class="btn btn-secondary btn-sm" id="history-btn" title="Ersetzungs-Historie"><i class="fa fa-history"></i></button>
                                 <button class="btn btn-secondary btn-sm" id="print-pack-btn" title="Labels drucken"><i class="fa fa-print"></i></button>
@@ -451,23 +461,23 @@ $('#batteries-tbl').on('click', '.expandBtn', function() {
                             </div>
                         </div>
                         
-                        <!-- Workflow Indicator -->
-                        <div id="workflow-indicator" class="workflow-indicator">
-                            <div class="workflow-step" id="step-select" data-step="1">
-                                <span class="step-icon">①</span> Zellen wählen
-                            </div>
-                            <span class="workflow-arrow">→</span>
-                            <div class="workflow-step" id="step-auto" data-step="2">
-                                <span class="step-icon">②</span> Auto-Select
-                            </div>
-                            <span class="workflow-arrow">→</span>
-                            <div class="workflow-step" id="step-assign" data-step="3">
-                                <span class="step-icon">③</span> Assign
-                            </div>
-                            <span class="workflow-arrow">→</span>
-                            <div class="workflow-step" id="step-save" data-step="4">
-                                <span class="step-icon">④</span> Speichern
-                            </div>
+                        <!-- Step Buttons - Clickable Workflow -->
+                        <div class="step-buttons">
+                            <button class="step-btn active" id="step-btn-1" data-step="1">
+                                <span class="step-num">①</span> Zellen wählen
+                            </button>
+                            <span class="step-arrow">→</span>
+                            <button class="step-btn" id="step-btn-2" data-step="2" disabled>
+                                <span class="step-num">②</span> Auto-Select
+                            </button>
+                            <span class="step-arrow">→</span>
+                            <button class="step-btn" id="step-btn-3" data-step="3" disabled>
+                                <span class="step-num">③</span> Assign
+                            </button>
+                            <span class="step-arrow">→</span>
+                            <button class="step-btn" id="step-btn-4" data-step="4" disabled>
+                                <span class="step-num">④</span> Speichern
+                            </button>
                             <div id="unsaved-indicator" class="unsaved-indicator">
                                 <i class="fa fa-exclamation-triangle"></i> Nicht gespeichert
                             </div>
@@ -542,6 +552,9 @@ $('#batteries-tbl').on('click', '.expandBtn', function() {
         const batteryLayout = createBatteryLayout(series, parallel, batteryId);
         document.getElementById('battery-pack-container').appendChild(batteryLayout);
         makeBatterySortable();
+        
+        // Initialize wizard at step 1
+        setWorkflowStep(1);
 
         // Transfer panel toggle
         document.getElementById('transfer-toggle').addEventListener('click', function() {
@@ -556,7 +569,17 @@ $('#batteries-tbl').on('click', '.expandBtn', function() {
             }
         });
 
-        document.getElementById('auto-select-btn').addEventListener('click', function() {
+        // Step 1: Zellen wählen - Initial step, just confirms selection
+        document.getElementById('step-btn-1').addEventListener('click', function() {
+            // Move to step 2 when user confirms project/filter selection
+            setWorkflowStep(2);
+            toastr.info('Projekt und Filter bestätigt. Klicken Sie nun auf Auto-Select.', 'Schritt 1 abgeschlossen');
+        });
+
+        // Step 2: Auto-Select
+        document.getElementById('step-btn-2').addEventListener('click', function() {
+            setStepProcessing(2);
+            
             const minCapacity = parseFloat(document.getElementById('min-capacity-input').value) || 0;
             const maxCapacity = parseFloat(document.getElementById('max-capacity-input').value) || 99999;
             const leftListItems = Array.from(document.querySelectorAll('#left-list .list-group-item'));
@@ -601,31 +624,25 @@ $('#batteries-tbl').on('click', '.expandBtn', function() {
             toastr.info(`${required_cells_count - calculateNeededItems(required_cells_count)} Zellen ausgewählt`, 'Auto-Select');
         });
 
-    document.getElementById('assign-btn').addEventListener('click', function() {
-        setWorkflowStep(3); // Assign in progress
-        const btn = this;
-        const spinner = document.getElementById('assign-spinner');
-        const originalText = btn.innerHTML;
-        
-        // Show loading state
-        btn.disabled = true;
-        btn.innerHTML = '<i class="fa fa-cog fa-spin"></i>';
-        
-        // Run async assignment
-        (async function() {
-            try {
-                await assignCellsToPack(series, parallel);
-                toastr.success('Zellen erfolgreich verteilt!', 'Balancing abgeschlossen');
-            } catch (error) {
-                console.error('Assign error:', error);
-                toastr.error('Fehler beim Zuweisen: ' + error.message, 'Fehler');
-                hideStatus();
-            } finally {
-                btn.disabled = false;
-                btn.innerHTML = '<i class="fa fa-check"></i>';
-            }
-        })();
-    });
+        // Step 3: Assign
+        document.getElementById('step-btn-3').addEventListener('click', function() {
+            setStepProcessing(3);
+            const btn = this;
+            
+            // Run async assignment
+            (async function() {
+                try {
+                    await assignCellsToPack(series, parallel);
+                    setWorkflowStep(4); // Ready to save
+                    toastr.success('Zellen erfolgreich verteilt!', 'Balancing abgeschlossen');
+                } catch (error) {
+                    console.error('Assign error:', error);
+                    toastr.error('Fehler beim Zuweisen: ' + error.message, 'Fehler');
+                    hideStatus();
+                    setWorkflowStep(3); // Stay at step 3
+                }
+            })();
+        });
 
     capacityUpdateInterval = setInterval(updateAllCapacities, 1000);
 
@@ -737,7 +754,10 @@ $('#batteries-tbl').on('click', '.expandBtn', function() {
         });
     });
 
-    document.getElementById('save-btn').addEventListener('click', function() {
+    // Step 4: Save
+    document.getElementById('step-btn-4').addEventListener('click', function() {
+        setStepProcessing(4);
+        
         const cellsData = [];
         const seriesSlots = document.querySelectorAll('.sortable-cell');
 
@@ -776,6 +796,7 @@ $('#batteries-tbl').on('click', '.expandBtn', function() {
         .catch((error) => {
             console.error('Error:', error);
             toastr.error("Fehler beim Speichern", "Fehler");
+            setWorkflowStep(4); // Stay at step 4
         });
     });
 
@@ -854,26 +875,68 @@ function delay(ms) {
 }
 
 // ============================================
-// WORKFLOW MANAGEMENT
+// WORKFLOW MANAGEMENT - Wizard UX
 // ============================================
 let hasUnsavedChanges = false;
+let currentWizardStep = 1;
+
+const wizardInstructions = {
+    1: { step: 'Schritt 1:', text: 'Wählen Sie ein Projekt aus und geben Sie optional Min/Max Kapazität ein. Dann klicken Sie auf "Zellen wählen".' },
+    2: { step: 'Schritt 2:', text: 'Klicken Sie auf "Auto-Select" um die besten Zellen automatisch auszuwählen.' },
+    3: { step: 'Schritt 3:', text: 'Klicken Sie auf "Assign" um die Zellen optimal im Pack zu verteilen.' },
+    4: { step: 'Schritt 4:', text: 'Überprüfen Sie die Verteilung und klicken Sie auf "Speichern" um die Änderungen zu sichern.' },
+    5: { step: 'Fertig!', text: 'Das Battery Pack wurde erfolgreich gespeichert.' }
+};
 
 function setWorkflowStep(stepNumber) {
-    document.querySelectorAll('.workflow-step').forEach(step => {
-        const num = parseInt(step.dataset.step);
-        step.classList.remove('completed', 'active');
+    currentWizardStep = stepNumber;
+    
+    // Update instruction banner
+    const bannerStep = document.querySelector('.banner-step');
+    const instructionText = document.getElementById('instruction-text');
+    if (bannerStep && instructionText && wizardInstructions[stepNumber]) {
+        bannerStep.textContent = wizardInstructions[stepNumber].step;
+        instructionText.textContent = wizardInstructions[stepNumber].text;
+    }
+    
+    // Update step buttons
+    document.querySelectorAll('.step-btn').forEach(btn => {
+        const num = parseInt(btn.dataset.step);
+        btn.classList.remove('completed', 'active', 'processing');
+        btn.disabled = true;
+        
         if (num < stepNumber) {
-            step.classList.add('completed');
+            btn.classList.add('completed');
         } else if (num === stepNumber) {
-            step.classList.add('active');
+            btn.classList.add('active');
+            btn.disabled = false;
         }
     });
+    
+    // Update field glow effects
+    const projectGroup = document.getElementById('project-group');
+    const mahGroup = document.getElementById('mah-group');
+    
+    if (projectGroup) projectGroup.classList.remove('field-active');
+    if (mahGroup) mahGroup.classList.remove('field-active');
+    
+    if (stepNumber === 1) {
+        if (projectGroup) projectGroup.classList.add('field-active');
+    }
+}
+
+function setStepProcessing(stepNumber) {
+    const btn = document.getElementById(`step-btn-${stepNumber}`);
+    if (btn) {
+        btn.classList.remove('active');
+        btn.classList.add('processing');
+    }
 }
 
 function markUnsaved() {
     hasUnsavedChanges = true;
     const indicator = document.getElementById('unsaved-indicator');
-    const saveBtn = document.getElementById('save-btn');
+    const saveBtn = document.getElementById('step-btn-4');
     if (indicator) indicator.classList.add('visible');
     if (saveBtn) saveBtn.classList.add('needs-save');
 }
@@ -881,7 +944,7 @@ function markUnsaved() {
 function markSaved() {
     hasUnsavedChanges = false;
     const indicator = document.getElementById('unsaved-indicator');
-    const saveBtn = document.getElementById('save-btn');
+    const saveBtn = document.getElementById('step-btn-4');
     if (indicator) indicator.classList.remove('visible');
     if (saveBtn) saveBtn.classList.remove('needs-save');
     setWorkflowStep(5); // Beyond last step = all done
@@ -915,7 +978,7 @@ function showResultBanner(stats) {
             </div>
         </div>
         <div class="result-actions">
-            <button class="btn btn-action btn-save-now" onclick="document.getElementById('save-btn').click()">
+            <button class="btn btn-action btn-save-now" onclick="document.getElementById('step-btn-4').click()">
                 <i class="fa fa-save"></i> Jetzt Speichern
             </button>
             <button class="btn btn-action btn-outline-light" onclick="document.getElementById('reset-btn').click(); hideResultBanner();">
