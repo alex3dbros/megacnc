@@ -184,7 +184,7 @@ function convertSlotId(oldId) {
     return oldId; // Already in new format or unknown
 }
 
-function fetchAndPopulateCells(batteryId) {
+function fetchAndPopulateCells(batteryId, series, parallel) {
     fetch(`/get-battery-cells/?bat_id=${batteryId}`)
     .then(response => response.json())
     .then(data => {
@@ -208,6 +208,17 @@ function fetchAndPopulateCells(batteryId) {
             }
         });
         updateAllCapacities();
+        
+        // Check if pack is already complete (status = ready)
+        if (data.battery_status === 'ready' && data.cells.length === series * parallel) {
+            setWorkflowStep(6); // Show completed state
+        } else if (data.cells.length > 0) {
+            // Has some cells but not complete - go to step 5 (save)
+            setWorkflowStep(5);
+        } else {
+            // Empty pack - start from step 1
+            setWorkflowStep(1);
+        }
     })
     .catch(error => console.error('Failed to fetch cells:', error));
 }
@@ -307,7 +318,7 @@ function createBatteryLayout(series, parallel, batteryId) {
     container.appendChild(scrollWrapper);
 
     if (batteryId) {
-        fetchAndPopulateCells(batteryId);
+        fetchAndPopulateCells(batteryId, series, parallel);
     }
 
     return container;
@@ -861,11 +872,18 @@ $('#batteries-tbl').on('click', '.expandBtn', function() {
             toastr.success('Pack erfolgreich gespeichert!', "Gespeichert");
             markSaved();
             hideResultBanner();
+            clearStepCheckpoint();
+            setWorkflowStep(6); // Set to finished state
+            
+            // Update the table row with new data
+            if (data.battery) {
+                updateBatteryTableRow(batteryId, data.battery);
+            }
         })
         .catch((error) => {
             console.error('Error:', error);
             toastr.error("Fehler beim Speichern", "Fehler");
-            setWorkflowStep(4); // Stay at step 4
+            setWorkflowStep(5); // Stay at step 5
         });
     });
 
@@ -972,18 +990,29 @@ function setWorkflowStep(stepNumber) {
     }
     
     // Update step buttons
-    document.querySelectorAll('.step-btn').forEach(btn => {
-        const num = parseInt(btn.dataset.step);
-        btn.classList.remove('completed', 'active', 'processing');
-        btn.disabled = true;
+    const stepButtons = document.querySelector('.step-buttons');
+    
+    if (stepNumber === 6) {
+        // Step 6 = Finished - hide wizard steps, show completion state
+        if (stepButtons) stepButtons.style.display = 'none';
+        showCompletedState();
+    } else {
+        if (stepButtons) stepButtons.style.display = 'flex';
+        hideCompletedState();
         
-        if (num < stepNumber) {
-            btn.classList.add('completed');
-        } else if (num === stepNumber) {
-            btn.classList.add('active');
-            btn.disabled = false;
-        }
-    });
+        document.querySelectorAll('.step-btn').forEach(btn => {
+            const num = parseInt(btn.dataset.step);
+            btn.classList.remove('completed', 'active', 'processing');
+            btn.disabled = true;
+            
+            if (num < stepNumber) {
+                btn.classList.add('completed');
+            } else if (num === stepNumber) {
+                btn.classList.add('active');
+                btn.disabled = false;
+            }
+        });
+    }
     
     // Show/hide balancing controls (visible for Step 3 and 4)
     const balancingControls = document.getElementById('balancing-controls');
@@ -1000,6 +1029,85 @@ function setWorkflowStep(stepNumber) {
     
     if (stepNumber === 1) {
         if (projectGroup) projectGroup.classList.add('field-active');
+    }
+}
+
+function showCompletedState() {
+    // Show a "completed" banner instead of wizard steps
+    let completedBanner = document.getElementById('completed-state-banner');
+    if (!completedBanner) {
+        completedBanner = document.createElement('div');
+        completedBanner.id = 'completed-state-banner';
+        completedBanner.className = 'completed-state-banner';
+        completedBanner.innerHTML = `
+            <div class="completed-content">
+                <i class="fa fa-check-circle"></i>
+                <span>Battery Pack ist bereit</span>
+            </div>
+            <div class="completed-actions">
+                <button class="btn btn-info btn-sm" id="view-chart-btn" title="Grafik anzeigen"><i class="fa fa-line-chart me-1"></i>Analyse</button>
+                <button class="btn btn-secondary btn-sm" id="view-history-btn" title="Historie"><i class="fa fa-history me-1"></i>Historie</button>
+                <button class="btn btn-warning btn-sm" id="edit-pack-btn" title="Pack bearbeiten"><i class="fa fa-edit me-1"></i>Bearbeiten</button>
+            </div>
+        `;
+        const controlBar = document.querySelector('.control-bar');
+        if (controlBar) {
+            controlBar.after(completedBanner);
+        }
+        
+        // Add event listeners
+        document.getElementById('view-chart-btn')?.addEventListener('click', () => {
+            document.getElementById('chart-btn')?.click();
+        });
+        document.getElementById('view-history-btn')?.addEventListener('click', () => {
+            document.getElementById('history-btn')?.click();
+        });
+        document.getElementById('edit-pack-btn')?.addEventListener('click', () => {
+            setWorkflowStep(1); // Allow editing
+        });
+    }
+    completedBanner.style.display = 'flex';
+    
+    // Hide control bar inputs for finished packs
+    const controlBar = document.querySelector('.control-bar');
+    if (controlBar) controlBar.style.display = 'none';
+}
+
+function hideCompletedState() {
+    const completedBanner = document.getElementById('completed-state-banner');
+    if (completedBanner) completedBanner.style.display = 'none';
+    
+    const controlBar = document.querySelector('.control-bar');
+    if (controlBar) controlBar.style.display = 'flex';
+}
+
+function updateBatteryTableRow(batteryId, batteryData) {
+    // Find the expand button with this battery ID
+    const expandBtn = document.querySelector(`.expandBtn[data-battery-id="${batteryId}"]`);
+    if (!expandBtn) return;
+    
+    const row = expandBtn.closest('tr');
+    if (!row) return;
+    
+    const cells = row.querySelectorAll('td');
+    // Table structure: checkbox, id, available, name, series, parallel, required, assigned, capacity, status, date, actions
+    // Indices:         0         1   2          3     4       5         6         7         8         9       10    11
+    
+    if (batteryData.assigned !== undefined && cells[7]) {
+        cells[7].textContent = batteryData.assigned;
+    }
+    if (batteryData.capacity !== undefined && cells[8]) {
+        cells[8].textContent = batteryData.capacity.toFixed(2);
+    }
+    if (batteryData.status !== undefined && cells[9]) {
+        cells[9].textContent = batteryData.status;
+        // Update status styling
+        cells[9].className = '';
+        if (batteryData.status === 'ready') {
+            cells[9].innerHTML = '<span class="badge bg-success">Ready</span>';
+        } else if (batteryData.status === 'created') {
+            cells[9].innerHTML = '<span class="badge bg-secondary">Created</span>';
+        }
     }
 }
 

@@ -379,8 +379,11 @@ def get_battery_cells(request):
             }
             cells_data.append(cdata)
 
-
-    return JsonResponse({'cells': cells_data})
+    return JsonResponse({
+        'cells': cells_data,
+        'battery_status': battery.status,
+        'battery_capacity': battery.capacity
+    })
 
 
 def database(request):
@@ -583,19 +586,20 @@ def save_battery_configuration(request):
         battery = Batteries.objects.get(id=battery_id)
 
         print("Battery ID: ", battery_id)
+        total_capacity = 0.0
+        
         # Example of handling the data:
-        for cell in cells_data:
-            cell_uuid = cell['cellId']
-            slot_id = cell['slotId']
-            capacity = cell['capacity']
+        for cell_data in cells_data:
+            cell_uuid = cell_data['cellId']
+            slot_id = cell_data['slotId']
+            capacity = float(cell_data.get('capacity', 0))
+            total_capacity += capacity
 
             cell = Cells.objects.get(UUID=cell_uuid)
             cell.battery = battery
             cell.bat_position = slot_id
             cell.available = "No"
             cell.save()
-
-
 
             # Process this data, such as saving it to the database
             print(cell_uuid, slot_id, capacity)
@@ -608,8 +612,25 @@ def save_battery_configuration(request):
                 cell.bat_position = ""
                 cell.available = "Yes"
                 cell.save()
+            battery.status = "created"
+            battery.capacity = 0
+        else:
+            # Update battery status and capacity
+            battery.status = "ready"
+            battery.capacity = round(total_capacity, 2)
+        
+        battery.save()
 
-        return JsonResponse({'status': 'success', 'message': 'Pack configuration saved successfully!'})
+        return JsonResponse({
+            'status': 'success', 
+            'message': 'Pack configuration saved successfully!',
+            'battery': {
+                'id': battery.id,
+                'status': battery.status,
+                'capacity': battery.capacity,
+                'assigned': len(cells_data)
+            }
+        })
     except json.JSONDecodeError as e:
         return JsonResponse({'status': 'error', 'message': 'Invalid JSON'}, status=400)
 
