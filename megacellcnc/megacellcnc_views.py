@@ -312,6 +312,29 @@ def delete_batteries(request):
     return JsonResponse({'error': 'Invalid request method'}, status=405)
 
 
+def update_battery_name(request):
+    if request.method == "POST":
+        try:
+            data = json.loads(request.body)
+            battery_id = data.get('battery_id')
+            new_name = data.get('name', '').strip()
+        except json.JSONDecodeError:
+            return JsonResponse({'success': False, 'error': 'Invalid JSON'}, status=400)
+
+        if not new_name:
+            return JsonResponse({'success': False, 'error': 'Name cannot be empty'}, status=400)
+
+        try:
+            battery = Batteries.objects.get(id=battery_id)
+            battery.name = new_name
+            battery.save()
+            return JsonResponse({'success': True, 'message': 'Name updated successfully'})
+        except Batteries.DoesNotExist:
+            return JsonResponse({'success': False, 'error': 'Battery not found'}, status=404)
+
+    return JsonResponse({'success': False, 'error': 'Invalid request method'}, status=405)
+
+
 def get_cells(request):
     project_id = request.GET.get('project_id')
     if project_id == 'all':

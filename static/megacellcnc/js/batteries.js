@@ -2824,12 +2824,94 @@ function showDeleteConfirmation(batteryId) {
 // Add event listeners to delete buttons
 document.querySelectorAll('.deleteBatteryBtn').forEach(btn => {
     btn.addEventListener('click', function(e) {
-        e.preventDefault();  // Prevent the default link behavior
+        e.preventDefault();
         const batteryId = this.getAttribute('data-battery-id');
-
-        showDeleteConfirmation(batteryId);  // Show confirmation modal
+        showDeleteConfirmation(batteryId);
     });
 });
+
+// Add event listeners to edit buttons
+document.querySelectorAll('.editBatteryBtn').forEach(btn => {
+    btn.addEventListener('click', function(e) {
+        e.preventDefault();
+        const batteryId = this.getAttribute('data-battery-id');
+        const row = this.closest('tr');
+        const currentName = row.querySelector('td:nth-child(4)').textContent.trim();
+        showEditBatteryModal(batteryId, currentName);
+    });
+});
+
+// Edit Battery Modal
+function showEditBatteryModal(batteryId, currentName) {
+    // Remove existing modal if any
+    const existingModal = document.getElementById('editBatteryModal');
+    if (existingModal) existingModal.remove();
+    
+    const modalHtml = `
+        <div class="modal fade" id="editBatteryModal" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content" style="background:#16213e;border:1px solid #4ecca3;">
+                    <div class="modal-header" style="border-bottom:1px solid #1a3a5c;">
+                        <h5 class="modal-title" style="color:#fff;"><i class="fa fa-pencil me-2"></i>Battery-Pack umbenennen</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label" style="color:#4ecca3;">Name</label>
+                            <input type="text" class="form-control" id="editBatteryName" value="${currentName}" 
+                                style="background:#0f3460;border-color:#1a3a5c;color:#fff;">
+                        </div>
+                    </div>
+                    <div class="modal-footer" style="border-top:1px solid #1a3a5c;">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Abbrechen</button>
+                        <button type="button" class="btn btn-success" id="saveBatteryNameBtn" data-battery-id="${batteryId}">
+                            <i class="fa fa-save me-2"></i>Speichern
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    
+    const modal = new bootstrap.Modal(document.getElementById('editBatteryModal'));
+    modal.show();
+    
+    document.getElementById('saveBatteryNameBtn').addEventListener('click', function() {
+        const newName = document.getElementById('editBatteryName').value.trim();
+        if (newName) {
+            saveBatteryName(batteryId, newName);
+            modal.hide();
+        } else {
+            toastr.warning('Bitte einen Namen eingeben', 'Warnung');
+        }
+    });
+}
+
+function saveBatteryName(batteryId, newName) {
+    fetch("/update-battery-name/", {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': getCookie('csrftoken'),
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ battery_id: batteryId, name: newName })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            toastr.success('Name geändert', 'Erfolg');
+            location.reload();
+        } else {
+            toastr.error(data.error || 'Fehler beim Speichern', 'Fehler');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        toastr.error('Fehler beim Speichern', 'Fehler');
+    });
+}
 
 // Add event listener to the confirmation button in the modal
 document.getElementById('confirmDeleteBtn').addEventListener('click', function() {
