@@ -1,0 +1,60 @@
+services:
+  db:
+    image: postgres:15
+    environment:
+      - POSTGRES_DB=mcccnc
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=MccAdmin
+    volumes:
+      - postgres_data:/var/lib/postgresql
+    ports:
+      - "5432:5432"
+
+  redis:
+    image: "redis:alpine"
+    ports:
+      - "6379:6379"
+
+  web:
+    image: ghcr.io/heinz-leiser-ai/megacnc:latest
+    command: gunicorn dashboard.wsgi:application --bind 0.0.0.0:8000
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app
+      - C:\Users\Elitedesk\Documents\megacnc\data:/data
+    depends_on:
+      - db
+      - redis
+    environment:
+      - DATABASE_URL=postgres://postgres:MccAdmin@db:5432/mcccnc
+      - REDIS_URL=redis://redis:6379/0
+
+  celeryworker:
+    image: ghcr.io/heinz-leiser-ai/megacnc:latest
+    command: celery -A dashboard worker --loglevel=info
+    volumes:
+      - .:/app
+      - C:\Users\Elitedesk\Documents\megacnc\data:/data
+    depends_on:
+      - db
+      - redis
+    environment:
+      - DATABASE_URL=postgres://postgres:MccAdmin@db:5432/mcccnc
+      - REDIS_URL=redis://redis:6379/0
+
+  celerybeat:
+    image: ghcr.io/heinz-leiser-ai/megacnc:latest
+    command: celery -A dashboard beat --loglevel=info --scheduler django_celery_beat.schedulers:DatabaseScheduler
+    volumes:
+      - .:/app
+      - C:\Users\Elitedesk\Documents\megacnc\data:/data
+    depends_on:
+      - db
+      - redis
+    environment:
+      - DATABASE_URL=postgres://postgres:MccAdmin@db:5432/mcccnc
+      - REDIS_URL=redis://redis:6379/0
+
+volumes:
+  postgres_data: 
