@@ -505,9 +505,79 @@ Die Settings-Seite ist in Tabs organisiert:
 
 Konfiguriert den Labeldrucker (z.B. Dymo).
 
+#### Label-Informationen
+
+Jedes gedruckte Label enthält folgende Daten:
+
+| Zeile | Beispiel | Beschreibung |
+|-------|----------|-------------|
+| **Header** | `005450-C:3245` | SerialNo (aus UUID) + Kapazität |
+| **Einheit** | `mAh` | Kapazitäts-Einheit (mAh oder Ah bei ≥10'000) |
+| **Zeile 1** | `I:0.1 T:25` | ESR (Innenwiderstand mΩ) + Max. Temperatur (°C) |
+| **Zeile 2** | `2.8/3.7/4.24` | Min-Spannung / Store-Spannung / Max-Spannung (V) |
+| **Zeile 3** | `Mc: 104-1` | Ladegerät-IP (letzte Zahl) - Slotnummer |
+| **Datum** | `2024-02-23` | Einfügedatum der Zelle |
+| **Custom** | `LabelPrinter-450` | Frei konfigurierbares Textfeld (aus Settings) |
+| **QR-Code** | | Enthält: UUID + Kapazität + Einheit |
+| **Branding** | `deepcyclepower.com` | Firmenname |
+
+##### SerialNo
+
+Die SerialNo wird aus der UUID der Zelle extrahiert (z.B. UUID `D20230620-S005450` → SerialNo `005450`).
+
+##### Label-Modi
+
+| Modus | Beschreibung |
+|-------|-------------|
+| **Square** | Einzellabel hochformat (13×25mm Dymo) |
+| **Landscape** | Einzellabel querformat (30×20mm Phomemo) |
+| **Dual Label** | Zwei Zellen auf einem Label (13×25mm Dymo) |
+
+> **Hinweis:** Beim Dual-Label entfallen Datum und Custom-Feld aus Platzgründen.
+
+#### Voraussetzung: QZ Tray
+
+Zum Drucken von Labels wird **QZ Tray** benötigt. QZ Tray ist eine Desktop-Anwendung, die als Brücke zwischen dem Browser und den lokalen Druckern dient. Ohne QZ Tray kann der Browser nicht auf Drucker zugreifen.
+
+**Download:** https://qz.io/download
+
+##### Installation Linux
+
+```bash
+# Voraussetzung: Java (OpenJDK 11+)
+sudo apt install openjdk-11-jre
+
+# Installer herunterladen
+curl -L -o /tmp/qz-tray.run \
+  "https://github.com/qzind/tray/releases/latest/download/qz-tray-2.2.5-x86_64.run"
+
+# Installieren
+chmod +x /tmp/qz-tray.run
+sudo /tmp/qz-tray.run
+
+# Starten
+/opt/qz-tray/qz-tray &
+```
+
+##### Installation macOS
+
+1. `.pkg`-Datei von https://qz.io/download herunterladen
+2. Doppelklick auf die `.pkg`-Datei
+3. Installationsassistent folgen
+4. QZ Tray startet automatisch (Tray-Icon in der Menüleiste)
+
+##### Installation Windows
+
+1. `.exe`-Datei von https://qz.io/download herunterladen
+2. Doppelklick auf die `.exe`-Datei
+3. Installationsassistent folgen
+4. QZ Tray startet automatisch (Tray-Icon im Infobereich)
+
+> **Hinweis:** QZ Tray muss auf dem PC laufen, auf dem der Browser geöffnet ist – nicht auf dem Server.
+
 #### Step 1: Verbindung
-1. QZ Tray herunterladen und installieren (Button oben rechts)
-2. "Connect" klicken
+1. QZ Tray starten (falls nicht bereits aktiv)
+2. "Connect" klicken → Status wechselt auf "Active"
 3. Drucker suchen:
    - "Find Printer" (nach Name, z.B. "dymo")
    - "Find Default Printer"

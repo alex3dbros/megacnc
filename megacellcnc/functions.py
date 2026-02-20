@@ -231,9 +231,9 @@ def format_cap(capacity):
 def draw_dual_label(label_data):
 
     if len(label_data) == 0:
-        label_data = [{"serial": 1, "uuid": "D20240219-S000001", "cap": 32450, "esr": 0.1, "temp": 25, "minV": 2.8, "storeV": 3.7, "maxV": 4.24,
+        label_data = [{"serial": "000001", "uuid": "D20240219-S000001", "cap": 32450, "esr": 0.1, "temp": 25, "minV": 2.8, "storeV": 3.7, "maxV": 4.24,
                        "ip": "192.168.1.104", "slot": 1},
-                      {"serial": 2, "uuid": "D20240219-S000002", "cap": 3200, "esr": 0.12, "temp": 24, "minV": 2.8, "storeV": 3.7, "maxV": 4.24,
+                      {"serial": "000002", "uuid": "D20240219-S000002", "cap": 3200, "esr": 0.12, "temp": 24, "minV": 2.8, "storeV": 3.7, "maxV": 4.24,
                        "ip": "192.168.1.104", "slot": 2}]
 
     templates_folder = os.path.join(main_settings.BASE_DIR, 'static', 'labeltemplates')
@@ -270,7 +270,7 @@ def draw_dual_label(label_data):
         label.paste(qr_img, (300, offset + 30))
         # QR Code Bloc End ---
 
-        serial = str(l["serial"]).zfill(6)
+        serial = str(l["serial"])
         header_text = "%s-C:%s" % (serial, capacity)
         label_editable.text((10, offset + -20), header_text, (0, 0, 0), font=header_font)
 
@@ -316,7 +316,7 @@ def draw_dual_label(label_data):
 def draw_square_label(label_data, custom_field1):
 
     if len(label_data) == 0:
-        label_data = [{"serial": 1, "uuid": "D20240219-S000001", "cap": 3245, "esr": 0.1, "temp": 25, "minV": 2.8, "storeV": 3.7, "maxV": 4.24,
+        label_data = [{"serial": "000001", "uuid": "D20240219-S000001", "cap": 3245, "esr": 0.1, "temp": 25, "minV": 2.8, "storeV": 3.7, "maxV": 4.24,
                        "ip": "192.168.1.104", "slot": 1, "date": "2024-02-23"}]
 
     templates_folder = os.path.join(main_settings.BASE_DIR, 'static', 'labeltemplates')
@@ -354,7 +354,7 @@ def draw_square_label(label_data, custom_field1):
     # QR Code Block End ---------
 
     # Cell Data Block --------
-    serial = str(l["serial"]).zfill(6)
+    serial = str(l["serial"])
     header_text = "%s-C:%s" % (serial, capacity)
     label_editable.text((20, -20), header_text, (0, 0, 0), font=header_font)
 
@@ -413,7 +413,7 @@ def draw_landscape_label(label_data, custom_field1):
 
     if len(label_data) == 0:
         label_data = [
-            {"serial": 1, "uuid": "D20240223-S000001", "cap": 3245, "esr": 0.1, "temp": 25, "minV": 2.8, "storeV": 3.7,
+            {"serial": "000001", "uuid": "D20240223-S000001", "cap": 3245, "esr": 0.1, "temp": 25, "minV": 2.8, "storeV": 3.7,
              "maxV": 4.24,
              "ip": "192.168.1.104", "slot": 1, "date": "2024-02-23"}]
 
@@ -452,7 +452,7 @@ def draw_landscape_label(label_data, custom_field1):
     # QR Code Block End ---------
 
     # Cell Data Block --------
-    serial = str(l["serial"]).zfill(6)
+    serial = str(l["serial"])
     header_text = "%s-C:%s" % (serial, capacity)
     label_editable.text((5, -20), header_text, (0, 0, 0), font=header_font)
 
@@ -506,14 +506,13 @@ def gather_label_data(deviceId, slots):
 
     for slot in filtered_slots:
         acell = slot.active_cell
-        match = re.search(r'S0*(\d+)', acell.UUID)
+        match = re.search(r'-S(\d+)', acell.UUID)
 
         if match:
-            # Extract the number part and convert it to an integer
-            cserial = int(match.group(1))
-
+            # Keep the full serial number string (e.g. "005450")
+            cserial = match.group(1)
         else:
-            cserial = 0
+            cserial = "000000"
 
         formated_date = acell.insertion_date.strftime('%Y-%m-%d')
 
@@ -534,14 +533,13 @@ def gather_label_cell_data(cells):
     label_data = []
 
     for acell in filtered_cells:
-        match = re.search(r'S0*(\d+)', acell.UUID)
+        match = re.search(r'-S(\d+)', acell.UUID)
 
         if match:
-            # Extract the number part and convert it to an integer
-            cserial = int(match.group(1))
-
+            # Keep the full serial number string (e.g. "005450")
+            cserial = match.group(1)
         else:
-            cserial = 0
+            cserial = "000000"
 
         formated_date = acell.insertion_date.strftime('%Y-%m-%d')
 

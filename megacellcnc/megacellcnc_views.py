@@ -1208,60 +1208,61 @@ def print_label(request):
             # Step 2: Convert all elements in the list to integers
             slots = [int(slot) for slot in slots]
 
-            if printer:
+            if not printer:
+                return JsonResponse({'error': 'Keine Drucker-Einstellungen gespeichert. Bitte zuerst unter Settings einen Drucker konfigurieren und speichern.'}, status=400)
 
-                # Regular Printing
-                if printer.IsDualLabel:
+            # Regular Printing
+            if printer.IsDualLabel:
 
-                    if isDemo:
-                        label = draw_dual_label([])
-
-                        response_data = {
-                            "label": f"{label}"
-                            # Ensure the format matches the format used in saving the image
-                        }
-                        return JsonResponse(response_data)
-
-                    if deviceId != -1:
-                        label_data = gather_label_data(deviceId, slots)
-                    else:
-                        label_data = gather_label_cell_data(slots)
-                    label = draw_dual_label(label_data)
+                if isDemo:
+                    label = draw_dual_label([])
 
                     response_data = {
                         "label": f"{label}"
+                        # Ensure the format matches the format used in saving the image
                     }
                     return JsonResponse(response_data)
 
+                if deviceId != -1:
+                    label_data = gather_label_data(deviceId, slots)
                 else:
+                    label_data = gather_label_cell_data(slots)
+                label = draw_dual_label(label_data)
 
-                    if isDemo:
+                response_data = {
+                    "label": f"{label}"
+                }
+                return JsonResponse(response_data)
 
-                        if printer.LabelShape == "square":
-                            label = draw_square_label([], printer.CustomField1)
-                        else:
-                            label = draw_landscape_label([], printer.CustomField1)
+            else:
 
-                        response_data = {
-                            "label": f"{label}"
-                            # Ensure the format matches the format used in saving the image
-                        }
-                        return JsonResponse(response_data)
-
-                    if deviceId != -1:
-                        label_data = gather_label_data(deviceId, slots)
-                    else:
-                        label_data = gather_label_cell_data(slots)
+                if isDemo:
 
                     if printer.LabelShape == "square":
-                        label = draw_square_label(label_data, printer.CustomField1)
+                        label = draw_square_label([], printer.CustomField1)
                     else:
-                        label = draw_landscape_label(label_data, printer.CustomField1)
+                        label = draw_landscape_label([], printer.CustomField1)
 
                     response_data = {
                         "label": f"{label}"
+                        # Ensure the format matches the format used in saving the image
                     }
                     return JsonResponse(response_data)
+
+                if deviceId != -1:
+                    label_data = gather_label_data(deviceId, slots)
+                else:
+                    label_data = gather_label_cell_data(slots)
+
+                if printer.LabelShape == "square":
+                    label = draw_square_label(label_data, printer.CustomField1)
+                else:
+                    label = draw_landscape_label(label_data, printer.CustomField1)
+
+                response_data = {
+                    "label": f"{label}"
+                }
+                return JsonResponse(response_data)
 
         except json.JSONDecodeError:
             return JsonResponse({'error': 'Invalid JSON'}, status=400)

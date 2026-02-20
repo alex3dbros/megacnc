@@ -1342,6 +1342,9 @@ function getPackCells() {
 async function printPackLabels() {
     const cells = getPackCells();
     
+    console.log(`[PrintPack] Gefundene Zellen im DOM: ${cells.length}`);
+    cells.forEach((c, i) => console.log(`[PrintPack]   Zelle ${i+1}: cellId=${c.cellId}, uuid=${c.uuid}, S${c.series}P${c.parallel}`));
+
     if (cells.length === 0) {
         toastr.error('Keine Zellen im Pack', 'Fehler');
         return;
@@ -1356,32 +1359,44 @@ async function printPackLabels() {
         try {
             const response = await fetch(`/get-cell-id-by-uuid/?uuid=${encodeURIComponent(cell.uuid)}`);
             const data = await response.json();
+            console.log(`[PrintPack] UUID-Lookup: uuid=${cell.uuid}, status=${response.status}, result=`, data);
             if (data.cell_id) {
                 cellIds.push(data.cell_id);
+            } else {
+                console.warn(`[PrintPack] ⚠ Zelle nicht gefunden in DB: uuid=${cell.uuid}`, data);
+                toastr.warning(`Zelle ${cell.cellId} (${cell.uuid}) nicht in DB gefunden`, 'Warnung');
             }
         } catch (e) {
-            console.error('Error getting cell ID:', e);
+            console.error(`[PrintPack] ✖ Fehler bei UUID-Lookup: uuid=${cell.uuid}`, e);
+            toastr.error(`Fehler bei Zelle ${cell.cellId}: ${e.message}`, 'Fehler');
         }
     }
     
+    console.log(`[PrintPack] Aufgelöste DB-IDs: ${cellIds.length} von ${cells.length}`, cellIds);
+
     if (cellIds.length === 0) {
         toastr.error('Keine druckbaren Zellen gefunden', 'Fehler');
         return;
     }
+
+    if (cellIds.length < cells.length) {
+        toastr.warning(`Nur ${cellIds.length} von ${cells.length} Zellen konnten aufgelöst werden`, 'Warnung');
+    }
     
     // Print using existing function
     let doubleLabel = parseInt(includedValue($("#doubleLabel")));
+    console.log(`[PrintPack] doubleLabel=${doubleLabel}, Modus: ${doubleLabel === 1 ? 'Dual' : 'Einzel'}`);
     
     if (doubleLabel === 1) {
         for (let i = 0; i < cellIds.length; i += 2) {
             const batch = cellIds.slice(i, i + 2);
-            printLabels(batch, -1);
-            await sleep(1000);
+            console.log(`[PrintPack] Drucke Dual-Label Batch ${Math.floor(i/2)+1}:`, batch);
+            await printLabels(batch, -1);
         }
     } else {
         for (let i = 0; i < cellIds.length; i++) {
-            printLabels([cellIds[i]], -1);
-            await sleep(1000);
+            console.log(`[PrintPack] Drucke Einzel-Label ${i+1}/${cellIds.length}: DB-ID=${cellIds[i]}`);
+            await printLabels([cellIds[i]], -1);
         }
     }
     
