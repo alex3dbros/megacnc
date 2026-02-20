@@ -136,7 +136,7 @@ tmp/*
 
 # mkdocs documentation
 /site
-
+backups/*
 # mypy
 .mypy_cache/
 .dmypy.json
