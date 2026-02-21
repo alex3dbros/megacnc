@@ -127,14 +127,12 @@ Copy-Item "$ScriptDir\deployment\docker-compose-win.yml" "$UsbPath\docker-compos
 Copy-Item "$ScriptDir\update-offline.ps1" "$UsbPath\update-offline.ps1" -Force
 
 # Version-Info schreiben
-$versionInfo = @"
-MegaCNC Update Package
-======================
-Erstellt:  $(Get-Date -Format "yyyy-MM-dd HH:mm:ss")
-Images:    $IMAGE_APP
-           $IMAGE_DB
-           $IMAGE_REDIS
-"@
+$versionInfo = "MegaCNC Update Package`r`n"
+$versionInfo += "======================`r`n"
+$versionInfo += "Erstellt:  " + (Get-Date -Format "yyyy-MM-dd HH:mm:ss") + "`r`n"
+$versionInfo += "Images:    $IMAGE_APP`r`n"
+$versionInfo += "           $IMAGE_DB`r`n"
+$versionInfo += "           $IMAGE_REDIS`r`n"
 $versionInfo | Out-File "$UsbPath\version.txt" -Encoding UTF8
 
 Write-Host "✓ Dateien kopiert" -ForegroundColor Green
