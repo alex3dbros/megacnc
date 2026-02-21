@@ -1373,7 +1373,7 @@ async function printPackLabels() {
     }
     
     console.log(`[PrintPack] Aufgelöste DB-IDs: ${cellIds.length} von ${cells.length}`, cellIds);
-
+    
     if (cellIds.length === 0) {
         toastr.error('Keine druckbaren Zellen gefunden', 'Fehler');
         return;

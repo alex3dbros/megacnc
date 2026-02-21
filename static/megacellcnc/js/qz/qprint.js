@@ -1961,24 +1961,24 @@ async function printLabels(slots, deviceId) {
 
     try {
         const response = await fetch(`/print-label/`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': getCookie('csrftoken')
-            },
-            body: JSON.stringify({isDemo, deviceId, slots })
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: JSON.stringify({isDemo, deviceId, slots })
         });
         const data = await response.json();
 
-        var config = getUpdatedConfig();
+            var config = getUpdatedConfig();
 
-        var printData = [
+            var printData = [
             { type: 'pixel', format: 'image', flavor: 'base64', data: data.label }
-        ];
+            ];
 
         await qz.print(config, printData);
 
-        toastr.success(data.message, "Success");
+            toastr.success(data.message, "Success");
     } catch (error) {
         console.error('Error printing label:', error);
         displayError(error);
