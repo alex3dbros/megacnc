@@ -159,5 +159,5 @@ Write-Host ""
 Write-Host "  Naechster Schritt:" -ForegroundColor Yellow
 Write-Host "  1. USB-Stick zum Ziel-PC bringen"
 Write-Host "  2. PowerShell als Admin oeffnen"
-Write-Host "  3. Ausfuehren: X:\$UpdateFolder\update-offline.ps1"
+Write-Host ('  3. Ausfuehren: X:\' + $UpdateFolder + '\update-offline.ps1')
 Write-Host ""
