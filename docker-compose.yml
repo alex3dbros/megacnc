@@ -6,7 +6,7 @@ services:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=MccAdmin
     volumes:
-      - postgres_data:/var/lib/postgresql
+      - postgres_data:/var/lib/postgresql/data
     ports:
       - "5432:5432"
 
@@ -22,7 +22,7 @@ services:
       - "8000:8000"
     volumes:
       - .:/app
-      - ./data:/data
+      - app_data:/data
     depends_on:
       - db
       - redis
@@ -35,7 +35,7 @@ services:
     command: celery -A dashboard worker --loglevel=info
     volumes:
       - .:/app
-      - ./data:/data
+      - app_data:/data
     depends_on:
       - db
       - redis
@@ -48,7 +48,7 @@ services:
     command: celery -A dashboard beat --loglevel=info --scheduler django_celery_beat.schedulers:DatabaseScheduler
     volumes:
       - .:/app
-      - ./data:/data
+      - app_data:/data
     depends_on:
       - db
       - redis
@@ -58,3 +58,4 @@ services:
 
 volumes:
   postgres_data:
+  app_data:
