@@ -14,5 +14,5 @@ git reset --hard origin/main
 sudo docker-compose up --build -d
 
 # Perform Django migrations
-sudo docker exec megacnc_web_1 python manage.py makemigrations
-sudo docker exec megacnc_web_1 python manage.py migrate
+sudo docker exec megacnc-web-1 python manage.py makemigrations
+sudo docker exec megacnc-web-1 python manage.py migrate
