@@ -15,7 +15,7 @@ NC='\033[0m'
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
-COMPOSE_FILE="deployment/docker-compose-win.yml"
+COMPOSE_FILE="docker-compose.yml"
 BACKUP_FILE="$1"
 
 echo ""

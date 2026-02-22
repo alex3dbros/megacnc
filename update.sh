@@ -15,7 +15,7 @@ NC='\033[0m'
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
-COMPOSE_FILE="deployment/docker-compose-win.yml"
+COMPOSE_FILE="docker-compose.yml"
 BACKUP_DIR="backups"
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 
@@ -31,10 +31,15 @@ fi
 
 # ── Step 1: DB Backup ──
 echo -e "${YELLOW}Step 1: Datenbank-Backup...${NC}"
-mkdir -p "$BACKUP_DIR"
+read -p "DB-Backup erstellen? (J/n): " DO_BACKUP
+if [[ ! "$DO_BACKUP" =~ ^[nN]$ ]]; then
+    mkdir -p "$BACKUP_DIR"
+    BACKUP_FILE="$BACKUP_DIR/db_backup_${TIMESTAMP}.sql"
 
-BACKUP_FILE="$BACKUP_DIR/db_backup_${TIMESTAMP}.sql"
-if docker compose -f "$COMPOSE_FILE" ps 2>/dev/null | grep -q "running"; then
+    # DB Container starten falls nicht laufend
+    docker compose -f "$COMPOSE_FILE" up -d db 2>/dev/null
+    sleep 5
+
     if docker compose -f "$COMPOSE_FILE" exec -T db pg_dump -U postgres mcccnc > "$BACKUP_FILE" 2>/dev/null; then
         gzip "$BACKUP_FILE"
         echo -e "${GREEN}✓ Backup erstellt: ${BACKUP_FILE}.gz${NC}"
@@ -42,7 +47,7 @@ if docker compose -f "$COMPOSE_FILE" ps 2>/dev/null | grep -q "running"; then
         echo -e "${YELLOW}⚠ Backup fehlgeschlagen, fahre trotzdem fort...${NC}"
     fi
 else
-    echo -e "${YELLOW}  Keine laufenden Container, ueberspringe Backup.${NC}"
+    echo -e "${YELLOW}  Backup uebersprungen.${NC}"
 fi
 
 # ── Step 2: Container stoppen ──
