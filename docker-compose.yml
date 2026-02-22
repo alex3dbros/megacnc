@@ -1,8 +1,6 @@
-version: '3'
-
 services:
   db:
-    image: postgres
+    image: postgres:15
     environment:
       - POSTGRES_DB=mcccnc
       - POSTGRES_USER=postgres
@@ -18,49 +16,45 @@ services:
       - "6379:6379"
 
   web:
-    build: .
+    image: ghcr.io/heinz-leiser-ai/megacnc:latest
     command: gunicorn dashboard.wsgi:application --bind 0.0.0.0:8000
-    network_mode: host
+    ports:
+      - "8000:8000"
     volumes:
       - .:/app
-      - /home/heinz/Dokumente/megacell/test:/data
+      - ./data:/data
     depends_on:
       - db
       - redis
     environment:
-      - DATABASE_URL=postgres://postgres:MccAdmin@localhost:5432/mcccnc
-      - REDIS_URL=redis://localhost:6379/0
-    cap_add:
-      - NET_ADMIN
+      - DATABASE_URL=postgres://postgres:MccAdmin@db:5432/mcccnc
+      - REDIS_URL=redis://redis:6379/0
 
   celeryworker:
-    build: .
+    image: ghcr.io/heinz-leiser-ai/megacnc:latest
     command: celery -A dashboard worker --loglevel=info
-    network_mode: host
     volumes:
       - .:/app
-      - /home/heinz/Dokumente/megacell/test:/data
+      - ./data:/data
     depends_on:
       - db
       - redis
     environment:
-      - DATABASE_URL=postgres://postgres:MccAdmin@localhost:5432/mcccnc
-      - REDIS_URL=redis://localhost:6379/0
+      - DATABASE_URL=postgres://postgres:MccAdmin@db:5432/mcccnc
+      - REDIS_URL=redis://redis:6379/0
 
   celerybeat:
-    build: .
+    image: ghcr.io/heinz-leiser-ai/megacnc:latest
     command: celery -A dashboard beat --loglevel=info --scheduler django_celery_beat.schedulers:DatabaseScheduler
-    network_mode: host
     volumes:
       - .:/app
-      - /home/heinz/Dokumente/megacell/test:/data
+      - ./data:/data
     depends_on:
       - db
       - redis
     environment:
-      - DATABASE_URL=postgres://postgres:MccAdmin@localhost:5432/mcccnc
-      - REDIS_URL=redis://localhost:6379/0
+      - DATABASE_URL=postgres://postgres:MccAdmin@db:5432/mcccnc
+      - REDIS_URL=redis://redis:6379/0
 
 volumes:
   postgres_data:
-
