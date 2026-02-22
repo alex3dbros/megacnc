@@ -22,7 +22,7 @@ services:
       - "8000:8000"
     volumes:
       - .:/app
-      - C:\Users\Elitedesk\Documents\megacnc\data:/data
+      - ./data:/data
     depends_on:
       - db
       - redis
@@ -35,7 +35,7 @@ services:
     command: celery -A dashboard worker --loglevel=info
     volumes:
       - .:/app
-      - C:\Users\Elitedesk\Documents\megacnc\data:/data
+      - ./data:/data
     depends_on:
       - db
       - redis
@@ -48,7 +48,7 @@ services:
     command: celery -A dashboard beat --loglevel=info --scheduler django_celery_beat.schedulers:DatabaseScheduler
     volumes:
       - .:/app
-      - C:\Users\Elitedesk\Documents\megacnc\data:/data
+      - ./data:/data
     depends_on:
       - db
       - redis
@@ -57,4 +57,4 @@ services:
       - REDIS_URL=redis://redis:6379/0
 
 volumes:
-  postgres_data: 
+  postgres_data:
