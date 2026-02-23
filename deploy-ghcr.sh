@@ -79,6 +79,23 @@ docker push "${FULL_IMAGE}:${VERSION}"
 docker push "${FULL_IMAGE}:latest"
 echo -e "${GREEN}✓ Images pushed${NC}"
 
+# Cleanup: alte Images aufräumen, nur letzte 2 Versionen behalten
+echo ""
+echo -e "${YELLOW}Step 4: Alte Images aufräumen...${NC}"
+
+OLD_IMAGES=$(docker images "${FULL_IMAGE}" --format "{{.ID}} {{.Tag}}" | grep -v "latest" | tail -n +3 | awk '{print $1}')
+if [ -n "$OLD_IMAGES" ]; then
+    echo "$OLD_IMAGES" | xargs docker rmi -f 2>/dev/null || true
+    echo -e "${GREEN}✓ Alte Images entfernt${NC}"
+else
+    echo -e "${GREEN}✓ Keine alten Images zum Aufräumen${NC}"
+fi
+
+# Dangling Images und Build-Cache entfernen
+docker image prune -f 2>/dev/null || true
+docker builder prune -f 2>/dev/null || true
+echo -e "${GREEN}✓ Build-Cache aufgeräumt${NC}"
+
 # Summary
 echo ""
 echo -e "${GREEN}=== Deployment Complete ===${NC}"
@@ -89,6 +106,3 @@ echo "  ${FULL_IMAGE}:latest"
 echo ""
 echo "To pull on production server:"
 echo "  docker pull ${FULL_IMAGE}:latest"
-echo ""
-echo "To use in docker-compose.yml, replace 'build: .' with:"
-echo "  image: ${FULL_IMAGE}:latest"
