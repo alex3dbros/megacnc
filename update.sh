@@ -62,6 +62,12 @@ echo -e "${YELLOW}Step 3: Neueste Scripts/Config holen (git pull)...${NC}"
 git pull origin main
 echo -e "${GREEN}✓ Repository aktualisiert${NC}"
 
+# ── Step 3b: Produktions-Compose-File aktivieren ──
+if [ -f "deployment/docker-compose-win.yml" ]; then
+    cp deployment/docker-compose-win.yml docker-compose.yml
+    echo -e "${GREEN}✓ docker-compose.yml aktualisiert (Produktion)${NC}"
+fi
+
 # ── Step 4: Docker Images Pull ──
 echo ""
 echo -e "${YELLOW}Step 4: Neueste Docker Images herunterladen...${NC}"
