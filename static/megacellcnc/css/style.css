@@ -53,12 +53,7 @@
         _page-user-lock
 
 */
-@import url("https://fonts.googleapis.com/css2?family=Cairo:wght@200;300;400;600;700;900&display=swap");
-@import url("https://fonts.googleapis.com/css?family=Poppins:300,400,500,600,700,800");
-@import url("https://fonts.googleapis.com/css?family=Open+Sans:400,600,700");
-@import url("https://fonts.googleapis.com/css?family=Montserrat:400,500,600,700");
-@import url("https://fonts.googleapis.com/css?family=Roboto:400,500,700");
-@import url("https://fonts.googleapis.com/css?family=Nunito:400,600,700");
+/* Google Fonts disabled for offline use - using system fonts instead */
 @import url("./../icons/simple-line-icons/css/simple-line-icons.css");
 @import url("./../icons/fontawesome6/css/all.min.css");
 @import url("./../icons/fontawesome/css/all.min.css");
@@ -109,6 +104,16 @@
 
 .status-offline-device {
     color: red;
+}
+
+.status-yes-cell {
+    color: #28a745;
+    font-weight: 600;
+}
+
+.status-no-cell {
+    color: #dc3545;
+    font-weight: 600;
 }
 
 
@@ -37181,3 +37186,21 @@ html[dir="rtl"] [direction="rtl"][data-sidebar-style="compact"]:not([data-layout
 
 
 /*# sourceMappingURL=style-rtl.css.map */
+
+/* Sidebar Toggle Arrow */
+.sidebar-toggle .arrow-icon {
+  font-size: 24px;
+  color: #5D78FF;
+  transition: transform 0.3s ease;
+  display: inline-block;
+  font-weight: bold;
+  line-height: 1;
+}
+
+.sidebar-toggle.is-active .arrow-icon {
+  transform: rotate(180deg);
+}
+
+.hamburger.sidebar-toggle .line {
+  display: none;
+}

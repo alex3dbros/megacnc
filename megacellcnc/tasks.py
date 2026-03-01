@@ -198,10 +198,18 @@ def check_device_status(device_id):
 
 @shared_task
 def check_all_devices():
-    devices = Device.objects.all()
-    task_group = group(check_device_status.s(device.id) for device in devices)
-    result_group = task_group.apply_async()
-    return result_group
+    try:
+        devices = Device.objects.all()
+        if devices.exists():
+            task_group = group(check_device_status.s(device.id) for device in devices)
+            result_group = task_group.apply_async()
+            return result_group
+        else:
+            # No devices to check
+            return None
+    except Exception:
+        # Database tables not migrated yet or error accessing devices
+        return None
 
 
 @shared_task

@@ -463,41 +463,56 @@ input[type='radio'] {
 <div class="content-body">
 	<div class="page-titles">
 			<ol class="breadcrumb">
-				<li class="breadcrumb-item"><a href="javascript:void(0)">Form</a></li>
+				<li class="breadcrumb-item"><a href="javascript:void(0)">Settings</a></li>
 				<li class="breadcrumb-item active"><a href="javascript:void(0)">{{page_title}}</a></li>
 			</ol>
 		</div>
 	<div class="container-fluid">
 		
-		<!-- row -->
+		<!-- Main Settings Card with Tabs -->
 		<div class="row">
 			<div class="col-xl-12 col-xxl-12">
 				<div class="card">
 					<div class="card-header">
-						<h4 class="card-title">Printer Settings Wizard</h4>
-						<div class="row">
-							<h1 id="title" class="page-header">
-								<a class="pull-right btn btn-primary btn" target="_blank" href="https://qz.io/download">
-									<i class="fa fa-download"></i> Download QZ Tray
-								</a>
-							</h1>
-						</div>
-
-
+						<h4 class="card-title">Settings</h4>
 					</div>
 					<div class="card-body">
-						<div id="smartwizard" class="form-wizard order-create">
-							<ul class="nav nav-wizard">
-								<li><a class="nav-link" href="#printer_wizard">
-									<span>1</span> 
-								</a></li>
-								<li><a class="nav-link" href="#label_settings">
-									<span>2</span>
-								</a></li>
-							</ul>
+						<!-- Main Settings Tabs -->
+						<ul class="nav nav-tabs" id="settingsTabs" role="tablist">
+							<li class="nav-item">
+								<a class="nav-link active" id="printer-tab" data-bs-toggle="tab" href="#printerSettings" role="tab">
+									<i class="fa fa-print me-2"></i> Printer
+								</a>
+							</li>
+							<li class="nav-item">
+								<a class="nav-link" id="backup-tab" data-bs-toggle="tab" href="#backupSettings" role="tab">
+									<i class="fa fa-database me-2"></i> Backup & Restore
+								</a>
+							</li>
+						</ul>
 
-							<div id="alertContainer"></div>
-							<div class="tab-content">
+						<div class="tab-content mt-4" id="settingsTabContent">
+							<!-- Printer Settings Tab -->
+							<div class="tab-pane fade show active" id="printerSettings" role="tabpanel">
+								<div class="d-flex justify-content-between align-items-center mb-3">
+									<h5>Printer Settings</h5>
+									<a class="btn btn-primary btn-sm" target="_blank" href="https://qz.io/download">
+										<i class="fa fa-download"></i> Download QZ Tray
+									</a>
+								</div>
+								
+								<div id="smartwizard" class="form-wizard order-create">
+									<ul class="nav nav-wizard">
+										<li><a class="nav-link" href="#printer_wizard">
+											<span>1</span> 
+										</a></li>
+										<li><a class="nav-link" href="#label_settings">
+											<span>2</span>
+										</a></li>
+									</ul>
+
+									<div id="alertContainer"></div>
+									<div class="tab-content">
 
 
 								<!--Printer Wizard-->
@@ -651,7 +666,96 @@ input[type='radio'] {
 								</div>
 
 
+									</div>
+								</div>
 							</div>
+
+							<!-- Backup & Restore Tab -->
+							<div class="tab-pane fade" id="backupSettings" role="tabpanel">
+								<h5 class="mb-4">Database Backup & Restore</h5>
+								<div class="row">
+									<!-- Backup Section -->
+									<div class="col-lg-6">
+										<div class="panel panel-default">
+											<h5><i class="fa fa-download text-success me-2"></i> Backup erstellen</h5>
+											<p class="text-muted">
+												Erstelle ein vollständiges Backup der Datenbank. Das Backup wird als komprimierte JSON-Datei (.json.gz) heruntergeladen.
+											</p>
+											
+											<button type="button" class="btn btn-success btn-lg mb-3" id="downloadBackupBtn" onclick="downloadBackup();">
+												<i class="fa fa-download"></i> Backup herunterladen
+											</button>
+
+											<div id="backupStatus" class="alert" style="display: none;"></div>
+										</div>
+									</div>
+
+									<!-- Restore Section -->
+									<div class="col-lg-6">
+										<div class="panel panel-default">
+											<h5><i class="fa fa-upload text-info me-2"></i> Backup wiederherstellen</h5>
+											<p class="text-muted">
+												Wähle dein Betriebssystem für die passende Anleitung:
+											</p>
+
+											<!-- OS Tabs -->
+											<ul class="nav nav-tabs" role="tablist">
+												<li class="nav-item">
+													<a class="nav-link active" data-bs-toggle="tab" href="#restore-linux">
+														<i class="fab fa-linux"></i> Linux / macOS
+													</a>
+												</li>
+												<li class="nav-item">
+													<a class="nav-link" data-bs-toggle="tab" href="#restore-windows">
+														<i class="fab fa-windows"></i> Windows
+													</a>
+												</li>
+											</ul>
+
+											<div class="tab-content mt-3">
+												<!-- Linux/macOS -->
+												<div id="restore-linux" class="tab-pane fade show active">
+													<p class="text-muted small">Terminal öffnen und im Projektverzeichnis ausführen:</p>
+													<pre style="background: #1a1a2e; padding: 12px; border-radius: 6px; overflow-x: auto;"><code># Backup entpacken
+gunzip megacnc_backup_XXXXXX.json.gz
+
+# Backup wiederherstellen
+docker-compose exec web python manage.py loaddata \
+  megacnc_backup_XXXXXX.json
+
+# Oder Datei ins Container kopieren
+docker cp megacnc_backup_XXXXXX.json megacnc-web-1:/app/
+docker exec megacnc-web-1 python manage.py loaddata \
+  megacnc_backup_XXXXXX.json</code></pre>
+												</div>
+
+												<!-- Windows -->
+												<div id="restore-windows" class="tab-pane fade">
+													<p class="text-muted small">PowerShell öffnen:</p>
+													<pre style="background: #1a1a2e; padding: 12px; border-radius: 6px; overflow-x: auto;"><code># Mit 7-Zip entpacken
+7z e megacnc_backup_XXXXXX.json.gz
+
+# Datei in Container kopieren
+docker cp megacnc_backup_XXXXXX.json megacnc-web-1:/app/
+
+# Backup wiederherstellen
+docker exec megacnc-web-1 python manage.py loaddata `
+  megacnc_backup_XXXXXX.json
+
+# Datei wieder löschen
+docker exec megacnc-web-1 rm megacnc_backup_XXXXXX.json</code></pre>
+												</div>
+											</div>
+
+											<div class="alert alert-warning mt-3">
+												<i class="fa fa-exclamation-triangle"></i>
+												<strong>Achtung:</strong> Ein Restore überschreibt alle aktuellen Daten!
+											</div>
+										</div>
+									</div>
+								</div>
+							</div>
+
 						</div>
 					</div>
 				</div>
@@ -692,6 +796,57 @@ input[type='radio'] {
 			$('#smartwizard').smartWizard();
 		});
 
+		// Database Backup Download
+		function downloadBackup() {
+			const btn = document.getElementById('downloadBackupBtn');
+			const statusDiv = document.getElementById('backupStatus');
+			
+			// Show loading state
+			btn.disabled = true;
+			btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Backup wird erstellt...';
+			statusDiv.style.display = 'none';
+			
+			// Trigger download
+			fetch('{% url "megacellcnc:download-backup" %}')
+				.then(response => {
+					if (!response.ok) {
+						return response.json().then(err => { throw new Error(err.error || 'Backup failed'); });
+					}
+					return response.blob().then(blob => {
+						// Get filename from Content-Disposition header
+						const contentDisposition = response.headers.get('Content-Disposition');
+						let filename = 'megacnc_backup.sql.gz';
+						if (contentDisposition) {
+							const match = contentDisposition.match(/filename="(.+)"/);
+							if (match) filename = match[1];
+						}
+						
+						// Create download link
+						const url = window.URL.createObjectURL(blob);
+						const a = document.createElement('a');
+						a.href = url;
+						a.download = filename;
+						document.body.appendChild(a);
+						a.click();
+						window.URL.revokeObjectURL(url);
+						a.remove();
+						
+						// Show success
+						statusDiv.className = 'alert alert-success';
+						statusDiv.innerHTML = '<i class="fa fa-check"></i> Backup erfolgreich erstellt: ' + filename;
+						statusDiv.style.display = 'block';
+					});
+				})
+				.catch(error => {
+					statusDiv.className = 'alert alert-danger';
+					statusDiv.innerHTML = '<i class="fa fa-exclamation-triangle"></i> Fehler: ' + error.message;
+					statusDiv.style.display = 'block';
+				})
+				.finally(() => {
+					btn.disabled = false;
+					btn.innerHTML = '<i class="fa fa-download"></i> Backup herunterladen';
+				});
+		}
 	</script>
 
 <script>var imagePath = '{% static "image_sample.png" %}';</script>

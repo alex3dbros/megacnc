@@ -65,6 +65,12 @@ class Cells(models.Model):
     insertion_date = models.DateTimeField(default=timezone.now)
     removal_date = models.DateTimeField(null=True, blank=True)
     available = models.CharField(max_length=150)
+    condition = models.CharField(max_length=50, default='good', choices=[
+        ('good', 'Gut'),
+        ('defective', 'Defekt'),
+        ('reserved', 'Reserviert'),
+        ('unknown', 'Unbekannt'),
+    ])
     bat_position = models.CharField(max_length=150, default="")
 
 
@@ -172,3 +178,25 @@ class Batteries(models.Model):
 
     def __str__(self):
         return self.UUID
+
+
+class CellReplacementLog(models.Model):
+    """Logs cell replacements in battery packs for traceability"""
+    battery = models.ForeignKey(Batteries, on_delete=models.CASCADE, related_name='replacement_logs')
+    old_cell_uuid = models.CharField(max_length=150)
+    new_cell_uuid = models.CharField(max_length=150)
+    slot_series = models.IntegerField()  # S position (1-based)
+    slot_parallel = models.IntegerField()  # P position (1-based)
+    old_capacity = models.FloatField()
+    new_capacity = models.FloatField()
+    old_esr = models.FloatField(null=True, blank=True)
+    new_esr = models.FloatField(null=True, blank=True)
+    reason = models.CharField(max_length=255, default='defective')
+    replaced_at = models.DateTimeField(default=timezone.now)
+    replaced_by = models.CharField(max_length=150, default='system')
+
+    def __str__(self):
+        return f"{self.battery.name}: {self.old_cell_uuid} → {self.new_cell_uuid}"
+
+    class Meta:
+        ordering = ['-replaced_at']

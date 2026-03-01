@@ -10,8 +10,12 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.0/ref/settings/
 """
 
+# App Version
+APP_VERSION = "1.1.0"
+
 from pathlib import Path
 import os
+import dj_database_url
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -78,21 +82,16 @@ WSGI_APPLICATION = 'dashboard.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databases
 
-
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'mcccnc',  # Your PostgreSQL database name
-        'USER': 'postgres',  # Your PostgreSQL username
-        'PASSWORD': 'MccAdmin',  # Your PostgreSQL password
-        'HOST': 'localhost',  # Your PostgreSQL host (use 'localhost' if running on the same machine)
-        'PORT': '5432',  # Leave as an empty string to use the default PostgreSQL port (5432)
-    }
+    'default': dj_database_url.config(
+        default=os.environ.get('DATABASE_URL', 'postgres://postgres:MccAdmin@localhost:5432/mcccnc'),
+        conn_max_age=600
+    )
 }
 
 # Celery Configuration
-CELERY_BROKER_URL = 'redis://localhost:6379/0'
-CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
+CELERY_BROKER_URL = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
+CELERY_RESULT_BACKEND = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
 CELERY_ACCEPT_CONTENT = ['application/json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'

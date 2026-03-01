@@ -1955,33 +1955,33 @@ function printImage() {
 }
 
 
-function printLabels(slots, deviceId) {
+async function printLabels(slots, deviceId) {
 
     isDemo = 0;
 
-    fetch(`/print-label/`, {
+    try {
+        const response = await fetch(`/print-label/`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
             'X-CSRFToken': getCookie('csrftoken')
         },
         body: JSON.stringify({isDemo, deviceId, slots })
-    })
-        .then(response => response.json())
-        .then(data => {
+        });
+        const data = await response.json();
 
             var config = getUpdatedConfig();
 
             var printData = [
-                { type: 'pixel', format: 'image', flavor: 'base64', data: data.label  }
-                //also valid, as format and flavor will default to proper values:
-        //             { type: 'pixel', data: 'assets/img/image_sample.png' }
+            { type: 'pixel', format: 'image', flavor: 'base64', data: data.label }
             ];
 
-            qz.print(config, printData).catch(displayError);
+        await qz.print(config, printData);
 
             toastr.success(data.message, "Success");
-        })
-        .catch(error => console.error('Error:', error));
+    } catch (error) {
+        console.error('Error printing label:', error);
+        displayError(error);
+    }
 
 }

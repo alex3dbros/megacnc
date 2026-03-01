@@ -1,6 +1,6 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.db.models import Prefetch
-from .models import Projects, Device, Slot, Cells, CellTestData, PrinterSettings, Batteries
+from .models import Projects, Device, Slot, Cells, CellTestData, PrinterSettings, Batteries, CellReplacementLog
 from django.contrib import messages
 from django.http import JsonResponse, HttpResponseRedirect
 from django.views.decorators.http import require_POST
@@ -37,15 +37,29 @@ warnings.filterwarnings('ignore', category=pd.errors.PerformanceWarning)
 
 
 def index(request):
-    devices = Device.objects.all().order_by('id')
-    devices_count = Device.objects.count()  # A small optimization to avoid querying all then counting
-    projects = Projects.objects.all()
-    # Count the total number of projects
-    total_projects = Projects.objects.count()
+    try:
+        devices = Device.objects.all().order_by('id')
+        devices_count = Device.objects.count()  # A small optimization to avoid querying all then counting
+    except Exception:
+        # Database tables not migrated yet or no devices
+        devices = []
+        devices_count = 0
+    
+    try:
+        projects = Projects.objects.all()
+        # Count the total number of projects
+        total_projects = Projects.objects.count()
+    except Exception:
+        projects = []
+        total_projects = 0
 
-    # Count the total number of Cells across all Projects
-    total_cells = Cells.objects.count()
-    good_cells = Cells.objects.filter(capacity__gt=1000).count()
+    try:
+        # Count the total number of Cells across all Projects
+        total_cells = Cells.objects.count()
+        good_cells = Cells.objects.filter(capacity__gt=1000).count()
+    except Exception:
+        total_cells = 0
+        good_cells = 0
 
     context = {
         "page_title": "Devices",
@@ -60,11 +74,17 @@ def index(request):
     return render(request, 'megacellcnc/index.html', context)
 
 def settings(request):
-    projects = Projects.objects.all()
+    try:
+        projects = Projects.objects.all()
+    except Exception:
+        projects = []
 
-    devices = Device.objects.all().order_by('id')
-    devices_count = Device.objects.all().count()
-    projects = Projects.objects.all()
+    try:
+        devices = Device.objects.all().order_by('id')
+        devices_count = Device.objects.all().count()
+    except Exception:
+        devices = []
+        devices_count = 0
     context = {
         "page_title": "Settings",
         "devices": devices,
@@ -267,6 +287,54 @@ def delete_cells(request):
     # Handle other HTTP methods or return an error response
 
 
+def delete_batteries(request):
+    if request.method == "POST":
+        try:
+            data = json.loads(request.body)
+            battery_ids = data.get('battery_ids', [])
+        except json.JSONDecodeError:
+            return JsonResponse({'error': 'Invalid JSON'}, status=400)
+
+        if len(battery_ids) > 0:
+            # First release all cells from these batteries
+            Cells.objects.filter(battery_id__in=battery_ids).update(
+                battery=None, 
+                available="Yes"
+            )
+            # Then delete the batteries
+            count, _ = Batteries.objects.filter(id__in=battery_ids).delete()
+            messages.success(request, f'{count} Battery-Pack(s) gelöscht!')
+            return JsonResponse({'message': f'Successfully deleted {count} battery pack(s).'})
+        else:
+            messages.error(request, 'No Battery Pack Selected')
+            return JsonResponse({'error': 'No Battery Pack selected'}, status=400)
+
+    return JsonResponse({'error': 'Invalid request method'}, status=405)
+
+
+def update_battery_name(request):
+    if request.method == "POST":
+        try:
+            data = json.loads(request.body)
+            battery_id = data.get('battery_id')
+            new_name = data.get('name', '').strip()
+        except json.JSONDecodeError:
+            return JsonResponse({'success': False, 'error': 'Invalid JSON'}, status=400)
+
+        if not new_name:
+            return JsonResponse({'success': False, 'error': 'Name cannot be empty'}, status=400)
+
+        try:
+            battery = Batteries.objects.get(id=battery_id)
+            battery.name = new_name
+            battery.save()
+            return JsonResponse({'success': True, 'message': 'Name updated successfully'})
+        except Batteries.DoesNotExist:
+            return JsonResponse({'success': False, 'error': 'Battery not found'}, status=404)
+
+    return JsonResponse({'success': False, 'error': 'Invalid request method'}, status=405)
+
+
 def get_cells(request):
     project_id = request.GET.get('project_id')
     if project_id == 'all':
@@ -279,7 +347,13 @@ def get_cells(request):
         match = re.search(r'-S(\d+)', cell.UUID)
         if match:
             serial_number = int(match.group(1))
-            cdata = {'id': serial_number, 'capacity': cell.capacity, 'uuid': cell.UUID}
+            cdata = {
+                'id': serial_number,
+                'capacity': cell.capacity,
+                'uuid': cell.UUID,
+                'esr': cell.esr,
+                'voltage': cell.voltage
+            }
             cells_data.append(cdata)
 
     return JsonResponse({'cells': cells_data})
@@ -295,32 +369,169 @@ def get_battery_cells(request):
         match = re.search(r'-S(\d+)', cell.UUID)
         if match:
             serial_number = int(match.group(1))
-            cdata = {'id': serial_number, 'capacity': cell.capacity, 'uuid': cell.UUID, 'bat_position': cell.bat_position}
+            cdata = {
+                'id': serial_number,
+                'capacity': cell.capacity,
+                'uuid': cell.UUID,
+                'bat_position': cell.bat_position,
+                'esr': cell.esr,
+                'voltage': cell.voltage
+            }
             cells_data.append(cdata)
 
-
-    return JsonResponse({'cells': cells_data})
+    return JsonResponse({
+        'cells': cells_data,
+        'battery_status': battery.status,
+        'battery_capacity': battery.capacity
+    })
 
 
 def database(request):
+    from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+    from django.db.models import Q
 
     projects = Projects.objects.all()
     project_id = request.GET.get('project')
+    search_query = request.GET.get('search', '').strip()
+    year_filter = request.GET.get('year', '')
+    status_filter = request.GET.get('status', '')
+    per_page = int(request.GET.get('per_page', 100))
 
+    # Base queryset
     if project_id == 'all' or project_id is None:
-        cells = Cells.objects.all().order_by('id')
+        cells_queryset = Cells.objects.all().order_by('id')
         selected_project_name = "All"
     else:
-        cells = Cells.objects.filter(project__id=project_id).order_by().order_by('id')
+        cells_queryset = Cells.objects.filter(project__id=project_id).order_by('id')
         selected_project_name = Projects.objects.get(id=project_id).Name
 
+    # Jahr-Filter (aus UUID extrahiert)
+    if year_filter:
+        # UUID Format: D{YYYYMMDD}-S{SerialNo}
+        # Filter nach Jahr im UUID: D2023
+        cells_queryset = cells_queryset.filter(UUID__startswith=f'D{year_filter}')
+
+    # Status-Filter (Available)
+    if status_filter:
+        cells_queryset = cells_queryset.filter(available__iexact=status_filter)
+
+    # Partial Match Suche nur in Seriennummer (ab 3 Zeichen)
+    search_results = None
+    if search_query and len(search_query) >= 3:
+        # Sucht nur im Seriennummern-Teil nach "-S"
+        # UUID Format: D{YYYYMMDD}-S{SerialNo} z.B. D20220922-S002984
+        # "104" findet: -S000104, -S010473, -S723104
+        # Aber NICHT: D20230104-S006627 (104 ist im Datum)
+        
+        cells_queryset = cells_queryset.filter(UUID__regex=rf'-S.*{search_query}')
+        search_results = cells_queryset.count()
+    
+    # Extrahiere alle verfügbaren Jahre aus UUIDs
+    # Verwende SQL für Performance statt Python-Loop
+    from django.db.models import Func, Value
+    from django.db.models.functions import Substr
+    
+    # Extrahiere Jahr aus UUID (Position 2-5: YYYY aus D{YYYYMMDD})
+    years_queryset = Cells.objects.annotate(
+        year=Substr('UUID', 2, 4)
+    ).values_list('year', flat=True).distinct()
+    
+    # Filtere gültige Jahre und sortiere
+    available_years = sorted(
+        [year for year in years_queryset if year and year.isdigit() and len(year) == 4],
+        reverse=True
+    )
+
+    # Pagination: Variable Anzahl Zellen pro Seite
+    paginator = Paginator(cells_queryset, per_page)
+    page = request.GET.get('page', 1)
+    
+    try:
+        cells = paginator.page(page)
+    except PageNotAnInteger:
+        cells = paginator.page(1)
+    except EmptyPage:
+        cells = paginator.page(paginator.num_pages)
+
     context = {
-        "page_title":"Devices",
+        "page_title":"Database",
         "cells": cells,
         "projects": projects,
-        'selected_project_name': selected_project_name
+        'selected_project_name': selected_project_name,
+        'search_query': search_query,
+        'search_results': search_results,
+        'available_years': available_years,
+        'selected_year': year_filter,
+        'selected_status': status_filter
     }
     return render(request, 'megacellcnc/database.html', context)
+
+
+def database_search_ajax(request):
+    """AJAX endpoint for cell search without page reload"""
+    from django.core.paginator import Paginator
+    from django.template.loader import render_to_string
+    
+    if request.headers.get('X-Requested-With') != 'XMLHttpRequest':
+        return JsonResponse({'error': 'Invalid request'}, status=400)
+    
+    project_id = request.GET.get('project')
+    search_query = request.GET.get('search', '').strip()
+    year_filter = request.GET.get('year', '')
+    status_filter = request.GET.get('status', '')
+    page = request.GET.get('page', 1)
+    per_page = int(request.GET.get('per_page', 100))
+    
+    # Base queryset
+    if project_id == 'all' or project_id is None:
+        cells_queryset = Cells.objects.all().order_by('id')
+    else:
+        cells_queryset = Cells.objects.filter(project__id=project_id).order_by('id')
+    
+    # Jahr-Filter
+    if year_filter:
+        cells_queryset = cells_queryset.filter(UUID__startswith=f'D{year_filter}')
+    
+    # Status-Filter
+    if status_filter:
+        cells_queryset = cells_queryset.filter(available__iexact=status_filter)
+    
+    # Partial Match Search nur in Seriennummer
+    search_results = None
+    if search_query and len(search_query) >= 3:
+        # Sucht nur im Seriennummern-Teil nach "-S"
+        # "104" findet: -S000104, -S010473, -S723104
+        # Aber NICHT: D20230104-S006627 (104 ist im Datum)
+        cells_queryset = cells_queryset.filter(UUID__regex=rf'-S.*{search_query}')
+        search_results = cells_queryset.count()
+    
+    # Pagination mit dynamischer Seitengröße
+    paginator = Paginator(cells_queryset, per_page)
+    
+    try:
+        cells = paginator.page(page)
+    except:
+        cells = paginator.page(1)
+    
+    # Render table rows HTML
+    table_html = render_to_string('megacellcnc/database_table_rows.html', {
+        'cells': cells
+    })
+    
+    return JsonResponse({
+        'success': True,
+        'table_html': table_html,
+        'total_cells': cells_queryset.count(),
+        'page': cells.number,
+        'num_pages': paginator.num_pages,
+        'has_previous': cells.has_previous(),
+        'has_next': cells.has_next(),
+        'previous_page': cells.previous_page_number() if cells.has_previous() else None,
+        'next_page': cells.next_page_number() if cells.has_next() else None,
+        'start_index': cells.start_index(),
+        'end_index': cells.end_index(),
+        'search_results': search_results
+    })
 
 
 def batteries(request):
@@ -375,19 +586,20 @@ def save_battery_configuration(request):
         battery = Batteries.objects.get(id=battery_id)
 
         print("Battery ID: ", battery_id)
+        total_capacity = 0.0
+        
         # Example of handling the data:
-        for cell in cells_data:
-            cell_uuid = cell['cellId']
-            slot_id = cell['slotId']
-            capacity = cell['capacity']
+        for cell_data in cells_data:
+            cell_uuid = cell_data['cellId']
+            slot_id = cell_data['slotId']
+            capacity = float(cell_data.get('capacity', 0))
+            total_capacity += capacity
 
             cell = Cells.objects.get(UUID=cell_uuid)
             cell.battery = battery
             cell.bat_position = slot_id
             cell.available = "No"
             cell.save()
-
-
 
             # Process this data, such as saving it to the database
             print(cell_uuid, slot_id, capacity)
@@ -400,8 +612,25 @@ def save_battery_configuration(request):
                 cell.bat_position = ""
                 cell.available = "Yes"
                 cell.save()
+            battery.status = "created"
+            battery.capacity = 0
+        else:
+            # Update battery status and capacity
+            battery.status = "ready"
+            battery.capacity = round(total_capacity, 2)
+        
+        battery.save()
 
-        return JsonResponse({'status': 'success', 'message': 'Pack configuration saved successfully!'})
+        return JsonResponse({
+            'status': 'success', 
+            'message': 'Pack configuration saved successfully!',
+            'battery': {
+                'id': battery.id,
+                'status': battery.status,
+                'capacity': battery.capacity,
+                'assigned': len(cells_data)
+            }
+        })
     except json.JSONDecodeError as e:
         return JsonResponse({'status': 'error', 'message': 'Invalid JSON'}, status=400)
 
@@ -612,8 +841,8 @@ def new_device(request):
 def edit_device(request):
     if request.method == "POST":
         try:
-            data = json.loads(request.body)
-            device_id = int(data.get('device_id'))
+            req_data = json.loads(request.body)
+            device_id = int(req_data.get('device_id'))
         except json.JSONDecodeError:
             return JsonResponse({'error': 'Invalid JSON'}, status=400)
 
@@ -622,9 +851,14 @@ def edit_device(request):
         slots_count = device.slots.all().count()
 
         # Get device chemistry settings depending on device type
+        try:
+            result_async = get_device_config.delay(device_id)
+            task_result, chems, firmware_version = result_async.get(timeout=30)
+        except Exception as e:
+            return JsonResponse({'error': f'Failed to get device config: {str(e)}'}, status=500)
 
-        result_async = get_device_config.delay(device_id)
-        task_result, chems, firmware_version = result_async.get()  # Be cautious with get(), it can lead to deadlocks
+        if not task_result:
+            return JsonResponse({'error': 'Device not responding or offline'}, status=503)
 
         # Use the task result in your response or further processing
 
@@ -640,7 +874,12 @@ def edit_device(request):
                     "discharge_mode": 0, "max_low_volt_recovery_time": 120}
 
         elif task_result and device.type == "MCCPro":
-            dev_data = msgpack.unpackb(task_result)
+            print(f"DEBUG task_result type: {type(task_result)}, value: {task_result[:100] if isinstance(task_result, bytes) else task_result}")
+            unpacker = msgpack.Unpacker(raw=False, strict_map_key=False)
+            unpacker.feed(task_result)
+            dev_data = list(unpacker)
+            print(f"DEBUG unpacked data: {dev_data}")
+            dev_data = dev_data[-1] if len(dev_data) > 1 else dev_data[0]
 
             data = {"dev_type": device.type, "max_charge_volt": round(dev_data[2] / 1000, 2),
                     "store_volt": round(dev_data[4] / 1000, 2),
@@ -654,7 +893,9 @@ def edit_device(request):
             print(data)
 
         elif task_result and device.type == "MCCReg":
-            dev_data = msgpack.unpackb(task_result)
+            unpacker = msgpack.Unpacker(raw=False, strict_map_key=False)
+            unpacker.feed(task_result)
+            dev_data = next(unpacker)
 
             data = {"dev_type": device.type, "max_charge_volt": round(dev_data[2] / 1000, 2),
                     "store_volt": round(dev_data[4] / 1000, 2),
@@ -666,6 +907,9 @@ def edit_device(request):
                     "term_charging_current": dev_data[8], "discharge_resistance": dev_data[10],
                     "discharge_mode": dev_data[11], "max_low_volt_recovery_time": dev_data[13]}
             print(data)
+
+        else:
+            return JsonResponse({'error': f'Unknown device type: {device.type}'}, status=400)
 
         return JsonResponse(data, safe=False)
 
@@ -752,6 +996,202 @@ def get_printer_settings(request):
         return JsonResponse(printer_data, safe=False)
 
 
+def download_backup(request):
+    """Download a database backup as gzipped SQL file using Django's dumpdata"""
+    import gzip
+    from io import BytesIO, StringIO
+    from django.http import HttpResponse
+    from datetime import datetime
+    from django.core.management import call_command
+    
+    try:
+        # Use Django's dumpdata to export all data as JSON
+        output = StringIO()
+        call_command(
+            'dumpdata',
+            '--natural-foreign',
+            '--natural-primary',
+            '--exclude=contenttypes',
+            '--exclude=auth.permission',
+            '--indent=2',
+            stdout=output
+        )
+        
+        dump_data = output.getvalue().encode('utf-8')
+        
+        # Compress with gzip
+        buffer = BytesIO()
+        with gzip.GzipFile(fileobj=buffer, mode='wb') as gz:
+            gz.write(dump_data)
+        
+        # Create response
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        filename = f'megacnc_backup_{timestamp}.json.gz'
+        
+        response = HttpResponse(buffer.getvalue(), content_type='application/gzip')
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        response['Content-Length'] = len(buffer.getvalue())
+        
+        return response
+        
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+@require_POST
+@csrf_exempt
+def log_cell_replacement(request):
+    """Log a cell replacement in a battery pack"""
+    try:
+        data = json.loads(request.body)
+        
+        battery_id = data.get('battery_id')
+        old_cell_uuid = data.get('old_cell_uuid')
+        new_cell_uuid = data.get('new_cell_uuid')
+        slot_series = data.get('slot_series')
+        slot_parallel = data.get('slot_parallel')
+        old_capacity = data.get('old_capacity')
+        new_capacity = data.get('new_capacity')
+        old_esr = data.get('old_esr')
+        new_esr = data.get('new_esr')
+        reason = data.get('reason', 'defective')
+        
+        battery = get_object_or_404(Batteries, id=battery_id)
+        
+        log_entry = CellReplacementLog.objects.create(
+            battery=battery,
+            old_cell_uuid=old_cell_uuid,
+            new_cell_uuid=new_cell_uuid,
+            slot_series=slot_series,
+            slot_parallel=slot_parallel,
+            old_capacity=old_capacity,
+            new_capacity=new_capacity,
+            old_esr=old_esr,
+            new_esr=new_esr,
+            reason=reason
+        )
+        
+        # Mark old cell as defective
+        try:
+            old_cell = Cells.objects.get(UUID=old_cell_uuid)
+            old_cell.condition = 'defective'
+            old_cell.save()
+        except Cells.DoesNotExist:
+            pass  # Cell might not exist in DB
+        
+        return JsonResponse({
+            'success': True,
+            'log_id': log_entry.id,
+            'message': f'Ersetzung protokolliert: {old_cell_uuid} → {new_cell_uuid}'
+        })
+        
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+@csrf_exempt
+def get_replacement_history(request, battery_id):
+    """Get replacement history for a battery pack"""
+    try:
+        battery = get_object_or_404(Batteries, id=battery_id)
+        logs = battery.replacement_logs.all()
+        
+        history = []
+        for log in logs:
+            history.append({
+                'id': log.id,
+                'old_cell_uuid': log.old_cell_uuid,
+                'new_cell_uuid': log.new_cell_uuid,
+                'slot_series': log.slot_series,
+                'slot_parallel': log.slot_parallel,
+                'old_capacity': log.old_capacity,
+                'new_capacity': log.new_capacity,
+                'old_esr': log.old_esr,
+                'new_esr': log.new_esr,
+                'reason': log.reason,
+                'replaced_at': log.replaced_at.isoformat(),
+                'replaced_by': log.replaced_by
+            })
+        
+        return JsonResponse({
+            'battery_name': battery.name,
+            'history': history
+        })
+        
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+@require_POST
+@csrf_exempt
+def update_cell_condition(request):
+    """Bulk update cell conditions"""
+    try:
+        data = json.loads(request.body)
+        cell_ids = data.get('cell_ids', [])
+        new_condition = data.get('condition')
+        
+        if not cell_ids:
+            return JsonResponse({'error': 'No cells selected'}, status=400)
+        
+        valid_conditions = ['good', 'defective', 'reserved', 'unknown']
+        if new_condition not in valid_conditions:
+            return JsonResponse({'error': f'Invalid condition. Valid: {valid_conditions}'}, status=400)
+        
+        updated_count = Cells.objects.filter(id__in=cell_ids).update(condition=new_condition)
+        
+        return JsonResponse({
+            'success': True,
+            'updated_count': updated_count,
+            'message': f'{updated_count} Zellen auf "{new_condition}" gesetzt'
+        })
+        
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+def get_cell_id_by_uuid(request):
+    """Get cell database ID by UUID"""
+    uuid = request.GET.get('uuid', '')
+    
+    if not uuid:
+        return JsonResponse({'error': 'UUID required'}, status=400)
+    
+    try:
+        cell = Cells.objects.get(UUID=uuid)
+        return JsonResponse({'cell_id': cell.id, 'uuid': cell.UUID})
+    except Cells.DoesNotExist:
+        return JsonResponse({'error': 'Cell not found'}, status=404)
+
+
+@require_POST
+@csrf_exempt
+def update_cell_available(request):
+    """Bulk update cell available status"""
+    try:
+        data = json.loads(request.body)
+        cell_ids = data.get('cell_ids', [])
+        new_available = data.get('available')
+        
+        if not cell_ids:
+            return JsonResponse({'error': 'No cells selected'}, status=400)
+        
+        valid_values = ['Yes', 'No']
+        if new_available not in valid_values:
+            return JsonResponse({'error': f'Invalid value. Valid: {valid_values}'}, status=400)
+        
+        updated_count = Cells.objects.filter(id__in=cell_ids).update(available=new_available)
+        
+        return JsonResponse({
+            'success': True,
+            'updated_count': updated_count,
+            'message': f'{updated_count} Zellen auf Available="{new_available}" gesetzt'
+        })
+        
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
 def print_label(request):
     if request.method == "POST":
         try:
@@ -768,60 +1208,59 @@ def print_label(request):
             # Step 2: Convert all elements in the list to integers
             slots = [int(slot) for slot in slots]
 
-            if printer:
+            if not printer:
+                return JsonResponse({'error': 'Keine Drucker-Einstellungen gespeichert. Bitte zuerst unter Settings einen Drucker konfigurieren und speichern.'}, status=400)
 
-                # Regular Printing
-                if printer.IsDualLabel:
+            # Regular Printing
+            if printer.IsDualLabel:
 
-                    if isDemo:
-                        label = draw_dual_label([])
-
-                        response_data = {
-                            "label": f"{label}"
-                            # Ensure the format matches the format used in saving the image
-                        }
-                        return JsonResponse(response_data)
-
-                    if deviceId != -1:
-                        label_data = gather_label_data(deviceId, slots)
-                    else:
-                        label_data = gather_label_cell_data(slots)
-                    label = draw_dual_label(label_data)
+                if isDemo:
+                    label = draw_dual_label([])
 
                     response_data = {
                         "label": f"{label}"
                     }
                     return JsonResponse(response_data)
 
+                if deviceId != -1:
+                    label_data = gather_label_data(deviceId, slots)
                 else:
+                    label_data = gather_label_cell_data(slots)
+                label = draw_dual_label(label_data)
 
-                    if isDemo:
+                response_data = {
+                    "label": f"{label}"
+                }
+                return JsonResponse(response_data)
 
-                        if printer.LabelShape == "square":
-                            label = draw_square_label([], printer.CustomField1)
-                        else:
-                            label = draw_landscape_label([], printer.CustomField1)
+            else:
 
-                        response_data = {
-                            "label": f"{label}"
-                            # Ensure the format matches the format used in saving the image
-                        }
-                        return JsonResponse(response_data)
-
-                    if deviceId != -1:
-                        label_data = gather_label_data(deviceId, slots)
-                    else:
-                        label_data = gather_label_cell_data(slots)
+                if isDemo:
 
                     if printer.LabelShape == "square":
-                        label = draw_square_label(label_data, printer.CustomField1)
+                        label = draw_square_label([], printer.CustomField1)
                     else:
-                        label = draw_landscape_label(label_data, printer.CustomField1)
+                        label = draw_landscape_label([], printer.CustomField1)
 
                     response_data = {
                         "label": f"{label}"
                     }
                     return JsonResponse(response_data)
+
+                if deviceId != -1:
+                    label_data = gather_label_data(deviceId, slots)
+                else:
+                    label_data = gather_label_cell_data(slots)
+
+                if printer.LabelShape == "square":
+                    label = draw_square_label(label_data, printer.CustomField1)
+                else:
+                    label = draw_landscape_label(label_data, printer.CustomField1)
+
+                response_data = {
+                    "label": f"{label}"
+                }
+                return JsonResponse(response_data)
 
         except json.JSONDecodeError:
             return JsonResponse({'error': 'Invalid JSON'}, status=400)

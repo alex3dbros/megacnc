@@ -1,4 +1,5 @@
 let capacityUpdateInterval;
+let currentBatteryId = null;  // Stores the currently open battery ID
 
 function getCookie(name) {
     let cookieValue = null;
@@ -16,80 +17,86 @@ function getCookie(name) {
 }
 
 function fetchCells(projectId) {
+    const leftList = document.getElementById('left-list');
+    if (leftList) {
+        leftList.innerHTML = '<div class="text-center p-2"><i class="fa fa-spinner fa-spin"></i></div>';
+    }
+    
     $.ajax({
-        url: '/get-cells',  // Your endpoint URL
+        url: '/get-cells',
         type: 'GET',
         data: { project_id: projectId },
         success: function(response) {
-            // Assuming 'response' contains the cells data
             updateCellsList(response.cells);
+            updateAvailableCount();
         },
         error: function() {
-            alert('Error fetching cells');
+            if (leftList) leftList.innerHTML = '<div class="text-danger p-2">Fehler</div>';
         }
     });
 }
 
-function updateCellsList(cells) {
-    const cellsList = $('#left-list');  // Assuming you have a container to display cells
-    cellsList.empty();  // Clear existing cells
-    cells.forEach(function(cell) {
+// Extract Cell-ID from UUID (e.g. "D20230620-S012559" -> "012559")
+function extractCellId(uuid) {
+    const match = uuid.match(/-S(\d+)/);
+    return match ? match[1] : uuid;
+}
 
+function updateCellsList(cells) {
+    const cellsList = $('#left-list');
+    cellsList.empty();
+    cells.forEach(function(cell) {
         var listItem = document.createElement('div');
         listItem.className = 'list-group-item';
-        listItem.textContent = `${cell.id} - ${cell.capacity}`;
+        const cellId = extractCellId(cell.uuid);
+        listItem.textContent = `${cellId} - ${cell.capacity} mAh - ${cell.esr} mΩ`;
         listItem.dataset.itemId = `${cell.uuid}`;
+        listItem.dataset.cellId = cellId;
         listItem.dataset.capacity = `${cell.capacity}`;
-
+        listItem.dataset.esr = `${cell.esr}`;
+        listItem.dataset.voltage = `${cell.voltage}`;
         cellsList.append(listItem);
     });
 }
 
-function createProjectDropdown(projects, selectedProjectName = "Select Project") {
-    // Create the dropdown container
-    let dropdownDiv = document.createElement('div');
-    dropdownDiv.className = 'dropdown';
-
-    // Create the button that toggles the dropdown
-    let button = document.createElement('button');
-    button.className = 'btn btn-default dropdown-toggle';
-    button.setAttribute('type', 'button');
-    button.setAttribute('data-bs-toggle', 'dropdown');
-    button.textContent = selectedProjectName;
-
-    // Create the dropdown menu
-    let dropdownMenu = document.createElement('div');
-    dropdownMenu.className = 'dropdown-menu';
-
+function populateProjectDropdown(projects) {
+    const select = document.getElementById('project-dropdown');
+    if (!select) return;
+    
     // Add 'All' option
-    let allOption = document.createElement('a');
-    allOption.className = 'dropdown-item';
-    allOption.href = 'javascript:void(0);';
-    allOption.textContent = 'All';
-    allOption.onclick = function() {
-        fetchCells('all');
-        button.textContent = 'All'; // Update button text
-    };
-    dropdownMenu.appendChild(allOption);
-
+    const allOption = document.createElement('option');
+    allOption.value = 'all';
+    allOption.textContent = 'Alle Projekte';
+    allOption.selected = true;
+    select.appendChild(allOption);
+    
     // Add project options
     projects.forEach(project => {
-        let option = document.createElement('a');
-        option.className = 'dropdown-item';
-        option.href = 'javascript:void(0);';
+        const option = document.createElement('option');
+        option.value = project.id;
         option.textContent = project.name;
-        option.onclick = function() {
-            fetchCells(project.id);
-            button.textContent = project.name; // Update button text
-        };
-        dropdownMenu.appendChild(option);
+        select.appendChild(option);
     });
+    
+    // Event listener for selection change
+    select.addEventListener('change', function() {
+        fetchCells(this.value);
+    });
+    
+    // Initial load
+    fetchCells('all');
+}
 
-    // Assemble the dropdown
-    dropdownDiv.appendChild(button);
-    dropdownDiv.appendChild(dropdownMenu);
+function updateAvailableCount() {
+    const count = document.querySelectorAll('#left-list .list-group-item').length;
+    const badge = document.getElementById('available-count');
+    if (badge) badge.textContent = count;
+}
 
-    return dropdownDiv;
+function updateTransferCount() {
+    const count = document.querySelectorAll('#middle-list .list-group-item').length;
+    const badge = document.getElementById('transfer-count');
+    if (badge) badge.textContent = count;
 }
 
 function makeBatterySortable() {
@@ -164,23 +171,54 @@ function updateCapacityOnModification(event) {
 }
 
 
-function fetchAndPopulateCells(batteryId) {
+// Convert old slot ID format (cell-1A) to new format (cell-1-1)
+function convertSlotId(oldId) {
+    // Match old format: cell-1A, cell-2B, etc.
+    const match = oldId.match(/^cell-(\d+)([A-Z]+)$/);
+    if (match) {
+        const series = match[1];
+        const parallelLetter = match[2];
+        const parallelNum = parallelLetter.charCodeAt(0) - 64; // A=1, B=2, etc.
+        return `cell-${series}-${parallelNum}`;
+    }
+    return oldId; // Already in new format or unknown
+}
+
+function fetchAndPopulateCells(batteryId, series, parallel) {
     fetch(`/get-battery-cells/?bat_id=${batteryId}`)
     .then(response => response.json())
     .then(data => {
         data.cells.forEach(cell => {
-            const slotId = cell.bat_position;  // Using bat_position directly from the response
-            const slot = document.getElementById(slotId);
+            // Support both old (cell-1A) and new (cell-1-1) format
+            let slotId = convertSlotId(cell.bat_position);
+            let slot = document.getElementById(slotId);
+            
             if (slot) {
                 const listItem = document.createElement('li');
-                listItem.textContent = `${cell.id} - ${cell.capacity}`;
+                const cellId = extractCellId(cell.uuid);
+                listItem.textContent = `${cellId}`;
                 listItem.className = 'list-group-item';
-                listItem.dataset.itemId = cell.uuid; // Use UUID instead of serial number as itemId
+                listItem.dataset.itemId = cell.uuid;
+                listItem.dataset.cellId = cellId;
                 listItem.dataset.capacity = cell.capacity;
+                listItem.dataset.esr = cell.esr;
+                listItem.dataset.voltage = cell.voltage;
+                listItem.title = `${cell.capacity} mAh | ${cell.esr} mΩ`;
                 slot.appendChild(listItem);
             }
         });
-        updateAllCapacities();  // This function needs to be defined to update capacities based on cells added.
+        updateAllCapacities();
+        
+        // Check if pack is already complete (status = ready)
+        if (data.battery_status === 'ready' && data.cells.length === series * parallel) {
+            setWorkflowStep(6); // Show completed state
+        } else if (data.cells.length > 0) {
+            // Has some cells but not complete - go to step 5 (save)
+            setWorkflowStep(5);
+        } else {
+            // Empty pack - start from step 1
+            setWorkflowStep(1);
+        }
     })
     .catch(error => console.error('Failed to fetch cells:', error));
 }
@@ -195,11 +233,9 @@ function updateAllCapacities() {
         updateSeriesCapacityById(seriesId);
     });
 
-    // Count the cells in the middle-list
-    const middleListCellsCount = document.querySelectorAll('#middle-list .list-group-item').length;
-    // Update the h4 text
-    const transferCellsTitle = document.getElementById('transfer-cells-title');
-    transferCellsTitle.textContent = `Transfer Cells (${middleListCellsCount})`; // Display count
+    // Update counters
+    updateAvailableCount();
+    updateTransferCount();
 }
 
 
@@ -212,55 +248,77 @@ function updateSeriesCapacityById(seriesId) {
     });
 
     const capacityDisplay = document.getElementById(`capacity-${seriesId}`);
-    capacityDisplay.textContent = `${totalCapacity.toFixed(2)} mAh`;
+    if (capacityDisplay) {
+        capacityDisplay.textContent = `${totalCapacity.toFixed(2)} mAh`;
+    }
 }
 
 
 function createBatteryLayout(series, parallel, batteryId) {
     const container = document.createElement('div');
-    container.className = 'col-md-4';
-    container.innerHTML = `<h4 class="text-center">Battery Pack Layout</h4>`;
+    container.className = 'w-100';
+    
+    const totalCells = series * parallel;
+    container.innerHTML = `
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5 class="mb-0"><i class="fa fa-battery-full me-2"></i>Battery Pack (${series}S${parallel}P = ${totalCells} Zellen)</h5>
+            <span class="badge bg-info">Kapazität links | Zellen rechts scrollbar</span>
+        </div>
+    `;
 
-    const table = document.createElement('table');
-    table.className = 'table';
-
-    const tbody = document.createElement('tbody');
-    table.appendChild(tbody);
+    // Create wrapper for horizontal scroll if many parallel cells
+    const scrollWrapper = document.createElement('div');
+    scrollWrapper.className = 'battery-scroll-wrapper';
+    
+    const layoutDiv = document.createElement('div');
+    layoutDiv.className = 'battery-grid-layout';
 
     for (let i = 0; i < series; i++) {
-        const tr = document.createElement('tr');
-        const rowNumberCell = document.createElement('td');
-        rowNumberCell.textContent = i + 1;
-        rowNumberCell.className = 'text-center';
-        tr.appendChild(rowNumberCell);
-
+        const seriesRow = document.createElement('div');
+        seriesRow.className = 'series-row';
+        
+        // Fixed left part: Capacity + Series label
+        const fixedPart = document.createElement('div');
+        fixedPart.className = 'series-fixed';
+        fixedPart.innerHTML = `
+            <div class="capacity-display" id="capacity-${i + 1}">0 mAh</div>
+            <div class="series-label">S${i + 1}</div>
+        `;
+        seriesRow.appendChild(fixedPart);
+        
+        // Scrollable part: Cell slots
+        const cellsContainer = document.createElement('div');
+        cellsContainer.className = 'cells-container';
+        
         for (let j = 0; j < parallel; j++) {
-            const td = document.createElement('td');
+            const cellSlot = document.createElement('div');
+            cellSlot.className = 'cell-slot';
+            
             const cellList = document.createElement('ul');
             cellList.className = 'sortable-cell';
-            cellList.id = `cell-${i + 1}${String.fromCharCode(65 + j)}`;
-            cellList.dataset.series = i + 1; // Keep track of series for each cell container
-
-            // Event listener setup (assuming SortableJS or similar)
-            //setupCellListeners(cellList);
-
-            td.appendChild(cellList);
-            tr.appendChild(td);
+            // Use numeric index for large parallel counts
+            cellList.id = `cell-${i + 1}-${j + 1}`;
+            cellList.dataset.series = i + 1;
+            cellList.title = `S${i + 1} P${j + 1}`;
+            
+            const label = document.createElement('span');
+            label.className = 'slot-label';
+            label.textContent = `P${j + 1}`;
+            
+            cellSlot.appendChild(label);
+            cellSlot.appendChild(cellList);
+            cellsContainer.appendChild(cellSlot);
         }
-
-        const capacityCell = document.createElement('td');
-        capacityCell.className = 'text-center capacity-display';
-        capacityCell.id = `capacity-${i + 1}`;
-        capacityCell.textContent = "0 mAh";
-        tr.appendChild(capacityCell);
-
-        tbody.appendChild(tr);
+        
+        seriesRow.appendChild(cellsContainer);
+        layoutDiv.appendChild(seriesRow);
     }
 
-    container.appendChild(table);
+    scrollWrapper.appendChild(layoutDiv);
+    container.appendChild(scrollWrapper);
 
     if (batteryId) {
-        fetchAndPopulateCells(batteryId);
+        fetchAndPopulateCells(batteryId, series, parallel);
     }
 
     return container;
@@ -337,10 +395,14 @@ $('#batteries-tbl').on('click', '.expandBtn', function() {
 
     var batteryId = $(this).data('battery-id');
     var UUID = $(this).data('battery-uuid');
+    var batteryName = $(this).data('battery-name');
     var projects = $(this).data('projects');
     var series = $(this).data('series');
     var parallel = $(this).data('parallel');
-    var required_cells_count = series * parallel
+    var required_cells_count = series * parallel;
+    
+    // Store battery ID globally for replacement logging
+    currentBatteryId = batteryId;
 
     // Hide and remove all other accordion contents except for the current one
     $allAccordions.not($nextRow).hide().remove();
@@ -364,145 +426,402 @@ $('#batteries-tbl').on('click', '.expandBtn', function() {
         var accordionRow = `
             <tr class="accordion-content" data-battery-number="${batteryId}">
                 <td colspan="${colspan}">
-                    <div class="container-fluid">
-                        <div class="row">
-                            <!-- Project Selection and List of Cells -->
-                            <div class="col-md-2">
-                            
-                                <div id="dropdown-container">
-                                    <!-- Dynamic dropdown will be inserted here by JavaScript -->
-                                </div>
-                                
-                                <div id="${leftListId}" class="list-group">
-                                    <!-- Items will be dynamically inserted here -->
-                                </div>
-                                
-                                <div class="control-panel">
-                                    <input type="number" id="min-capacity-input" class="form-control" style="width: auto; display: inline-block; margin-top:10px; margin-right: 5px;" placeholder="Min Capacity (mAh)">
-                                    <input type="number" id="max-capacity-input" class="form-control" style="width: auto; display: inline-block; margin-top:10px;" placeholder="Max Capacity (mAh)">
-                                    <button class="btn btn-light" id="auto-select-btn" style="margin-top: 10px;">Auto Select</button>
-                                </div>
-
-
+                    <div class="pack-editor">
+                        <!-- Instruction Banner -->
+                        <div id="instruction-banner" class="instruction-banner">
+                            <i class="fa fa-lightbulb-o banner-icon"></i>
+                            <div class="banner-text">
+                                <span class="banner-step">Schritt 1:</span>
+                                <span id="instruction-text">Wählen Sie ein Projekt aus, von dem Sie die Zellen verwenden möchten.</span>
                             </div>
-                            
-                            <!-- Transfer List -->
-                            <div class="col-md-2">
-                                <h4 id="transfer-cells-title" class="text-center">Transfer Cells</h4>
-
-                                <div id="${middleListId}" class="list-group">
-                                    <!-- Items moved from left list will appear here -->
+                        </div>
+                        
+                        <!-- Control Bar - Redesigned -->
+                        <div class="control-bar-new">
+                            <div class="filter-section">
+                                <div class="filter-group" id="project-group">
+                                    <label>Projekt</label>
+                                    <select id="project-dropdown"></select>
                                 </div>
-                                <button id="assign-btn" class="btn btn-light" style="margin-top: 10px;">Assign</button>
-
-                            </div>
-                            
-                            <div class="col-md-8">
-                            <!-- Battery Pack Visualization -->
-                                <div class="col-md-4">
-
-                                    <h4 class="text-center">Search by UUID</h4>
-                                    <input type="text" id="uuid-search" class="form-control" placeholder="Enter UUID">
-                                    <div id="battery-controls">
-
-                                        <button class="btn btn-light" id="reset-btn" style="margin-top: 10px;">Reset Cells</button>
-                                        <button class="btn btn-light" id="save-btn" style="margin-top: 10px; margin-left: 10px;">Save Pack</button>
+                                <div class="filter-group" id="mah-group">
+                                    <label>Kapazität (mAh)</label>
+                                    <div class="d-flex gap-1">
+                                        <input type="number" id="min-capacity-input" placeholder="Min" style="width:70px">
+                                        <input type="number" id="max-capacity-input" placeholder="Max" style="width:70px">
                                     </div>
-                                    
                                 </div>
-                            
-                            
-                                <div id="battery-pack-container">
-                                    <!-- Dynamic dropdown will be inserted here by JavaScript -->
+                                <div class="info-badges">
+                                    <div class="info-group">
+                                        <span class="info-label">Verfügbar:</span>
+                                        <span class="badge bg-secondary" id="available-count">0</span>
+                                    </div>
+                                    <div class="info-group transfer-toggle" id="transfer-toggle">
+                                        <span class="info-label">Transfer:</span>
+                                        <span class="badge bg-success" id="transfer-count">0</span>
+                                        <i class="fa fa-chevron-down ms-1"></i>
+                                    </div>
                                 </div>
-                                
-
-
-                                
+                            </div>
+                            <div class="utility-buttons">
+                                <button class="btn btn-info btn-sm" id="chart-btn" title="Grafik anzeigen"><i class="fa fa-line-chart"></i></button>
+                                <button class="btn btn-secondary btn-sm" id="history-btn" title="Ersetzungs-Historie"><i class="fa fa-history"></i></button>
+                                <button class="btn btn-secondary btn-sm" id="print-pack-btn" title="Labels drucken"><i class="fa fa-print"></i></button>
+                                <button class="btn btn-secondary btn-sm" id="export-pack-btn" title="Zellenliste exportieren"><i class="fa fa-download"></i></button>
+                                <button class="btn btn-danger btn-sm" id="dissolve-btn" title="Pack auflösen"><i class="fa fa-trash"></i></button>
+                            </div>
+                        </div>
+                        
+                        <!-- Step Buttons - Clickable Workflow -->
+                        <div class="step-buttons">
+                            <button class="step-btn active" id="step-btn-1" data-step="1">
+                                <span class="step-num">①</span> Zellen wählen
+                            </button>
+                            <span class="step-arrow">→</span>
+                            <button class="step-btn" id="step-btn-2" data-step="2" disabled>
+                                <span class="step-num">②</span> Auto-Select
+                            </button>
+                            <span class="step-arrow">→</span>
+                            <button class="step-btn" id="step-btn-3" data-step="3" disabled>
+                                <span class="step-num">③</span> Assign
+                            </button>
+                            <span class="step-arrow">→</span>
+                            <button class="step-btn" id="step-btn-4" data-step="4" disabled>
+                                <span class="step-num">④</span> Balancing
+                            </button>
+                            <span class="step-arrow">→</span>
+                            <button class="step-btn" id="step-btn-5" data-step="5" disabled>
+                                <span class="step-num">⑤</span> Speichern
+                            </button>
+                            <!-- Balancing Controls -->
+                            <div id="balancing-controls" class="balancing-controls" style="display:none;">
+                                <button class="btn btn-warning btn-sm" id="pause-btn" title="Pause">
+                                    <i class="fa fa-pause"></i>
+                                </button>
+                                <button class="btn btn-danger btn-sm" id="stop-btn" title="Stop">
+                                    <i class="fa fa-stop"></i>
+                                </button>
+                            </div>
+                            <div id="unsaved-indicator" class="unsaved-indicator">
+                                <i class="fa fa-exclamation-triangle"></i> Nicht gespeichert
+                            </div>
+                        </div>
+                        
+                        <!-- Status Display -->
+                        <div id="assign-status" class="assign-status" style="display:none;">
+                            <div class="status-content">
+                                <i class="fa fa-cog fa-spin me-2"></i>
+                                <span id="status-text">Initialisiere...</span>
+                            </div>
+                            <div class="progress mt-2" style="height:4px;">
+                                <div id="status-progress" class="progress-bar bg-success" style="width:0%"></div>
+                            </div>
+                        </div>
+                        
+                        <!-- Result Banner (shown after balancing) -->
+                        <div id="result-banner" class="result-banner" style="display:none;"></div>
+                        
+                        <!-- Hidden Transfer List (collapsible) -->
+                        <div id="transfer-panel" class="transfer-panel" style="display:none;">
+                            <div id="${middleListId}" class="list-group cell-list"></div>
+                        </div>
+                        
+                        <!-- Hidden source list for cells -->
+                        <div id="${leftListId}" class="list-group" style="display:none;"></div>
+                        
+                        <!-- Battery Pack Layout -->
+                        <div class="pack-section">
+                            <div id="battery-pack-container"></div>
+                        </div>
+                    </div>
+                    
+                    <!-- Chart Modal -->
+                    <div id="chart-modal-overlay" class="chart-modal-overlay">
+                        <div class="chart-modal">
+                            <div class="chart-modal-header">
+                                <span class="chart-modal-title"><i class="fa fa-line-chart me-2"></i>Pack Analyse - ${series}S${parallel}P</span>
+                                <button class="chart-modal-close" id="chart-modal-close">&times;</button>
+                            </div>
+                            <div class="chart-modal-body">
+                                <div class="series-selector" id="series-selector"></div>
+                                <div class="chart-controls" id="chart-controls"></div>
+                                <div class="chart-container">
+                                    <canvas id="pack-chart"></canvas>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </td>
-                </tr>
-
+            </tr>
         `;
 
     // Insert accordion and initialize Sortable
     $(accordionRow).insertAfter($triggerRow).show(function() {
-        new Sortable(document.getElementById(leftListId), { group: 'shared', animation: 150 });
-        new Sortable(document.getElementById(middleListId), { group: 'shared', animation: 150 });
+        new Sortable(document.getElementById(leftListId), { 
+            group: 'shared', 
+            animation: 150,
+            onAdd: function() { updateAvailableCount(); updateTransferCount(); },
+            onRemove: function() { updateAvailableCount(); updateTransferCount(); }
+        });
+        new Sortable(document.getElementById(middleListId), { 
+            group: 'shared', 
+            animation: 150,
+            onAdd: function() { updateTransferCount(); },
+            onRemove: function() { updateTransferCount(); }
+        });
 
-        let accordionContent = document.getElementById('accordion-content-id');
-        console.log(projects);
-        let dropdown  = createProjectDropdown(projects);
-        document.getElementById('dropdown-container').appendChild(dropdown);
+        // Initialize project dropdown
+        populateProjectDropdown(projects);
 
         const batteryLayout = createBatteryLayout(series, parallel, batteryId);
         document.getElementById('battery-pack-container').appendChild(batteryLayout);
         makeBatterySortable();
+        
+        // Initialize wizard at step 1
+        setWorkflowStep(1);
 
-        const searchInput = document.getElementById('uuid-search');
-
-        console.log(searchInput);
-
-        // Listen for input events for real-time feedback and keypress to handle Enter
-        searchInput.addEventListener('input', function() {
-            const uuid = this.value.trim();
-            highlightCell(uuid, required_cells_count);
-        });
-
-        searchInput.addEventListener('keypress', function(event) {
-            if (event.key === 'Enter') {
-                event.preventDefault();  // Prevent any default action associated with the Enter key
-                const uuid = this.value.trim();
-                console.log(uuid);
-                highlightCell(uuid, required_cells_count);
-                this.select();
+        // Transfer panel toggle
+        document.getElementById('transfer-toggle').addEventListener('click', function() {
+            const panel = document.getElementById('transfer-panel');
+            const icon = this.querySelector('i');
+            if (panel.style.display === 'none') {
+                panel.style.display = 'block';
+                icon.className = 'fa fa-chevron-up ms-1';
+            } else {
+                panel.style.display = 'none';
+                icon.className = 'fa fa-chevron-down ms-1';
             }
         });
 
+        // Step 1: Zellen wählen - Initial step, just confirms selection
+        document.getElementById('step-btn-1').addEventListener('click', function() {
+            // Move to step 2 when user confirms project/filter selection
+            setWorkflowStep(2);
+            toastr.info('Projekt und Filter bestätigt. Klicken Sie nun auf Auto-Select.', 'Schritt 1 abgeschlossen');
+        });
 
-        document.getElementById('auto-select-btn').addEventListener('click', function() {
-            const minCapacity = parseFloat(document.getElementById('min-capacity-input').value);
-            const maxCapacity = parseFloat(document.getElementById('max-capacity-input').value);
-            const leftListItems = document.querySelectorAll('#left-list .list-group-item');
+        // Step 2: Auto-Select
+        document.getElementById('step-btn-2').addEventListener('click', function() {
+            setStepProcessing(2);
+            
+            const minCapacity = parseFloat(document.getElementById('min-capacity-input').value) || 0;
+            const maxCapacity = parseFloat(document.getElementById('max-capacity-input').value) || 99999;
+            const leftListItems = Array.from(document.querySelectorAll('#left-list .list-group-item'));
             const middleList = document.getElementById('middle-list');
             let neededItemsCount = calculateNeededItems(required_cells_count);
 
-            leftListItems.forEach(item => {
-                let itemCapacity = parseFloat(item.dataset.capacity);
-                if ((itemCapacity >= minCapacity && itemCapacity <= maxCapacity) && neededItemsCount > 0) {
-                    middleList.appendChild(item); // This moves the item, not just cloning
-                    neededItemsCount--; // Decrement the needed items count
-                }
+            // Phase A: Filter valid candidates
+            let validCandidates = leftListItems.filter(item => {
+                let cap = parseFloat(item.dataset.capacity);
+                return cap >= minCapacity && cap <= maxCapacity;
             });
 
-            updateLeftListUI(); // Optional: Update the UI if needed
+            // Sort: capacity ascending, then ESR descending (worst to best)
+            validCandidates.sort((a, b) => {
+                let capDiff = parseFloat(a.dataset.capacity) - parseFloat(b.dataset.capacity);
+                if (capDiff !== 0) return capDiff;
+                return parseFloat(b.dataset.esr) - parseFloat(a.dataset.esr);
+            });
 
+            // Equidistant sampling for representative selection
+            if (validCandidates.length >= neededItemsCount && neededItemsCount > 0) {
+                const step = validCandidates.length / neededItemsCount;
+                for (let i = 0; i < neededItemsCount; i++) {
+                    const index = Math.floor(i * step);
+                    middleList.appendChild(validCandidates[index]);
+                }
+            } else {
+                // Not enough cells - take all valid candidates
+                validCandidates.forEach(item => {
+                    if (neededItemsCount > 0) {
+                        middleList.appendChild(item);
+                        neededItemsCount--;
+                    }
+                });
+            }
+
+            updateLeftListUI();
+            updateAllCapacities();
+            
+            // Update workflow step
+            setWorkflowStep(3); // Ready for Assign
+            toastr.info(`${required_cells_count - calculateNeededItems(required_cells_count)} Zellen ausgewählt`, 'Auto-Select');
         });
 
-    document.getElementById('assign-btn').addEventListener('click', function() {
-        assignCellsToPack(series, parallel);
-    });
+        // Step 3: Assign - Serpentine Distribution
+        document.getElementById('step-btn-3').addEventListener('click', function() {
+            setStepProcessing(3);
+            balancingPaused = false;
+            balancingStopped = false;
+            
+            // Run serpentine distribution
+            (async function() {
+                try {
+                    const result = await serpentineDistribution(series, parallel);
+                    if (balancingStopped) {
+                        showStopDialog(series, parallel, result.seriesArrays, 3);
+                    } else {
+                        // Auto-start balancing
+                        setWorkflowStep(4);
+                        document.getElementById('step-btn-4').click();
+                    }
+                } catch (error) {
+                    console.error('Serpentine error:', error);
+                    toastr.error('Fehler bei der Verteilung: ' + error.message, 'Fehler');
+                    hideStatus();
+                    setWorkflowStep(3);
+                }
+            })();
+        });
+        
+        // Step 4: Balancing - Swap Optimization
+        document.getElementById('step-btn-4').addEventListener('click', function() {
+            setStepProcessing(4);
+            balancingPaused = false;
+            balancingStopped = false;
+            
+            // Run swap balancing
+            (async function() {
+                try {
+                    const result = await swapBalancing(series, parallel);
+                    if (balancingStopped) {
+                        showStopDialog(series, parallel, result.seriesArrays, 4);
+                    } else {
+                        setWorkflowStep(5);
+                        toastr.success('Balancing abgeschlossen!', 'Fertig');
+                    }
+                } catch (error) {
+                    console.error('Balancing error:', error);
+                    if (!balancingStopped) {
+                        toastr.error('Fehler beim Balancing: ' + error.message, 'Fehler');
+                        hideStatus();
+                        setWorkflowStep(4);
+                    }
+                }
+            })();
+        });
+        
+        // Pause Button
+        document.getElementById('pause-btn').addEventListener('click', function() {
+            balancingPaused = !balancingPaused;
+            const icon = this.querySelector('i');
+            if (balancingPaused) {
+                icon.className = 'fa fa-play';
+                this.title = 'Fortsetzen';
+                toastr.warning('Prozess pausiert', 'Pause');
+            } else {
+                icon.className = 'fa fa-pause';
+                this.title = 'Pause';
+                toastr.info('Prozess fortgesetzt', 'Fortgesetzt');
+            }
+        });
+        
+        // Stop Button
+        document.getElementById('stop-btn').addEventListener('click', function() {
+            balancingStopped = true;
+        });
+        
+        // Check for resume on pack open
+        checkForResume(batteryId, series, parallel);
 
     capacityUpdateInterval = setInterval(updateAllCapacities, 1000);
 
-
-    document.getElementById('reset-btn').addEventListener('click', function() {
-        const slots = document.querySelectorAll('.sortable-cell');
-        const middleList = document.getElementById('middle-list');
-
-        slots.forEach(slot => {
-            // Move each cell in the slot back to the middle list
-            while (slot.firstChild) {
-                middleList.appendChild(slot.firstChild);
-            }
-        });
-
-        updateAllCapacities(); // Update capacities if necessary
+    // Chart Button
+    document.getElementById('chart-btn').addEventListener('click', function() {
+        openPackChart(series, parallel);
+    });
+    
+    // Chart Modal Close
+    document.getElementById('chart-modal-close').addEventListener('click', function() {
+        closePackChart();
+    });
+    
+    // Close modal on overlay click
+    document.getElementById('chart-modal-overlay').addEventListener('click', function(e) {
+        if (e.target === this) {
+            closePackChart();
+        }
     });
 
-    document.getElementById('save-btn').addEventListener('click', function() {
+    // History Button
+    document.getElementById('history-btn').addEventListener('click', function() {
+        openReplacementHistory(batteryId);
+    });
+
+    // Print Pack Button
+    document.getElementById('print-pack-btn').addEventListener('click', function() {
+        printPackLabels();
+    });
+
+    // Export Pack Button
+    document.getElementById('export-pack-btn').addEventListener('click', function() {
+        exportPackCells(batteryName);
+    });
+
+    // Pack auflösen Button
+    document.getElementById('dissolve-btn').addEventListener('click', function() {
+        // Count current cells in pack
+        const cellsInPack = document.querySelectorAll('.sortable-cell .list-group-item').length;
+        
+        if (cellsInPack === 0) {
+            toastr.info('Pack ist bereits leer', 'Info');
+            return;
+        }
+        
+        // Show confirmation dialog
+        const confirmed = confirm(
+            `⚠️ Pack wirklich auflösen?\n\n` +
+            `${cellsInPack} Zellen werden freigegeben und\n` +
+            `stehen wieder zur Verfügung.\n\n` +
+            `Diese Aktion kann nicht rückgängig gemacht werden.`
+        );
+        
+        if (!confirmed) return;
+        
+        // Send empty cellsData to backend to release all cells
+        const payload = {
+            batteryId: batteryId,
+            cellsData: []  // Empty = release all cells
+        };
+        
+        fetch('/save-battery-configuration/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify(payload)
+        })
+        .then(response => response.json())
+        .then(data => {
+            console.log('Pack dissolved:', data);
+            
+            // Clear all slots visually
+            document.querySelectorAll('.sortable-cell').forEach(slot => {
+                slot.innerHTML = '';
+                slot.classList.remove('cell-done', 'cell-placed');
+            });
+            
+            // Clear transfer list
+            document.getElementById('middle-list').innerHTML = '';
+            
+            // Update UI
+            updateAllCapacities();
+            markSaved();
+            hideResultBanner();
+            setWorkflowStep(1);
+            
+            toastr.success(`${cellsInPack} Zellen wurden freigegeben`, 'Pack aufgelöst');
+        })
+        .catch((error) => {
+            console.error('Error:', error);
+            toastr.error('Fehler beim Auflösen des Packs', 'Fehler');
+        });
+    });
+
+    // Step 5: Save
+    document.getElementById('step-btn-5').addEventListener('click', function() {
+        setStepProcessing(5);
+        
         const cellsData = [];
         const seriesSlots = document.querySelectorAll('.sortable-cell');
 
@@ -534,11 +853,21 @@ $('#batteries-tbl').on('click', '.expandBtn', function() {
         .then(response => response.json())
         .then(data => {
             console.log('Success:', data);
-            toastr.success('Pack configuration saved successfully!', "Success");
+            toastr.success('Pack erfolgreich gespeichert!', "Gespeichert");
+            markSaved();
+            hideResultBanner();
+            clearStepCheckpoint();
+            setWorkflowStep(6); // Set to finished state
+            
+            // Update the table row with new data
+            if (data.battery) {
+                updateBatteryTableRow(batteryId, data.battery);
+            }
         })
         .catch((error) => {
             console.error('Error:', error);
-            toastr.error("Error saving pack configuration", "Error");
+            toastr.error("Fehler beim Speichern", "Fehler");
+            setWorkflowStep(5); // Stay at step 5
         });
     });
 
@@ -556,67 +885,1791 @@ $('#batteries-tbl').on('click', '.expandBtn', function() {
 
 });
 
-// Assign Cells to pack
-function assignCellsToPack(series, parallel) {
-    const cells = Array.from(document.querySelectorAll('#middle-list .list-group-item'));
-    const requiredCells = series * parallel;
+// Helper: Calculate parallel resistance (1 / sum(1/R))
+function calculateGroupResistance(cellsArray) {
+    const sumInverseR = cellsArray.reduce((sum, cell) => {
+        const esr = parseFloat(cell.dataset.esr) || 1;
+        return sum + (1 / esr);
+    }, 0);
+    return sumInverseR > 0 ? 1 / sumInverseR : 0;
+}
 
-    cells.sort((a, b) => parseFloat(b.dataset.capacity) - parseFloat(a.dataset.capacity));
+// Helper: Calculate standard deviation
+function calculateStdDev(values) {
+    if (values.length === 0) return 0;
+    const mean = values.reduce((a, b) => a + b, 0) / values.length;
+    const squaredDiffs = values.map(v => Math.pow(v - mean, 2));
+    return Math.sqrt(squaredDiffs.reduce((a, b) => a + b, 0) / values.length);
+}
 
-    let seriesArrays = Array.from({ length: series }, () => []);
+// Helper: Calculate group capacity
+function calculateGroupCapacity(cellsArray) {
+    return cellsArray.reduce((total, cell) => total + parseFloat(cell.dataset.capacity), 0);
+}
 
-    // Two-way selection for initial fill
-    let highIndex = 0, lowIndex = cells.length - 1;
-    for (let i = 0; i < series; i++) {
-        while (seriesArrays[i].length < parallel && highIndex <= lowIndex) {
-            seriesArrays[i].push(cells[highIndex++]); // Add high capacity cell
-            if (seriesArrays[i].length < parallel && highIndex <= lowIndex) {
-                seriesArrays[i].push(cells[lowIndex--]); // Add low capacity cell
+// Multi-Objective Score: weighted combination of capacity and resistance deviation
+function calculateBalancingScore(seriesArrays, w1 = 0.6, w2 = 0.4) {
+    const capacities = seriesArrays.map(s => calculateGroupCapacity(s));
+    const resistances = seriesArrays.map(s => calculateGroupResistance(s));
+    
+    const stdDevCap = calculateStdDev(capacities);
+    const stdDevRes = calculateStdDev(resistances);
+    
+    // Normalize: capacity in mAh (thousands), resistance in mOhm (small numbers)
+    const normalizedCapScore = stdDevCap / 100; // Scale down
+    const normalizedResScore = stdDevRes * 100; // Scale up
+    
+    return (w1 * normalizedCapScore) + (w2 * normalizedResScore);
+}
+
+// Status update helper
+function updateStatus(phase, text, progress) {
+    const statusDiv = document.getElementById('assign-status');
+    const statusText = document.getElementById('status-text');
+    const progressBar = document.getElementById('status-progress');
+    
+    if (statusDiv) statusDiv.style.display = 'block';
+    if (statusText) {
+        statusText.innerHTML = `<span class="phase-label">${phase}</span>${text}`;
+    }
+    if (progressBar) progressBar.style.width = progress + '%';
+}
+
+function hideStatus() {
+    const statusDiv = document.getElementById('assign-status');
+    if (statusDiv) statusDiv.style.display = 'none';
+}
+
+// Async delay for UI updates
+function delay(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+// ============================================
+// WORKFLOW MANAGEMENT - Wizard UX
+// ============================================
+let hasUnsavedChanges = false;
+let currentWizardStep = 1;
+let balancingPaused = false;
+let balancingStopped = false;
+
+const wizardInstructions = {
+    1: { step: 'Schritt 1:', text: 'Wählen Sie ein Projekt aus und geben Sie optional Min/Max Kapazität ein. Dann klicken Sie auf "Zellen wählen".' },
+    2: { step: 'Schritt 2:', text: 'Klicken Sie auf "Auto-Select" um die besten Zellen automatisch auszuwählen.' },
+    3: { step: 'Schritt 3:', text: 'Klicken Sie auf "Assign" um die Zellen in das Pack zu übernehmen.' },
+    4: { step: 'Schritt 4:', text: 'Balancing läuft... Die Zellen werden optimal im Pack verteilt. Sie können Pause oder Stop klicken.' },
+    5: { step: 'Schritt 5:', text: 'Überprüfen Sie die Verteilung und klicken Sie auf "Speichern" um die Änderungen zu sichern.' },
+    6: { step: 'Fertig!', text: 'Das Battery Pack wurde erfolgreich gespeichert.' }
+};
+
+function setWorkflowStep(stepNumber) {
+    currentWizardStep = stepNumber;
+    
+    // Update instruction banner
+    const bannerStep = document.querySelector('.banner-step');
+    const instructionText = document.getElementById('instruction-text');
+    if (bannerStep && instructionText && wizardInstructions[stepNumber]) {
+        bannerStep.textContent = wizardInstructions[stepNumber].step;
+        instructionText.textContent = wizardInstructions[stepNumber].text;
+    }
+    
+    // Update step buttons
+    const stepButtons = document.querySelector('.step-buttons');
+    
+    if (stepNumber === 6) {
+        // Step 6 = Finished - hide wizard steps, show completion state
+        if (stepButtons) stepButtons.style.display = 'none';
+        showCompletedState();
+    } else {
+        if (stepButtons) stepButtons.style.display = 'flex';
+        hideCompletedState();
+        
+        document.querySelectorAll('.step-btn').forEach(btn => {
+            const num = parseInt(btn.dataset.step);
+            btn.classList.remove('completed', 'active', 'processing');
+            btn.disabled = true;
+            
+            if (num < stepNumber) {
+                btn.classList.add('completed');
+            } else if (num === stepNumber) {
+                btn.classList.add('active');
+                btn.disabled = false;
+            }
+        });
+    }
+    
+    // Show/hide balancing controls (visible for Step 3 and 4)
+    const balancingControls = document.getElementById('balancing-controls');
+    if (balancingControls) {
+        balancingControls.style.display = (stepNumber === 3 || stepNumber === 4) ? 'flex' : 'none';
+    }
+    
+    // Update field glow effects
+    const projectGroup = document.getElementById('project-group');
+    const mahGroup = document.getElementById('mah-group');
+    
+    if (projectGroup) projectGroup.classList.remove('field-active');
+    if (mahGroup) mahGroup.classList.remove('field-active');
+    
+    if (stepNumber === 1) {
+        if (projectGroup) projectGroup.classList.add('field-active');
+    }
+}
+
+function showCompletedState() {
+    // Show a "completed" banner instead of wizard steps
+    let completedBanner = document.getElementById('completed-state-banner');
+    if (!completedBanner) {
+        completedBanner = document.createElement('div');
+        completedBanner.id = 'completed-state-banner';
+        completedBanner.className = 'completed-state-banner';
+        completedBanner.innerHTML = `
+            <div class="completed-content">
+                <i class="fa fa-check-circle"></i>
+                <span>Battery Pack ist bereit</span>
+            </div>
+            <div class="completed-actions">
+                <button class="btn btn-info btn-sm" id="view-chart-btn" title="Grafik anzeigen"><i class="fa fa-line-chart me-1"></i>Analyse</button>
+                <button class="btn btn-secondary btn-sm" id="view-history-btn" title="Historie"><i class="fa fa-history me-1"></i>Historie</button>
+                <button class="btn btn-warning btn-sm" id="edit-pack-btn" title="Pack bearbeiten"><i class="fa fa-edit me-1"></i>Bearbeiten</button>
+            </div>
+        `;
+        const controlBar = document.querySelector('.control-bar');
+        if (controlBar) {
+            controlBar.after(completedBanner);
+        }
+        
+        // Add event listeners
+        document.getElementById('view-chart-btn')?.addEventListener('click', () => {
+            document.getElementById('chart-btn')?.click();
+        });
+        document.getElementById('view-history-btn')?.addEventListener('click', () => {
+            document.getElementById('history-btn')?.click();
+        });
+        document.getElementById('edit-pack-btn')?.addEventListener('click', () => {
+            setWorkflowStep(1); // Allow editing
+        });
+    }
+    completedBanner.style.display = 'flex';
+    
+    // Hide control bar inputs for finished packs
+    const controlBar = document.querySelector('.control-bar');
+    if (controlBar) controlBar.style.display = 'none';
+}
+
+function hideCompletedState() {
+    const completedBanner = document.getElementById('completed-state-banner');
+    if (completedBanner) completedBanner.style.display = 'none';
+    
+    const controlBar = document.querySelector('.control-bar');
+    if (controlBar) controlBar.style.display = 'flex';
+}
+
+function updateBatteryTableRow(batteryId, batteryData) {
+    // Find the expand button with this battery ID
+    const expandBtn = document.querySelector(`.expandBtn[data-battery-id="${batteryId}"]`);
+    if (!expandBtn) return;
+    
+    const row = expandBtn.closest('tr');
+    if (!row) return;
+    
+    const cells = row.querySelectorAll('td');
+    // Table structure: checkbox, id, available, name, series, parallel, required, assigned, capacity, status, date, actions
+    // Indices:         0         1   2          3     4       5         6         7         8         9       10    11
+    
+    if (batteryData.assigned !== undefined && cells[7]) {
+        cells[7].textContent = batteryData.assigned;
+    }
+    if (batteryData.capacity !== undefined && cells[8]) {
+        cells[8].textContent = batteryData.capacity.toFixed(2);
+    }
+    if (batteryData.status !== undefined && cells[9]) {
+        cells[9].textContent = batteryData.status;
+        // Update status styling
+        cells[9].className = '';
+        if (batteryData.status === 'ready') {
+            cells[9].innerHTML = '<span class="badge bg-success">Ready</span>';
+        } else if (batteryData.status === 'created') {
+            cells[9].innerHTML = '<span class="badge bg-secondary">Created</span>';
+        }
+    }
+}
+
+function setStepProcessing(stepNumber) {
+    const btn = document.getElementById(`step-btn-${stepNumber}`);
+    if (btn) {
+        btn.classList.remove('active');
+        btn.classList.add('processing');
+    }
+}
+
+function markUnsaved() {
+    hasUnsavedChanges = true;
+    const indicator = document.getElementById('unsaved-indicator');
+    const saveBtn = document.getElementById('step-btn-5');
+    if (indicator) indicator.classList.add('visible');
+    if (saveBtn) saveBtn.classList.add('needs-save');
+}
+
+function markSaved() {
+    hasUnsavedChanges = false;
+    const indicator = document.getElementById('unsaved-indicator');
+    const saveBtn = document.getElementById('step-btn-5');
+    if (indicator) indicator.classList.remove('visible');
+    if (saveBtn) saveBtn.classList.remove('needs-save');
+    setWorkflowStep(6); // Beyond last step = all done
+}
+
+function showResultBanner(stats) {
+    const banner = document.getElementById('result-banner');
+    if (!banner) return;
+    
+    banner.innerHTML = `
+        <div class="result-header">
+            <i class="fa fa-check-circle result-icon"></i>
+            <span class="result-title">Balancing abgeschlossen!</span>
+        </div>
+        <div class="result-stats">
+            <div class="stat-item">
+                <span class="stat-value">${stats.cells}</span>
+                <span class="stat-label">Zellen</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-value">${stats.iterations}</span>
+                <span class="stat-label">Iterationen</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-value">${stats.swaps}</span>
+                <span class="stat-label">Swaps</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-value">σ ${stats.stdDev}</span>
+                <span class="stat-label">mAh Abweichung</span>
+            </div>
+        </div>
+        <div class="result-actions">
+            <button class="btn btn-action btn-save-now" onclick="document.getElementById('step-btn-5').click()">
+                <i class="fa fa-save"></i> Jetzt Speichern
+            </button>
+            <button class="btn btn-action btn-outline-secondary" onclick="hideResultBanner()">
+                <i class="fa fa-times"></i> Schließen
+            </button>
+        </div>
+    `;
+    banner.style.display = 'block';
+    
+    // Mark as unsaved and update workflow
+    markUnsaved();
+    setWorkflowStep(5); // Step 5: Save
+}
+
+function hideResultBanner() {
+    const banner = document.getElementById('result-banner');
+    if (banner) banner.style.display = 'none';
+}
+
+// ============================================
+// CHART FUNCTIONALITY
+// ============================================
+let packChart = null;
+let chartDatasets = {};
+let selectedSeriesSet = new Set(); // Multi-select
+let totalSeriesCount = 0;
+
+const chartColors = {
+    capacity: { color: '#4ecca3', label: 'Kapazität (mAh)' },
+    esr: { color: '#e74c3c', label: 'ESR (mΩ)' },
+    voltage: { color: '#3498db', label: 'Spannung (V)' }
+};
+
+// Different colors for each series
+const seriesColors = [
+    '#4ecca3', '#e74c3c', '#3498db', '#f39c12', '#9b59b6',
+    '#1abc9c', '#e67e22', '#2ecc71', '#e91e63', '#00bcd4'
+];
+
+function openPackChart(series, parallel) {
+    const overlay = document.getElementById('chart-modal-overlay');
+    if (!overlay) return;
+    
+    overlay.classList.add('visible');
+    
+    // Build series selector
+    buildSeriesSelector(series);
+    
+    // Build chart controls (toggles)
+    buildChartControls();
+    
+    // Collect data and render chart
+    setTimeout(() => {
+        collectChartData(series, parallel);
+        renderPackChart(parallel);
+    }, 100);
+}
+
+function closePackChart() {
+    const overlay = document.getElementById('chart-modal-overlay');
+    if (overlay) overlay.classList.remove('visible');
+    
+    if (packChart) {
+        packChart.destroy();
+        packChart = null;
+    }
+}
+
+// ==================== REPLACEMENT HISTORY ====================
+
+function openReplacementHistory(batteryId) {
+    fetch(`/replacement-history/${batteryId}/`)
+        .then(r => r.json())
+        .then(data => {
+            showHistoryModal(data);
+        })
+        .catch(err => {
+            console.error('Error fetching history:', err);
+            toastr.error('Fehler beim Laden der Historie', 'Fehler');
+        });
+}
+
+function showHistoryModal(data) {
+    // Remove existing modal if any
+    const existingModal = document.getElementById('history-modal-overlay');
+    if (existingModal) existingModal.remove();
+    
+    const hasHistory = data.history && data.history.length > 0;
+    
+    let tableRows = '';
+    if (hasHistory) {
+        data.history.forEach(log => {
+            const date = new Date(log.replaced_at).toLocaleString('de-CH');
+            const oldCellId = extractCellId(log.old_cell_uuid);
+            const newCellId = extractCellId(log.new_cell_uuid);
+            tableRows += `
+                <tr>
+                    <td>${date}</td>
+                    <td>S${log.slot_series}-P${log.slot_parallel}</td>
+                    <td>${oldCellId}<br><small class="text-muted">${log.old_capacity} mAh</small></td>
+                    <td>${newCellId}<br><small class="text-muted">${log.new_capacity} mAh</small></td>
+                    <td>${log.reason}</td>
+                </tr>
+            `;
+        });
+    }
+    
+    const modalHtml = `
+        <div id="history-modal-overlay" class="history-modal-overlay">
+            <div class="history-modal">
+                <div class="history-modal-header">
+                    <h5 class="history-modal-title">
+                        <i class="fa fa-history"></i> Ersetzungs-Historie: ${data.battery_name}
+                    </h5>
+                    <button class="history-modal-close" onclick="closeHistoryModal()">×</button>
+                </div>
+                <div class="history-modal-body">
+                    ${hasHistory ? `
+                        <table class="history-table">
+                            <thead>
+                                <tr>
+                                    <th>Datum</th>
+                                    <th>Position</th>
+                                    <th>Alte Zelle</th>
+                                    <th>Neue Zelle</th>
+                                    <th>Grund</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${tableRows}
+                            </tbody>
+                        </table>
+                    ` : `
+                        <div class="no-history">
+                            <i class="fa fa-check-circle"></i>
+                            <p>Keine Ersetzungen für dieses Pack.</p>
+                            <small>Alle Original-Zellen sind noch vorhanden.</small>
+                        </div>
+                    `}
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    
+    // Show with animation
+    setTimeout(() => {
+        document.getElementById('history-modal-overlay').classList.add('visible');
+    }, 10);
+    
+    // Close on overlay click
+    document.getElementById('history-modal-overlay').addEventListener('click', function(e) {
+        if (e.target === this) closeHistoryModal();
+    });
+}
+
+function closeHistoryModal() {
+    const overlay = document.getElementById('history-modal-overlay');
+    if (overlay) {
+        overlay.classList.remove('visible');
+        setTimeout(() => overlay.remove(), 300);
+    }
+}
+
+// ==================== PACK PRINT & EXPORT ====================
+
+function getPackCells() {
+    const cells = [];
+    const cellElements = document.querySelectorAll('.sortable-cell .list-group-item');
+    
+    cellElements.forEach(cell => {
+        const slot = cell.closest('.sortable-cell');
+        const slotId = slot ? slot.id : '';
+        const slotMatch = slotId.match(/cell-(\d+)-(\d+)/);
+        
+        cells.push({
+            cellId: extractCellId(cell.dataset.itemId),
+            uuid: cell.dataset.itemId,
+            capacity: parseFloat(cell.dataset.capacity) || 0,
+            esr: parseFloat(cell.dataset.esr) || 0,
+            voltage: parseFloat(cell.dataset.voltage) || 0,
+            series: slotMatch ? parseInt(slotMatch[1]) : 0,
+            parallel: slotMatch ? parseInt(slotMatch[2]) : 0
+        });
+    });
+    
+    return cells;
+}
+
+async function printPackLabels() {
+    const cells = getPackCells();
+    
+    console.log(`[PrintPack] Gefundene Zellen im DOM: ${cells.length}`);
+    cells.forEach((c, i) => console.log(`[PrintPack]   Zelle ${i+1}: cellId=${c.cellId}, uuid=${c.uuid}, S${c.series}P${c.parallel}`));
+
+    if (cells.length === 0) {
+        toastr.error('Keine Zellen im Pack', 'Fehler');
+        return;
+    }
+    
+    toastr.info(`Drucke ${cells.length} Labels...`, 'Drucken');
+    
+    // Get cell database IDs for printing
+    const cellIds = [];
+    for (const cell of cells) {
+        // We need to get the database ID from UUID
+        try {
+            const response = await fetch(`/get-cell-id-by-uuid/?uuid=${encodeURIComponent(cell.uuid)}`);
+            const data = await response.json();
+            console.log(`[PrintPack] UUID-Lookup: uuid=${cell.uuid}, status=${response.status}, result=`, data);
+            if (data.cell_id) {
+                cellIds.push(data.cell_id);
+            } else {
+                console.warn(`[PrintPack] ⚠ Zelle nicht gefunden in DB: uuid=${cell.uuid}`, data);
+                toastr.warning(`Zelle ${cell.cellId} (${cell.uuid}) nicht in DB gefunden`, 'Warnung');
+            }
+        } catch (e) {
+            console.error(`[PrintPack] ✖ Fehler bei UUID-Lookup: uuid=${cell.uuid}`, e);
+            toastr.error(`Fehler bei Zelle ${cell.cellId}: ${e.message}`, 'Fehler');
+        }
+    }
+    
+    console.log(`[PrintPack] Aufgelöste DB-IDs: ${cellIds.length} von ${cells.length}`, cellIds);
+    
+    if (cellIds.length === 0) {
+        toastr.error('Keine druckbaren Zellen gefunden', 'Fehler');
+        return;
+    }
+
+    if (cellIds.length < cells.length) {
+        toastr.warning(`Nur ${cellIds.length} von ${cells.length} Zellen konnten aufgelöst werden`, 'Warnung');
+    }
+    
+    // Print using existing function
+    let doubleLabel = parseInt(includedValue($("#doubleLabel")));
+    console.log(`[PrintPack] doubleLabel=${doubleLabel}, Modus: ${doubleLabel === 1 ? 'Dual' : 'Einzel'}`);
+    
+    if (doubleLabel === 1) {
+        for (let i = 0; i < cellIds.length; i += 2) {
+            const batch = cellIds.slice(i, i + 2);
+            console.log(`[PrintPack] Drucke Dual-Label Batch ${Math.floor(i/2)+1}:`, batch);
+            await printLabels(batch, -1);
+        }
+    } else {
+        for (let i = 0; i < cellIds.length; i++) {
+            console.log(`[PrintPack] Drucke Einzel-Label ${i+1}/${cellIds.length}: DB-ID=${cellIds[i]}`);
+            await printLabels([cellIds[i]], -1);
+        }
+    }
+    
+    toastr.success(`${cellIds.length} Labels gedruckt`, 'Fertig');
+}
+
+function exportPackCells(packName) {
+    const cells = getPackCells();
+    
+    if (cells.length === 0) {
+        toastr.error('Keine Zellen im Pack', 'Fehler');
+        return;
+    }
+    
+    // Sort by Cell-ID
+    cells.sort((a, b) => a.cellId.localeCompare(b.cellId));
+    
+    // Sanitize pack name for filename
+    const safePackName = packName.replace(/[^a-zA-Z0-9_-]/g, '_');
+    
+    // Create CSV content
+    const headers = ['Cell-ID', 'UUID', 'Position', 'Capacity (mAh)', 'ESR (mΩ)', 'Voltage (V)'];
+    const rows = cells.map(c => [
+        c.cellId,
+        c.uuid,
+        `S${c.series}-P${c.parallel}`,
+        c.capacity,
+        c.esr,
+        c.voltage
+    ]);
+    
+    let csvContent = headers.join(';') + '\n';
+    rows.forEach(row => {
+        csvContent += row.join(';') + '\n';
+    });
+    
+    // Add summary
+    csvContent += '\n';
+    csvContent += `Total Cells;${cells.length}\n`;
+    csvContent += `Total Capacity;${cells.reduce((sum, c) => sum + c.capacity, 0).toFixed(0)} mAh\n`;
+    csvContent += `Avg Capacity;${(cells.reduce((sum, c) => sum + c.capacity, 0) / cells.length).toFixed(1)} mAh\n`;
+    csvContent += `Avg ESR;${(cells.reduce((sum, c) => sum + c.esr, 0) / cells.length).toFixed(2)} mΩ\n`;
+    
+    // Download
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${safePackName}_cells.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+    
+    toastr.success(`${cells.length} Zellen exportiert`, 'Export');
+}
+
+function buildSeriesSelector(seriesCount) {
+    const container = document.getElementById('series-selector');
+    if (!container) return;
+    
+    totalSeriesCount = seriesCount;
+    
+    // Start with all series selected
+    selectedSeriesSet.clear();
+    for (let s = 1; s <= seriesCount; s++) {
+        selectedSeriesSet.add(s);
+    }
+    
+    let html = '<button class="series-btn active" data-series="all">Alle</button>';
+    html += '<button class="series-btn" data-series="none">Keine</button>';
+    for (let s = 1; s <= seriesCount; s++) {
+        const color = seriesColors[(s - 1) % seriesColors.length];
+        html += `<button class="series-btn active" data-series="${s}" style="--series-color: ${color}">
+            <span class="series-dot" style="background:${color}"></span>S${s}
+        </button>`;
+    }
+    container.innerHTML = html;
+    
+    // Event listeners
+    container.querySelectorAll('.series-btn').forEach(btn => {
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            const series = this.dataset.series;
+            
+            if (series === 'all') {
+                // Select all
+                selectedSeriesSet.clear();
+                for (let s = 1; s <= seriesCount; s++) {
+                    selectedSeriesSet.add(s);
+                }
+                container.querySelectorAll('.series-btn[data-series]').forEach(b => {
+                    if (b.dataset.series !== 'all' && b.dataset.series !== 'none') {
+                        b.classList.add('active');
+                    }
+                });
+            } else if (series === 'none') {
+                // Deselect all
+                selectedSeriesSet.clear();
+                container.querySelectorAll('.series-btn[data-series]').forEach(b => {
+                    if (b.dataset.series !== 'all' && b.dataset.series !== 'none') {
+                        b.classList.remove('active');
+                    }
+                });
+            } else {
+                // Toggle individual series
+                const seriesNum = parseInt(series);
+                if (selectedSeriesSet.has(seriesNum)) {
+                    selectedSeriesSet.delete(seriesNum);
+                    this.classList.remove('active');
+                } else {
+                    selectedSeriesSet.add(seriesNum);
+                    this.classList.add('active');
+                }
+            }
+            
+            console.log('Selected series:', Array.from(selectedSeriesSet));
+            updateChartVisibility();
+        });
+    });
+}
+
+function buildChartControls() {
+    const container = document.getElementById('chart-controls');
+    if (!container) return;
+    
+    let html = '';
+    for (const [key, config] of Object.entries(chartColors)) {
+        html += `
+            <div class="chart-toggle active" style="--toggle-color: ${config.color}" data-metric="${key}">
+                <span class="toggle-indicator"></span>
+                <span class="toggle-label">${config.label}</span>
+            </div>
+        `;
+    }
+    container.innerHTML = html;
+    
+    // Event listeners - use mousedown to prevent any interference
+    container.querySelectorAll('.chart-toggle').forEach(toggle => {
+        toggle.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            this.classList.toggle('active');
+            console.log('Toggle metric:', this.dataset.metric, 'active:', this.classList.contains('active'));
+            updateChartVisibility();
+        });
+    });
+}
+
+function collectChartData(seriesCount, parallelCount) {
+    chartDatasets = {};
+    
+    for (let s = 1; s <= seriesCount; s++) {
+        chartDatasets[s] = {
+            capacity: [],
+            esr: [],
+            voltage: [],
+            labels: []
+        };
+        
+        for (let p = 1; p <= parallelCount; p++) {
+            const slot = document.getElementById(`cell-${s}-${p}`);
+            const cell = slot ? slot.querySelector('.list-group-item') : null;
+            
+            chartDatasets[s].labels.push(`P${p}`);
+            
+            if (cell) {
+                chartDatasets[s].capacity.push(parseFloat(cell.dataset.capacity) || 0);
+                chartDatasets[s].esr.push(parseFloat(cell.dataset.esr) || 0);
+                chartDatasets[s].voltage.push(parseFloat(cell.dataset.voltage) || 0);
+            } else {
+                chartDatasets[s].capacity.push(null);
+                chartDatasets[s].esr.push(null);
+                chartDatasets[s].voltage.push(null);
             }
         }
     }
+}
 
-    // Calculate initial total capacities per series
-    let capacities = seriesArrays.map(s => s.reduce((total, cell) => total + parseFloat(cell.dataset.capacity), 0));
+function renderPackChart(parallelCount) {
+    const canvas = document.getElementById('pack-chart');
+    if (!canvas) return;
+    
+    const ctx = canvas.getContext('2d');
+    
+    if (packChart) {
+        packChart.destroy();
+    }
+    
+    const labels = Array.from({ length: parallelCount }, (_, i) => `P${i + 1}`);
+    const datasets = buildChartDatasets();
+    
+    packChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: datasets
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: {
+                mode: 'index',
+                intersect: false
+            },
+            plugins: {
+                legend: {
+                    display: false  // We use custom toggles
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(0,0,0,0.9)',
+                    titleColor: '#4ecca3',
+                    bodyColor: '#fff',
+                    borderColor: '#4ecca3',
+                    borderWidth: 1
+                }
+            },
+            scales: {
+                x: {
+                    grid: { color: 'rgba(255,255,255,0.1)' },
+                    ticks: { color: '#888' }
+                },
+                y: {
+                    grid: { color: 'rgba(255,255,255,0.1)' },
+                    ticks: { color: '#888' }
+                },
+                y1: {
+                    position: 'right',
+                    grid: { display: false },
+                    ticks: { color: '#e74c3c' }
+                }
+            }
+        }
+    });
+}
 
-    // Perform iterative balancing
-    for (let a = 0; a < series; a++) {
-        for (let b = a + 1; b < series; b++) {
-            // Attempt to swap cells between series a and b to minimize variance
-            for (let i = 0; i < parallel; i++) {
-                for (let j = 0; j < parallel; j++) {
-                    // Calculate potential new capacities after a swap
-                    let newCapacityA = capacities[a] - parseFloat(seriesArrays[a][i].dataset.capacity) + parseFloat(seriesArrays[b][j].dataset.capacity);
-                    let newCapacityB = capacities[b] - parseFloat(seriesArrays[b][j].dataset.capacity) + parseFloat(seriesArrays[a][i].dataset.capacity);
+function buildChartDatasets() {
+    const datasets = [];
+    const activeMetrics = getActiveMetrics();
+    const seriesToShow = Array.from(selectedSeriesSet).sort((a, b) => a - b);
+    
+    if (seriesToShow.length === 0) return datasets;
+    
+    const isMultiple = seriesToShow.length > 1;
+    const isManySelected = seriesToShow.length > 3;
+    
+    seriesToShow.forEach((seriesNum) => {
+        const data = chartDatasets[seriesNum];
+        if (!data) return;
+        
+        const seriesColor = seriesColors[(seriesNum - 1) % seriesColors.length];
+        const lineWidth = isManySelected ? 1.5 : 2;
+        const pointRadius = isManySelected ? 0 : 3;
+        
+        if (activeMetrics.includes('capacity')) {
+            datasets.push({
+                label: `S${seriesNum} Kapazität`,
+                data: data.capacity,
+                borderColor: isMultiple ? seriesColor : chartColors.capacity.color,
+                backgroundColor: `${isMultiple ? seriesColor : chartColors.capacity.color}33`,
+                borderWidth: lineWidth,
+                tension: 0.3,
+                pointRadius: pointRadius,
+                yAxisID: 'y',
+                borderDash: [] // solid line for capacity
+            });
+        }
+        
+        if (activeMetrics.includes('esr')) {
+            datasets.push({
+                label: `S${seriesNum} ESR`,
+                data: data.esr,
+                borderColor: isMultiple ? seriesColor : chartColors.esr.color,
+                backgroundColor: `${isMultiple ? seriesColor : chartColors.esr.color}33`,
+                borderWidth: lineWidth,
+                tension: 0.3,
+                pointRadius: pointRadius,
+                yAxisID: 'y1',
+                borderDash: [5, 5] // dashed line for ESR
+            });
+        }
+        
+        if (activeMetrics.includes('voltage')) {
+            datasets.push({
+                label: `S${seriesNum} Spannung`,
+                data: data.voltage,
+                borderColor: isMultiple ? seriesColor : chartColors.voltage.color,
+                backgroundColor: `${isMultiple ? seriesColor : chartColors.voltage.color}33`,
+                borderWidth: lineWidth,
+                tension: 0.3,
+                pointRadius: pointRadius,
+                yAxisID: 'y',
+                borderDash: [2, 2] // dotted line for voltage
+            });
+        }
+    });
+    
+    return datasets;
+}
 
-                    // Calculate current and new variances
-                    let currentVariance = Math.abs(capacities[a] - capacities[b]);
-                    let newVariance = Math.abs(newCapacityA - newCapacityB);
+function getActiveMetrics() {
+    const active = [];
+    document.querySelectorAll('#chart-controls .chart-toggle.active').forEach(toggle => {
+        active.push(toggle.dataset.metric);
+    });
+    return active;
+}
 
-                    // If the new variance is smaller, perform the swap
-                    if (newVariance < currentVariance) {
+function updateChartVisibility() {
+    if (!packChart) return;
+    
+    const datasets = buildChartDatasets();
+    packChart.data.datasets = datasets;
+    packChart.update();
+}
+
+// Unsaved changes warning
+window.addEventListener('beforeunload', function(e) {
+    if (hasUnsavedChanges) {
+        e.preventDefault();
+        e.returnValue = 'Änderungen wurden noch nicht gespeichert. Wirklich verlassen?';
+        return e.returnValue;
+    }
+});
+
+// ============================================
+// CHECKPOINT SYSTEM
+// ============================================
+const CHECKPOINT_KEY = 'megacell_assign_checkpoint';
+
+function saveCheckpoint(series, parallel, seriesArrays, iteration, totalSwaps, scoreHistory) {
+    try {
+        // Convert cell elements to serializable format
+        const cellPositions = seriesArrays.map(seriesArr => 
+            seriesArr.map(cell => ({
+                itemId: cell.dataset.itemId,
+                capacity: cell.dataset.capacity,
+                esr: cell.dataset.esr,
+                voltage: cell.dataset.voltage
+            }))
+        );
+        
+        const checkpoint = {
+            series,
+            parallel,
+            cellPositions,
+            iteration,
+            totalSwaps,
+            scoreHistory,
+            timestamp: Date.now()
+        };
+        
+        localStorage.setItem(CHECKPOINT_KEY, JSON.stringify(checkpoint));
+        console.log(`[Checkpoint] Saved at iteration ${iteration}`);
+    } catch (e) {
+        console.warn('[Checkpoint] Failed to save:', e);
+    }
+}
+
+function loadCheckpoint() {
+    try {
+        const data = localStorage.getItem(CHECKPOINT_KEY);
+        if (!data) return null;
+        
+        const checkpoint = JSON.parse(data);
+        
+        // Check if checkpoint is recent (< 1 hour old)
+        const age = Date.now() - checkpoint.timestamp;
+        if (age > 3600000) {
+            clearCheckpoint();
+            return null;
+        }
+        
+        return checkpoint;
+    } catch (e) {
+        console.warn('[Checkpoint] Failed to load:', e);
+        return null;
+    }
+}
+
+function clearCheckpoint() {
+    localStorage.removeItem(CHECKPOINT_KEY);
+    console.log('[Checkpoint] Cleared');
+}
+
+function hasCheckpoint() {
+    return loadCheckpoint() !== null;
+}
+
+async function resumeFromCheckpoint(checkpoint) {
+    const { series, parallel, cellPositions, iteration, totalSwaps, scoreHistory } = checkpoint;
+    
+    updateStatus('Wiederherstellung', `Lade Checkpoint von Iteration ${iteration}...`, 10);
+    await delay(300);
+    
+    // Get all cells from middle-list and create lookup
+    const allCells = Array.from(document.querySelectorAll('#middle-list .list-group-item'));
+    const cellLookup = {};
+    allCells.forEach(cell => {
+        cellLookup[cell.dataset.itemId] = cell;
+    });
+    
+    // Clear all slots
+    document.querySelectorAll('.sortable-cell').forEach(slot => {
+        slot.innerHTML = '';
+        slot.classList.remove('cell-placing', 'cell-placed', 'cell-done');
+    });
+    
+    // Restore cell positions
+    let seriesArrays = [];
+    for (let s = 0; s < series; s++) {
+        seriesArrays[s] = [];
+        for (let p = 0; p < parallel; p++) {
+            const cellData = cellPositions[s][p];
+            const cell = cellLookup[cellData.itemId];
+            
+            if (cell) {
+                seriesArrays[s].push(cell);
+                const slot = getSlot(s, p);
+                placeCellInSlot(cell, slot, false);
+                slot.classList.add('cell-placed');
+            }
+            
+            // Update progress
+            const progress = 10 + ((s * parallel + p) / (series * parallel)) * 30;
+            updateStatus('Wiederherstellung', `Stelle Zellen wieder her... (S${s+1}P${p+1})`, progress);
+        }
+    }
+    
+    updateStatus('Wiederherstellung', `Checkpoint geladen. Setze bei Iteration ${iteration} fort...`, 45);
+    await delay(500);
+    
+    // Continue with remaining iterations
+    const maxIterations = 100;
+    const earlyStopThreshold = 0.005;
+    let improved = true;
+    let currentIteration = iteration;
+    let currentTotalSwaps = totalSwaps;
+    let previousScore = scoreHistory[scoreHistory.length - 1]?.score || calculateBalancingScore(seriesArrays);
+    let initialScore = scoreHistory[0]?.score || previousScore;
+    
+    console.log(`[Resume] Continuing from iteration ${currentIteration}, score ${previousScore.toFixed(4)}`);
+    
+    while (improved && currentIteration < maxIterations) {
+        improved = false;
+        currentIteration++;
+        
+        let currentScore = calculateBalancingScore(seriesArrays);
+        let iterationSwaps = 0;
+
+        for (let a = 0; a < series; a++) {
+            for (let b = a + 1; b < series; b++) {
+                for (let i = 0; i < seriesArrays[a].length; i++) {
+                    for (let j = 0; j < seriesArrays[b].length; j++) {
                         let temp = seriesArrays[a][i];
                         seriesArrays[a][i] = seriesArrays[b][j];
                         seriesArrays[b][j] = temp;
 
-                        // Update capacities
-                        capacities[a] = newCapacityA;
-                        capacities[b] = newCapacityB;
+                        let newScore = calculateBalancingScore(seriesArrays);
+
+                        if (newScore < currentScore) {
+                            currentScore = newScore;
+                            improved = true;
+                            currentTotalSwaps++;
+                            iterationSwaps++;
+                            
+                            if (currentTotalSwaps % 5 === 0) {
+                                const slotA = getSlot(a, i);
+                                const slotB = getSlot(b, j);
+                                await animateSwap(slotA, slotB);
+                                
+                                const cellA = slotA.firstChild;
+                                const cellB = slotB.firstChild;
+                                if (cellA && cellB) {
+                                    slotA.innerHTML = '';
+                                    slotB.innerHTML = '';
+                                    slotA.appendChild(cellB);
+                                    slotB.appendChild(cellA);
+                                }
+                            }
+                        } else {
+                            seriesArrays[b][j] = seriesArrays[a][i];
+                            seriesArrays[a][i] = temp;
+                        }
                     }
+                }
+            }
+        }
+        
+        const improvement = previousScore > 0 ? ((previousScore - currentScore) / previousScore) * 100 : 0;
+        console.log(`[Score] Iter ${currentIteration}: ${currentScore.toFixed(4)} (-${improvement.toFixed(2)}%)`);
+        
+        if (improved && improvement < earlyStopThreshold && currentIteration > iteration + 5) {
+            console.log(`[Score] Early stop after resume`);
+            break;
+        }
+        
+        previousScore = currentScore;
+        
+        if (currentIteration % 10 === 0) {
+            saveCheckpoint(series, parallel, seriesArrays, currentIteration, currentTotalSwaps, scoreHistory);
+        }
+        
+        const progress = 46 + ((currentIteration - iteration) / (maxIterations - iteration)) * 45;
+        const scoreReduction = ((initialScore - currentScore) / initialScore * 100).toFixed(1);
+        updateStatus('Phase 2 (fortgesetzt)', `Iter ${currentIteration} | ${currentTotalSwaps} Swaps | -${scoreReduction}%`, progress);
+        
+        if (currentIteration % 2 === 0) await delay(15);
+    }
+    
+    clearCheckpoint();
+    
+    // Finalize
+    updateStatus('Finalisierung', 'Berechne Statistiken...', 92);
+    await delay(100);
+
+    for (let s = 0; s < series; s++) {
+        for (let p = 0; p < parallel; p++) {
+            const slot = getSlot(s, p);
+            const cell = seriesArrays[s][p];
+            if (slot && cell && slot.firstChild !== cell) {
+                placeCellInSlot(cell, slot, false);
+            }
+        }
+    }
+
+    const finalCapacities = seriesArrays.map(s => calculateGroupCapacity(s));
+    const capStdDev = calculateStdDev(finalCapacities);
+    
+    console.log('Resume complete:', currentIteration, 'total iterations,', currentTotalSwaps, 'total swaps');
+
+    markAllCellsDone();
+    setupCellTooltips();
+    updateAllCapacities();
+
+    hideStatus();
+    
+    // Show result banner
+    showResultBanner({
+        cells: series * parallel,
+        iterations: currentIteration,
+        swaps: currentTotalSwaps,
+        stdDev: capStdDev.toFixed(1)
+    });
+}
+
+// Get slot element by series and parallel index
+function getSlot(s, p) {
+    return document.getElementById(`cell-${s + 1}-${p + 1}`);
+}
+
+// Place cell in slot with animation
+function placeCellInSlot(cell, slot, animate = true) {
+    if (!slot || !cell) return;
+    
+    // Extract Cell-ID for display
+    const cellId = extractCellId(cell.dataset.itemId || '');
+    
+    // Update cell display to show just the ID (no title - we use custom tooltip)
+    cell.textContent = cellId;
+    
+    slot.innerHTML = '';
+    slot.appendChild(cell);
+    
+    if (animate) {
+        slot.classList.add('cell-placing');
+        setTimeout(() => {
+            slot.classList.remove('cell-placing');
+            slot.classList.add('cell-placed');
+        }, 150);
+    }
+}
+
+// Animate swap between two slots
+async function animateSwap(slotA, slotB) {
+    slotA.classList.add('cell-swap-source');
+    slotB.classList.add('cell-swap-target');
+    
+    await delay(80);
+    
+    slotA.classList.remove('cell-swap-source');
+    slotB.classList.remove('cell-swap-target');
+}
+
+// Mark all cells as done (green)
+function markAllCellsDone() {
+    document.querySelectorAll('.sortable-cell').forEach(slot => {
+        slot.classList.remove('cell-placing', 'cell-placed', 'cell-swap-source', 'cell-swap-target');
+        if (slot.children.length > 0) {
+            slot.classList.add('cell-done');
+        }
+    });
+}
+
+// Setup hover tooltips for cells
+function setupCellTooltips() {
+    const tooltip = document.createElement('div');
+    tooltip.className = 'cell-tooltip';
+    tooltip.style.display = 'none';
+    document.body.appendChild(tooltip);
+    
+    document.querySelectorAll('.sortable-cell .list-group-item').forEach(cell => {
+        cell.addEventListener('mouseenter', function(e) {
+            const cap = this.dataset.capacity || '?';
+            const esr = this.dataset.esr || '?';
+            const volt = this.dataset.voltage || '?';
+            const id = this.dataset.itemId || '?';
+            
+            tooltip.innerHTML = `
+                <div class="tooltip-row"><span class="tooltip-label">ID:</span><span class="tooltip-value">${id}</span></div>
+                <div class="tooltip-row"><span class="tooltip-label">Kapazität:</span><span class="tooltip-value">${cap} mAh</span></div>
+                <div class="tooltip-row"><span class="tooltip-label">ESR:</span><span class="tooltip-value">${esr} mΩ</span></div>
+                <div class="tooltip-row"><span class="tooltip-label">Spannung:</span><span class="tooltip-value">${volt} V</span></div>
+            `;
+            tooltip.style.display = 'block';
+        });
+        
+        cell.addEventListener('mousemove', function(e) {
+            tooltip.style.left = (e.pageX + 15) + 'px';
+            tooltip.style.top = (e.pageY + 10) + 'px';
+        });
+        
+        cell.addEventListener('mouseleave', function() {
+            tooltip.style.display = 'none';
+        });
+    });
+}
+
+// Global variable to store seriesArrays between steps
+let currentSeriesArrays = null;
+
+// ============================================
+// SERPENTINE DISTRIBUTION (Step 3: Assign)
+// ============================================
+async function serpentineDistribution(series, parallel) {
+    const cells = Array.from(document.querySelectorAll('#middle-list .list-group-item'));
+    const requiredCells = series * parallel;
+
+    updateStatus('Vorbereitung', `Prüfe Zellen... (${cells.length} verfügbar)`, 2);
+    await delay(200);
+
+    if (cells.length < requiredCells) {
+        hideStatus();
+        throw new Error(`Nicht genug Zellen. Benötigt: ${requiredCells}, Verfügbar: ${cells.length}`);
+    }
+
+    updateStatus('Vorbereitung', `Sortiere ${cells.length} Zellen nach Kapazität...`, 5);
+    await delay(150);
+
+    // Sort by capacity descending
+    cells.sort((a, b) => parseFloat(b.dataset.capacity) - parseFloat(a.dataset.capacity));
+
+    // Clear all slots first
+    document.querySelectorAll('.sortable-cell').forEach(slot => {
+        slot.innerHTML = '';
+        slot.classList.remove('cell-placing', 'cell-placed', 'cell-done', 'cell-swap-source', 'cell-swap-target');
+    });
+
+    updateStatus('Assign', 'Serpentine-Verteilung startet...', 8);
+    await delay(100);
+
+    let seriesArrays = Array.from({ length: series }, () => []);
+    let cellIndex = 0;
+    const animationDelay = Math.max(5, Math.min(50, 2000 / requiredCells));
+
+    for (let p = 0; p < parallel; p++) {
+        // Check for stop/pause
+        if (balancingStopped) break;
+        while (balancingPaused && !balancingStopped) {
+            await delay(100);
+        }
+        
+        const forward = (p % 2 === 0);
+        
+        for (let step = 0; step < series && cellIndex < cells.length; step++) {
+            if (balancingStopped) break;
+            while (balancingPaused && !balancingStopped) {
+                await delay(100);
+            }
+            
+            const s = forward ? step : (series - 1 - step);
+            const cell = cells[cellIndex];
+            const slot = getSlot(s, p);
+            
+            seriesArrays[s].push(cell);
+            placeCellInSlot(cell, slot, true);
+            
+            cellIndex++;
+            
+            const progress = 8 + (cellIndex / requiredCells) * 90;
+            updateStatus('Assign', `Serpentine-Verteilung (${cellIndex}/${requiredCells})`, progress);
+            
+            await delay(animationDelay);
+        }
+    }
+
+    if (!balancingStopped) {
+        updateStatus('Assign', 'Verteilung abgeschlossen!', 100);
+        await delay(300);
+        hideStatus();
+    }
+    
+    currentSeriesArrays = seriesArrays;
+    updateAllCapacities();
+    
+    return { seriesArrays, cellsPlaced: cellIndex };
+}
+
+// ============================================
+// SWAP BALANCING (Step 4: Balancing)
+// ============================================
+async function swapBalancing(series, parallel, resumeIteration = 0, resumeSwaps = 0) {
+    let seriesArrays = currentSeriesArrays;
+    
+    if (!seriesArrays) {
+        // Rebuild from DOM if not available
+        seriesArrays = Array.from({ length: series }, () => []);
+        for (let s = 0; s < series; s++) {
+            for (let p = 0; p < parallel; p++) {
+                const slot = getSlot(s, p);
+                if (slot && slot.firstChild) {
+                    seriesArrays[s].push(slot.firstChild);
                 }
             }
         }
     }
 
-    // Move cells to the corresponding slots
-    for (let i = 0; i < series; i++) {
-        for (let j = 0; j < parallel; j++) {
-            const slotId = `cell-${i + 1}${String.fromCharCode(65 + j)}`;
-            const slot = document.getElementById(slotId);
-            slot.innerHTML = ''; // Clear existing content
-            slot.appendChild(seriesArrays[i][j]); // Assign new cell
+    const isResume = resumeIteration > 0;
+    updateStatus('Balancing', isResume ? `Fortsetzen ab Iteration ${resumeIteration}...` : 'Swap-Optimierung startet...', 5);
+    await delay(200);
+
+    const maxIterations = 100;
+    const earlyStopThreshold = 0.005;
+    let improved = true;
+    let iteration = resumeIteration;
+    let totalSwaps = resumeSwaps;
+    
+    let scoreHistory = [];
+    let initialScore = calculateBalancingScore(seriesArrays);
+    let previousScore = initialScore;
+    scoreHistory.push({ iteration: iteration, score: initialScore, improvement: 0 });
+
+    while (improved && iteration < maxIterations) {
+        if (balancingStopped) break;
+        while (balancingPaused && !balancingStopped) {
+            await delay(100);
+        }
+        
+        improved = false;
+        iteration++;
+        
+        let currentScore = calculateBalancingScore(seriesArrays);
+        let iterationSwaps = 0;
+
+        for (let a = 0; a < series && !balancingStopped; a++) {
+            for (let b = a + 1; b < series && !balancingStopped; b++) {
+                for (let i = 0; i < seriesArrays[a].length && !balancingStopped; i++) {
+                    for (let j = 0; j < seriesArrays[b].length && !balancingStopped; j++) {
+                        while (balancingPaused && !balancingStopped) {
+                            await delay(100);
+                        }
+                        
+                        let temp = seriesArrays[a][i];
+                        seriesArrays[a][i] = seriesArrays[b][j];
+                        seriesArrays[b][j] = temp;
+
+                        let newScore = calculateBalancingScore(seriesArrays);
+
+                        if (newScore < currentScore) {
+                            currentScore = newScore;
+                            improved = true;
+                            totalSwaps++;
+                            iterationSwaps++;
+                            
+                            if (totalSwaps % 5 === 0 || totalSwaps < 10) {
+                                const slotA = getSlot(a, i);
+                                const slotB = getSlot(b, j);
+                                await animateSwap(slotA, slotB);
+                                
+                                const cellA = slotA.firstChild;
+                                const cellB = slotB.firstChild;
+                                if (cellA && cellB) {
+                                    slotA.innerHTML = '';
+                                    slotB.innerHTML = '';
+                                    slotA.appendChild(cellB);
+                                    slotB.appendChild(cellA);
+                                }
+                            }
+                        } else {
+                            seriesArrays[b][j] = seriesArrays[a][i];
+                            seriesArrays[a][i] = temp;
+                        }
+                    }
+                }
+            }
+        }
+        
+        const improvement = previousScore > 0 ? ((previousScore - currentScore) / previousScore) * 100 : 0;
+        scoreHistory.push({ iteration, score: currentScore, improvement, swaps: iterationSwaps });
+        
+        if (improved && improvement < earlyStopThreshold && iteration > 5) break;
+        
+        previousScore = currentScore;
+        
+        // Save checkpoint
+        if (iteration % 10 === 0) {
+            saveStepCheckpoint(series, parallel, seriesArrays, 4, iteration, totalSwaps);
+        }
+        
+        const progress = 5 + (iteration / maxIterations) * 90;
+        const scoreReduction = ((initialScore - currentScore) / initialScore * 100).toFixed(1);
+        updateStatus('Balancing', `Iter ${iteration} | ${totalSwaps} Swaps | Score -${scoreReduction}%`, progress);
+        
+        if (iteration % 2 === 0) await delay(15);
+    }
+
+    if (!balancingStopped) {
+        // Finalize
+        updateStatus('Finalisierung', 'Berechne Statistiken...', 95);
+        await delay(100);
+        
+        for (let s = 0; s < series; s++) {
+            for (let p = 0; p < parallel; p++) {
+                const slot = getSlot(s, p);
+                const cell = seriesArrays[s][p];
+                if (slot && cell && slot.firstChild !== cell) {
+                    placeCellInSlot(cell, slot, false);
+                }
+            }
+        }
+
+        const finalCapacities = seriesArrays.map(s => calculateGroupCapacity(s));
+        const capStdDev = calculateStdDev(finalCapacities);
+
+        markAllCellsDone();
+        setupCellTooltips();
+        updateAllCapacities();
+        hideStatus();
+        
+        showResultBanner({
+            cells: series * parallel,
+            iterations: iteration,
+            swaps: totalSwaps,
+            stdDev: capStdDev.toFixed(1)
+        });
+        
+        clearStepCheckpoint();
+    }
+    
+    currentSeriesArrays = seriesArrays;
+    return { seriesArrays, iterations: iteration, swaps: totalSwaps };
+}
+
+// ============================================
+// STOP DIALOG - Save or Discard
+// ============================================
+function showStopDialog(series, parallel, seriesArrays, stoppedAtStep) {
+    hideStatus();
+    
+    const dialogHtml = `
+        <div id="stop-dialog-overlay" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.8);z-index:3000;display:flex;align-items:center;justify-content:center;">
+            <div style="background:#16213e;border-radius:10px;padding:30px;max-width:450px;border:2px solid #f39c12;text-align:center;">
+                <i class="fa fa-exclamation-triangle" style="font-size:48px;color:#f39c12;margin-bottom:15px;"></i>
+                <h4 style="color:#fff;margin-bottom:15px;">Prozess gestoppt</h4>
+                <p style="color:#ccc;margin-bottom:15px;">Was möchten Sie tun?</p>
+                <div style="display:flex;flex-direction:column;gap:10px;">
+                    <button id="stop-save-db-btn" class="btn btn-success"><i class="fa fa-database me-2"></i>In Datenbank speichern</button>
+                    <button id="stop-save-checkpoint-btn" class="btn btn-warning"><i class="fa fa-pause me-2"></i>Später fortsetzen (Checkpoint)</button>
+                    <button id="stop-discard-btn" class="btn btn-danger"><i class="fa fa-trash me-2"></i>Verwerfen</button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.body.insertAdjacentHTML('beforeend', dialogHtml);
+    
+    // Save directly to database
+    document.getElementById('stop-save-db-btn').addEventListener('click', function() {
+        document.getElementById('stop-dialog-overlay').remove();
+        clearStepCheckpoint();
+        // Trigger the actual save (Step 5 button)
+        document.getElementById('step-btn-5').click();
+    });
+    
+    // Save checkpoint for later resume
+    document.getElementById('stop-save-checkpoint-btn').addEventListener('click', function() {
+        saveStepCheckpoint(series, parallel, seriesArrays, stoppedAtStep, 0, 0);
+        document.getElementById('stop-dialog-overlay').remove();
+        setWorkflowStep(5);
+        toastr.info('Checkpoint gespeichert. Beim nächsten Öffnen können Sie fortfahren.', 'Checkpoint');
+    });
+    
+    document.getElementById('stop-discard-btn').addEventListener('click', function() {
+        // Clear everything and reset
+        clearStepCheckpoint();
+        document.querySelectorAll('.sortable-cell').forEach(slot => slot.innerHTML = '');
+        document.getElementById('stop-dialog-overlay').remove();
+        setWorkflowStep(2);
+        toastr.warning('Änderungen verworfen.', 'Verworfen');
+    });
+}
+
+// ============================================
+// CHECKPOINT SYSTEM WITH STEP INFO
+// ============================================
+function saveStepCheckpoint(series, parallel, seriesArrays, step, iteration, swaps) {
+    const checkpoint = {
+        series,
+        parallel,
+        step,
+        iteration,
+        swaps,
+        timestamp: Date.now(),
+        cells: seriesArrays.map(arr => arr.map(cell => ({
+            id: cell.dataset.itemId,
+            capacity: cell.dataset.capacity,
+            esr: cell.dataset.esr
+        })))
+    };
+    localStorage.setItem('batteryPackCheckpoint', JSON.stringify(checkpoint));
+}
+
+function loadStepCheckpoint() {
+    const data = localStorage.getItem('batteryPackCheckpoint');
+    return data ? JSON.parse(data) : null;
+}
+
+function clearStepCheckpoint() {
+    localStorage.removeItem('batteryPackCheckpoint');
+}
+
+function checkForResume(batteryId, series, parallel) {
+    const checkpoint = loadStepCheckpoint();
+    if (checkpoint && checkpoint.series === series && checkpoint.parallel === parallel) {
+        const age = Math.round((Date.now() - checkpoint.timestamp) / 60000);
+        const stepNames = { 3: 'Assign', 4: 'Balancing', 5: 'Speichern' };
+        const stepName = stepNames[checkpoint.step] || `Step ${checkpoint.step}`;
+        
+        const dialogHtml = `
+            <div id="resume-dialog-overlay" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.8);z-index:3000;display:flex;align-items:center;justify-content:center;">
+                <div style="background:#16213e;border-radius:10px;padding:30px;max-width:450px;border:2px solid #4ecca3;text-align:center;">
+                    <i class="fa fa-history" style="font-size:48px;color:#4ecca3;margin-bottom:15px;"></i>
+                    <h4 style="color:#fff;margin-bottom:15px;">Fortschritt gefunden</h4>
+                    <p style="color:#ccc;margin-bottom:10px;">Es wurde ein gespeicherter Stand gefunden (vor ${age} Minuten).</p>
+                    <p style="color:#4ecca3;margin-bottom:25px;">Möchten Sie bei <strong>${stepName}</strong> fortfahren?</p>
+                    <div style="display:flex;gap:15px;justify-content:center;">
+                        <button id="resume-yes-btn" class="btn btn-success"><i class="fa fa-play me-2"></i>Fortfahren</button>
+                        <button id="resume-no-btn" class="btn btn-secondary"><i class="fa fa-times me-2"></i>Neu starten</button>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        document.body.insertAdjacentHTML('beforeend', dialogHtml);
+        
+        document.getElementById('resume-yes-btn').addEventListener('click', function() {
+            document.getElementById('resume-dialog-overlay').remove();
+            restoreFromCheckpoint(checkpoint);
+        });
+        
+        document.getElementById('resume-no-btn').addEventListener('click', function() {
+            clearStepCheckpoint();
+            document.getElementById('resume-dialog-overlay').remove();
+        });
+    }
+}
+
+function restoreFromCheckpoint(checkpoint) {
+    // Restore cells to slots
+    const seriesArrays = [];
+    
+    checkpoint.cells.forEach((seriesCells, sIndex) => {
+        seriesArrays[sIndex] = [];
+        seriesCells.forEach((cellData, pIndex) => {
+            const slot = getSlot(sIndex, pIndex);
+            if (slot) {
+                const cell = document.createElement('li');
+                cell.className = 'list-group-item';
+                cell.dataset.itemId = cellData.id;
+                cell.dataset.capacity = cellData.capacity;
+                cell.dataset.esr = cellData.esr;
+                cell.textContent = extractCellId(cellData.id);
+                slot.innerHTML = '';
+                slot.appendChild(cell);
+                seriesArrays[sIndex].push(cell);
+            }
+        });
+    });
+    
+    currentSeriesArrays = seriesArrays;
+    updateAllCapacities();
+    
+    // If step 4 (Balancing), auto-start the balancing with resume data
+    if (checkpoint.step === 4) {
+        toastr.info('Balancing wird fortgesetzt...', 'Wiederhergestellt');
+        setStepProcessing(4);
+        
+        // Auto-start balancing with checkpoint data
+        (async function() {
+            try {
+                const result = await swapBalancing(
+                    checkpoint.series, 
+                    checkpoint.parallel, 
+                    checkpoint.iteration || 0, 
+                    checkpoint.totalSwaps || 0
+                );
+                if (result.stopped) {
+                    showStopDialog(checkpoint.series, checkpoint.parallel, result.seriesArrays, 4);
+                } else {
+                    setWorkflowStep(5);
+                    toastr.success('Balancing abgeschlossen!', 'Fertig');
+                }
+            } catch (error) {
+                if (!balancingStopped) {
+                    console.error('Balancing error:', error);
+                    toastr.error('Fehler beim Balancing: ' + error.message, 'Fehler');
+                    hideStatus();
+                    setWorkflowStep(4);
+                }
+            }
+        })();
+    } else {
+        // Set workflow to the saved step
+        setWorkflowStep(checkpoint.step);
+        toastr.info(`Fortgesetzt bei Step ${checkpoint.step}`, 'Wiederhergestellt');
+    }
+}
+
+// Legacy function - kept for compatibility
+// Assign Cells to pack with Visual Animation
+async function assignCellsToPack(series, parallel) {
+    // Check for existing checkpoint
+    const checkpoint = loadCheckpoint();
+    if (checkpoint && checkpoint.series === series && checkpoint.parallel === parallel) {
+        const age = Math.round((Date.now() - checkpoint.timestamp) / 60000);
+        const resume = confirm(
+            `Checkpoint gefunden!\n\n` +
+            `Iteration: ${checkpoint.iteration}\n` +
+            `Swaps: ${checkpoint.totalSwaps}\n` +
+            `Alter: ${age} Minuten\n\n` +
+            `Fortsetzen?`
+        );
+        
+        if (resume) {
+            await resumeFromCheckpoint(checkpoint);
+            return;
+        } else {
+            clearCheckpoint();
         }
     }
+    
+    const cells = Array.from(document.querySelectorAll('#middle-list .list-group-item'));
+    const requiredCells = series * parallel;
+
+    updateStatus('Vorbereitung', `Prüfe Zellen... (${cells.length} verfügbar)`, 2);
+    await delay(200);
+
+    if (cells.length < requiredCells) {
+        hideStatus();
+        toastr.warning(`Nicht genug Zellen. Benötigt: ${requiredCells}, Verfügbar: ${cells.length}`, "Warnung");
+        return;
+    }
+
+    updateStatus('Vorbereitung', `Sortiere ${cells.length} Zellen nach Kapazität...`, 5);
+    await delay(150);
+
+    // Sort by capacity descending
+    cells.sort((a, b) => parseFloat(b.dataset.capacity) - parseFloat(a.dataset.capacity));
+
+    // Clear all slots first
+    document.querySelectorAll('.sortable-cell').forEach(slot => {
+        slot.innerHTML = '';
+        slot.classList.remove('cell-placing', 'cell-placed', 'cell-done', 'cell-swap-source', 'cell-swap-target');
+    });
+
+    // ============================================
+    // PHASE 1: Serpentine Distribution with Animation
+    // ============================================
+    updateStatus('Phase 1', 'Serpentine-Verteilung startet...', 8);
+    await delay(100);
+
+    let seriesArrays = Array.from({ length: series }, () => []);
+    let cellIndex = 0;
+    const animationDelay = Math.max(5, Math.min(50, 2000 / requiredCells)); // Adaptive speed
+
+    for (let p = 0; p < parallel; p++) {
+        const forward = (p % 2 === 0);
+        
+        for (let step = 0; step < series && cellIndex < cells.length; step++) {
+            const s = forward ? step : (series - 1 - step);
+            const cell = cells[cellIndex];
+            const slot = getSlot(s, p);
+            
+            seriesArrays[s].push(cell);
+            placeCellInSlot(cell, slot, true);
+            
+            cellIndex++;
+            
+            // Update progress
+            const progress = 8 + (cellIndex / requiredCells) * 35;
+            updateStatus('Phase 1', `Serpentine-Verteilung (${cellIndex}/${requiredCells})`, progress);
+            
+            await delay(animationDelay);
+        }
+    }
+
+    updateStatus('Phase 1', 'Verteilung abgeschlossen!', 45);
+    await delay(300);
+
+    // ============================================
+    // PHASE 2: Multi-Objective Swap Balancing with Score Tracking
+    // ============================================
+    updateStatus('Phase 2', 'Swap-Balancing startet...', 46);
+    await delay(200);
+
+    const maxIterations = 100;
+    const earlyStopThreshold = 0.005; // Stop if improvement < 0.5%
+    let improved = true;
+    let iteration = 0;
+    let totalSwaps = 0;
+    let visualSwaps = 0;
+    
+    // Score tracking
+    let scoreHistory = [];
+    let initialScore = calculateBalancingScore(seriesArrays);
+    let previousScore = initialScore;
+    scoreHistory.push({ iteration: 0, score: initialScore, improvement: 0 });
+    
+    console.log(`[Score] Initial: ${initialScore.toFixed(4)}`);
+
+    while (improved && iteration < maxIterations) {
+        // Check for stop
+        if (balancingStopped) {
+            console.log('[Balancing] Stopped by user');
+            break;
+        }
+        
+        // Check for pause
+        while (balancingPaused && !balancingStopped) {
+            await delay(100);
+        }
+        
+        improved = false;
+        iteration++;
+        
+        let currentScore = calculateBalancingScore(seriesArrays);
+        let iterationSwaps = 0;
+
+        for (let a = 0; a < series; a++) {
+            for (let b = a + 1; b < series; b++) {
+                for (let i = 0; i < seriesArrays[a].length; i++) {
+                    for (let j = 0; j < seriesArrays[b].length; j++) {
+                        // Check for stop in inner loop
+                        if (balancingStopped) break;
+                        
+                        // Try swap
+                        let temp = seriesArrays[a][i];
+                        seriesArrays[a][i] = seriesArrays[b][j];
+                        seriesArrays[b][j] = temp;
+
+                        let newScore = calculateBalancingScore(seriesArrays);
+
+                        if (newScore < currentScore) {
+                            currentScore = newScore;
+                            improved = true;
+                            totalSwaps++;
+                            iterationSwaps++;
+                            
+                            // Visual swap in DOM (every Nth swap for performance)
+                            if (totalSwaps % 5 === 0 || totalSwaps < 10) {
+                                const slotA = getSlot(a, i);
+                                const slotB = getSlot(b, j);
+                                
+                                await animateSwap(slotA, slotB);
+                                
+                                const cellA = slotA.firstChild;
+                                const cellB = slotB.firstChild;
+                                if (cellA && cellB) {
+                                    slotA.innerHTML = '';
+                                    slotB.innerHTML = '';
+                                    slotA.appendChild(cellB);
+                                    slotB.appendChild(cellA);
+                                }
+                                
+                                visualSwaps++;
+                            }
+                        } else {
+                            // Revert swap
+                            seriesArrays[b][j] = seriesArrays[a][i];
+                            seriesArrays[a][i] = temp;
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Track score improvement
+        const improvement = previousScore > 0 ? ((previousScore - currentScore) / previousScore) * 100 : 0;
+        scoreHistory.push({ iteration, score: currentScore, improvement, swaps: iterationSwaps });
+        
+        console.log(`[Score] Iter ${iteration}: ${currentScore.toFixed(4)} (${improvement > 0 ? '-' : '+'}${Math.abs(improvement).toFixed(2)}%, ${iterationSwaps} swaps)`);
+        
+        // Early stop if improvement is negligible
+        if (improved && improvement < earlyStopThreshold && iteration > 5) {
+            console.log(`[Score] Early stop: Improvement ${improvement.toFixed(3)}% < ${earlyStopThreshold}%`);
+            break;
+        }
+        
+        previousScore = currentScore;
+        
+        // Save checkpoint every 10 iterations
+        if (iteration % 10 === 0) {
+            saveCheckpoint(series, parallel, seriesArrays, iteration, totalSwaps, scoreHistory);
+        }
+        
+        // Update status with score info
+        const progress = 46 + (iteration / maxIterations) * 45;
+        const scoreReduction = ((initialScore - currentScore) / initialScore * 100).toFixed(1);
+        updateStatus('Phase 2', `Iter ${iteration} | ${totalSwaps} Swaps | Score -${scoreReduction}%`, progress);
+        
+        // Allow UI to breathe
+        if (iteration % 2 === 0) await delay(15);
+    }
+    
+    // Clear checkpoint on successful completion
+    clearCheckpoint();
+
+    // ============================================
+    // PHASE 3: Finalize
+    // ============================================
+    updateStatus('Finalisierung', 'Berechne Statistiken...', 92);
+    await delay(100);
+
+    // Ensure final state is in DOM
+    for (let s = 0; s < series; s++) {
+        for (let p = 0; p < parallel; p++) {
+            const slot = getSlot(s, p);
+            const cell = seriesArrays[s][p];
+            if (slot && cell && slot.firstChild !== cell) {
+                placeCellInSlot(cell, slot, false);
+            }
+        }
+    }
+
+    // Calculate final stats
+    const finalCapacities = seriesArrays.map(s => calculateGroupCapacity(s));
+    const finalResistances = seriesArrays.map(s => calculateGroupResistance(s));
+    const capStdDev = calculateStdDev(finalCapacities);
+    const resStdDev = calculateStdDev(finalResistances);
+    
+    console.log('Balancing complete:', iteration, 'iterations,', totalSwaps, 'swaps');
+    console.log('Capacity StdDev:', capStdDev.toFixed(2), 'mAh');
+    console.log('Resistance StdDev:', resStdDev.toFixed(4), 'mΩ');
+
+    updateStatus('Finalisierung', 'Markiere Zellen...', 96);
+    await delay(100);
+
+    // Mark all cells as done (green)
+    markAllCellsDone();
+    
+    // Setup hover tooltips
+    setupCellTooltips();
+    
+    updateAllCapacities();
+
+    // Hide status and show result banner
+    hideStatus();
+    
+    // Show result banner with stats
+    showResultBanner({
+        cells: requiredCells,
+        iterations: iteration,
+        swaps: totalSwaps,
+        stdDev: capStdDev.toFixed(1)
+    });
 }
 
 
@@ -626,8 +2679,218 @@ function updateUIAfterAssignment() {
     document.getElementById('assign-btn').disabled = true; // Disable button after assignment
 }
 
+// Find best replacement cell for a defective cell in the pack
+function findReplacementCell(defectiveCellElement) {
+    const reservePool = Array.from(document.querySelectorAll('#left-list .list-group-item'));
+    
+    if (reservePool.length === 0) {
+        toastr.error('Keine Ersatzzellen im Reserve-Pool verfügbar', 'Fehler');
+        return null;
+    }
 
+    const defectiveCapacity = parseFloat(defectiveCellElement.dataset.capacity);
+    const defectiveEsr = parseFloat(defectiveCellElement.dataset.esr) || 0;
 
+    // Find best match: minimize combined delta of capacity and ESR
+    let bestMatch = null;
+    let bestScore = Infinity;
+
+    reservePool.forEach(cell => {
+        const cellCapacity = parseFloat(cell.dataset.capacity);
+        const cellEsr = parseFloat(cell.dataset.esr) || 0;
+
+        // Calculate normalized deltas
+        const deltaCap = Math.abs(cellCapacity - defectiveCapacity) / 100; // Normalize
+        const deltaEsr = Math.abs(cellEsr - defectiveEsr) * 10; // Normalize
+
+        // Weighted score (capacity more important)
+        const score = (0.6 * deltaCap) + (0.4 * deltaEsr);
+
+        if (score < bestScore) {
+            bestScore = score;
+            bestMatch = cell;
+        }
+    });
+
+    if (bestMatch) {
+        console.log('Best replacement found:', {
+            uuid: bestMatch.dataset.itemId,
+            capacity: bestMatch.dataset.capacity,
+            esr: bestMatch.dataset.esr,
+            score: bestScore.toFixed(4)
+        });
+    }
+
+    return bestMatch;
+}
+
+// Replace a defective cell in a slot with the best match from reserve
+function replaceDefectiveCell(slotId) {
+    const slot = document.getElementById(slotId);
+    if (!slot) {
+        toastr.error('Slot nicht gefunden', 'Fehler');
+        return;
+    }
+
+    const defectiveCell = slot.querySelector('.list-group-item');
+    if (!defectiveCell) {
+        toastr.error('Keine Zelle in diesem Slot', 'Fehler');
+        return;
+    }
+
+    const replacement = findReplacementCell(defectiveCell);
+    if (replacement) {
+        // Parse slot position from ID (format: cell-S-P)
+        const slotMatch = slotId.match(/cell-(\d+)-(\d+)/);
+        const slotSeries = slotMatch ? parseInt(slotMatch[1]) : 0;
+        const slotParallel = slotMatch ? parseInt(slotMatch[2]) : 0;
+        
+        // Extract Cell-IDs for display
+        const oldCellId = extractCellId(defectiveCell.dataset.itemId);
+        const newCellId = extractCellId(replacement.dataset.itemId);
+        
+        // Log replacement to server
+        if (currentBatteryId) {
+            fetch('/log-cell-replacement/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    battery_id: currentBatteryId,
+                    old_cell_uuid: defectiveCell.dataset.itemId,
+                    new_cell_uuid: replacement.dataset.itemId,
+                    slot_series: slotSeries,
+                    slot_parallel: slotParallel,
+                    old_capacity: parseFloat(defectiveCell.dataset.capacity),
+                    new_capacity: parseFloat(replacement.dataset.capacity),
+                    old_esr: parseFloat(defectiveCell.dataset.esr) || null,
+                    new_esr: parseFloat(replacement.dataset.esr) || null,
+                    reason: 'defective'
+                })
+            }).then(r => r.json()).then(data => {
+                if (data.success) {
+                    console.log('Replacement logged:', data.message);
+                }
+            }).catch(err => console.error('Log failed:', err));
+        }
+        
+        // Move defective cell to middle-list (or mark as defective)
+        const middleList = document.getElementById('middle-list');
+        defectiveCell.classList.add('defective');
+        defectiveCell.style.backgroundColor = '#ffcccc';
+        middleList.appendChild(defectiveCell);
+
+        // Move replacement to slot and highlight
+        slot.appendChild(replacement);
+        slot.classList.add('cell-replaced');
+        replacement.classList.add('replacement-highlight');
+        
+        // Remove highlight after animation
+        setTimeout(() => {
+            slot.classList.remove('cell-replaced');
+            replacement.classList.remove('replacement-highlight');
+        }, 3000);
+
+        // Clear, detailed success message
+        toastr.success(
+            `<div style="line-height: 1.6">
+                <strong>Position:</strong> S${slotSeries}-P${slotParallel}<br>
+                <strong>Alte Zelle:</strong> ${oldCellId} (${defectiveCell.dataset.capacity} mAh)<br>
+                <strong>Neue Zelle:</strong> ${newCellId} (${replacement.dataset.capacity} mAh)
+            </div>`,
+            '✓ Zelle erfolgreich ersetzt',
+            { timeOut: 8000, escapeHtml: false }
+        );
+
+        updateAllCapacities();
+    }
+}
+
+// ==================== CONTEXT MENU ====================
+
+let contextMenuTarget = null;
+let contextMenuSlot = null;
+
+function setupCellContextMenu() {
+    const contextMenu = document.getElementById('cell-context-menu');
+    if (!contextMenu) return;
+
+    // Right-click on cells in battery layout
+    document.addEventListener('contextmenu', function(e) {
+        const cell = e.target.closest('.sortable-cell .list-group-item');
+        const slot = e.target.closest('.sortable-cell');
+        
+        if (cell && slot) {
+            e.preventDefault();
+            contextMenuTarget = cell;
+            contextMenuSlot = slot;
+            
+            // Position menu
+            contextMenu.style.left = e.clientX + 'px';
+            contextMenu.style.top = e.clientY + 'px';
+            contextMenu.classList.add('show');
+        } else {
+            hideContextMenu();
+        }
+    });
+
+    // Hide on click outside
+    document.addEventListener('click', function(e) {
+        if (!contextMenu.contains(e.target)) {
+            hideContextMenu();
+        }
+    });
+
+    // Hide on scroll
+    document.addEventListener('scroll', hideContextMenu, true);
+
+    // Replace cell action
+    document.getElementById('ctx-replace-cell').addEventListener('click', function() {
+        if (contextMenuSlot) {
+            replaceDefectiveCell(contextMenuSlot.id);
+        }
+        hideContextMenu();
+    });
+
+    // Show details action
+    document.getElementById('ctx-show-details').addEventListener('click', function() {
+        if (contextMenuTarget) {
+            const uuid = contextMenuTarget.dataset.itemId;
+            const cap = contextMenuTarget.dataset.capacity;
+            const esr = contextMenuTarget.dataset.esr || 'N/A';
+            const voltage = contextMenuTarget.dataset.voltage || 'N/A';
+            
+            toastr.info(
+                `UUID: ${uuid}<br>Kapazität: ${cap} mAh<br>ESR: ${esr} mΩ<br>Spannung: ${voltage} V`,
+                'Zell-Details',
+                { timeOut: 10000, escapeHtml: false }
+            );
+        }
+        hideContextMenu();
+    });
+
+    // Remove cell action
+    document.getElementById('ctx-remove-cell').addEventListener('click', function() {
+        if (contextMenuTarget && contextMenuSlot) {
+            const middleList = document.getElementById('middle-list');
+            middleList.appendChild(contextMenuTarget);
+            updateAllCapacities();
+            toastr.success('Zelle zurück in Transfer-Liste verschoben', 'Entfernt');
+        }
+        hideContextMenu();
+    });
+}
+
+function hideContextMenu() {
+    const contextMenu = document.getElementById('cell-context-menu');
+    if (contextMenu) {
+        contextMenu.classList.remove('show');
+    }
+    contextMenuTarget = null;
+    contextMenuSlot = null;
+}
+
+// Initialize context menu when DOM is ready
+document.addEventListener('DOMContentLoaded', setupCellContextMenu);
 
 
 
@@ -706,37 +2969,123 @@ function showDeleteConfirmation(batteryId) {
 // Add event listeners to delete buttons
 document.querySelectorAll('.deleteBatteryBtn').forEach(btn => {
     btn.addEventListener('click', function(e) {
-        e.preventDefault();  // Prevent the default link behavior
+        e.preventDefault();
         const batteryId = this.getAttribute('data-battery-id');
-
-        showDeleteConfirmation(batteryId);  // Show confirmation modal
+        showDeleteConfirmation(batteryId);
     });
 });
 
-// Add event listener to the confirmation button in the modal
-document.getElementById('confirmDeleteBtn').addEventListener('click', function() {
-    const cellId = this.getAttribute('data-cell-id');
-    console.log(cellId);
-    deleteCell(cellId);  // Proceed to delete the device
-    $('#deleteConfirmationModal').modal('hide');  // Hide the confirmation modal
+// Add event listeners to edit buttons
+document.querySelectorAll('.editBatteryBtn').forEach(btn => {
+    btn.addEventListener('click', function(e) {
+        e.preventDefault();
+        const batteryId = this.getAttribute('data-battery-id');
+        const row = this.closest('tr');
+        const currentName = row.querySelector('td:nth-child(4)').textContent.trim();
+        showEditBatteryModal(batteryId, currentName);
+    });
 });
 
-    // Delete device function
-function deleteCell(cellId) {
-    fetch("/delete-cells/", {
+// Edit Battery Modal
+function showEditBatteryModal(batteryId, currentName) {
+    // Remove existing modal if any
+    const existingModal = document.getElementById('editBatteryModal');
+    if (existingModal) existingModal.remove();
+    
+    const modalHtml = `
+        <div class="modal fade" id="editBatteryModal" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content" style="background:#16213e;border:1px solid #4ecca3;">
+                    <div class="modal-header" style="border-bottom:1px solid #1a3a5c;">
+                        <h5 class="modal-title" style="color:#fff;"><i class="fa fa-pencil me-2"></i>Battery-Pack umbenennen</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label" style="color:#4ecca3;">Name</label>
+                            <input type="text" class="form-control" id="editBatteryName" value="${currentName}" 
+                                style="background:#0f3460;border-color:#1a3a5c;color:#fff;">
+                        </div>
+                    </div>
+                    <div class="modal-footer" style="border-top:1px solid #1a3a5c;">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Abbrechen</button>
+                        <button type="button" class="btn btn-success" id="saveBatteryNameBtn" data-battery-id="${batteryId}">
+                            <i class="fa fa-save me-2"></i>Speichern
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    
+    const modal = new bootstrap.Modal(document.getElementById('editBatteryModal'));
+    modal.show();
+    
+    document.getElementById('saveBatteryNameBtn').addEventListener('click', function() {
+        const newName = document.getElementById('editBatteryName').value.trim();
+        if (newName) {
+            saveBatteryName(batteryId, newName);
+            modal.hide();
+        } else {
+            toastr.warning('Bitte einen Namen eingeben', 'Warnung');
+        }
+    });
+}
+
+function saveBatteryName(batteryId, newName) {
+    fetch("/update-battery-name/", {
         method: 'POST',
         headers: {
             'X-CSRFToken': getCookie('csrftoken'),
             'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ 'cell_ids': [cellId] })  // Note that we're sending an array with a single ID
+        body: JSON.stringify({ battery_id: batteryId, name: newName })
     })
     .then(response => response.json())
     .then(data => {
-        console.log(data);  // Handle success response
-        location.reload();  // Optionally reload the page to update the cells list
+        if (data.success) {
+            toastr.success('Name geändert', 'Erfolg');
+            location.reload();
+        } else {
+            toastr.error(data.error || 'Fehler beim Speichern', 'Fehler');
+        }
     })
-    .catch(error => console.error('Error:', error));
+    .catch(error => {
+        console.error('Error:', error);
+        toastr.error('Fehler beim Speichern', 'Fehler');
+    });
+}
+
+// Add event listener to the confirmation button in the modal
+document.getElementById('confirmDeleteBtn').addEventListener('click', function() {
+    const batteryId = this.getAttribute('data-battery-id');
+    console.log(batteryId);
+    deleteBattery(batteryId);  // Proceed to delete the battery pack
+    $('#deleteConfirmationModal').modal('hide');  // Hide the confirmation modal
+});
+
+    // Delete battery pack function
+function deleteBattery(batteryId) {
+    fetch("/delete-batteries/", {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': getCookie('csrftoken'),
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ 'battery_ids': [batteryId] })
+    })
+    .then(response => response.json())
+    .then(data => {
+        console.log(data);
+        toastr.success('Battery-Pack gelöscht', 'Erfolg');
+        location.reload();
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        toastr.error('Fehler beim Löschen', 'Fehler');
+    });
 }
 
 
