@@ -214,7 +214,7 @@
                 </ul>
             </div>
             
-            <a href="#" class="text-primary" id="print" title="Print"><i class="fa-solid fa-print fs-18"></i></a>
+            <a href="#" class="text-muted" id="print" title="Labels drucken" style="pointer-events: none; opacity: 0.4;"><i class="fa-solid fa-print fs-18"></i></a>
             <a href="#" class="text-muted" id="deleteCellsBtn" title="Delete selected" style="pointer-events: none; opacity: 0.4;"><i class="fa-solid fa-trash fs-18"></i></a>
             
             <!-- Bulk Condition Edit -->
@@ -619,13 +619,16 @@ $(document).ready(function() {
     function updateDeleteButton() {
         const checkedCount = $('input[name="cell_ids"]:checked').length;
         const $deleteBtn = $('#deleteCellsBtn');
+        const $printBtn = $('#print');
         const $conditionDropdown = $('#conditionDropdown');
         
         if (checkedCount > 0) {
             $deleteBtn.css({'pointer-events': 'auto', 'opacity': '1'}).removeClass('text-muted').addClass('text-danger');
+            $printBtn.css({'pointer-events': 'auto', 'opacity': '1'}).removeClass('text-muted').addClass('text-primary');
             $conditionDropdown.css({'pointer-events': 'auto', 'opacity': '1'}).find('a').removeClass('text-muted').addClass('text-primary');
         } else {
             $deleteBtn.css({'pointer-events': 'none', 'opacity': '0.4'}).removeClass('text-danger').addClass('text-muted');
+            $printBtn.css({'pointer-events': 'none', 'opacity': '0.4'}).removeClass('text-primary').addClass('text-muted');
             $conditionDropdown.css({'pointer-events': 'none', 'opacity': '0.4'}).find('a').removeClass('text-primary').addClass('text-muted');
         }
     }

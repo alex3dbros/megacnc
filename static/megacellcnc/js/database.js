@@ -19,6 +19,10 @@ $(function() {
     });
 });
 
+function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 function formatDuration(seconds) {
     const days = Math.floor(seconds / (3600 * 24));
     seconds %= 3600 * 24;
@@ -608,7 +612,7 @@ async function sendAction(action) {
 
         } else {
             for (let i = 0; i < cell_ids.length; i++) {
-                printLabels(cell_ids[i], -1);
+                printLabels([cell_ids[i]], -1);
                 await sleep(1000);
             }
 
