@@ -106,6 +106,16 @@
     color: red;
 }
 
+.status-yes-cell {
+    color: #28a745;
+    font-weight: 600;
+}
+
+.status-no-cell {
+    color: #dc3545;
+    font-weight: 600;
+}
+
 
 
 .gradient_one {
