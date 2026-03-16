@@ -718,6 +718,14 @@ $('#batteries-tbl').on('click', '.expandBtn', function() {
         // Stop Button
         document.getElementById('stop-btn').addEventListener('click', function() {
             balancingStopped = true;
+            // Also terminate Web Worker if running
+            if (activeBalancingWorker) {
+                activeBalancingWorker.terminate();
+                activeBalancingWorker = null;
+                hideStatus();
+                toastr.warning('Worker-Balancing gestoppt', 'Gestoppt');
+                setWorkflowStep(5); // Go to save step
+            }
         });
         
         // Check for resume on pack open
@@ -2028,6 +2036,7 @@ let currentSeriesArrays = null;
 
 // ============================================
 // SERPENTINE DISTRIBUTION (Step 3: Assign)
+// Now uses Web Worker for large packs (> 200 cells)
 // ============================================
 async function serpentineDistribution(series, parallel) {
     const cells = Array.from(document.querySelectorAll('#middle-list .list-group-item'));
@@ -2053,47 +2062,48 @@ async function serpentineDistribution(series, parallel) {
         slot.classList.remove('cell-placing', 'cell-placed', 'cell-done', 'cell-swap-source', 'cell-swap-target');
     });
 
+    // For small packs: animated placement
+    const useAnimation = requiredCells <= 200;
+
     updateStatus('Assign', 'Serpentine-Verteilung startet...', 8);
-    await delay(100);
 
     let seriesArrays = Array.from({ length: series }, () => []);
     let cellIndex = 0;
-    const animationDelay = Math.max(5, Math.min(50, 2000 / requiredCells));
+    const animationDelay = useAnimation ? Math.max(5, Math.min(50, 2000 / requiredCells)) : 0;
 
     for (let p = 0; p < parallel; p++) {
-        // Check for stop/pause
         if (balancingStopped) break;
-        while (balancingPaused && !balancingStopped) {
-            await delay(100);
-        }
         
         const forward = (p % 2 === 0);
         
         for (let step = 0; step < series && cellIndex < cells.length; step++) {
             if (balancingStopped) break;
-            while (balancingPaused && !balancingStopped) {
-                await delay(100);
-            }
             
             const s = forward ? step : (series - 1 - step);
             const cell = cells[cellIndex];
             const slot = getSlot(s, p);
             
             seriesArrays[s].push(cell);
-            placeCellInSlot(cell, slot, true);
+            placeCellInSlot(cell, slot, useAnimation);
             
             cellIndex++;
             
-            const progress = 8 + (cellIndex / requiredCells) * 90;
-            updateStatus('Assign', `Serpentine-Verteilung (${cellIndex}/${requiredCells})`, progress);
-            
-            await delay(animationDelay);
+            if (useAnimation) {
+                const progress = 8 + (cellIndex / requiredCells) * 90;
+                updateStatus('Assign', `Serpentine-Verteilung (${cellIndex}/${requiredCells})`, progress);
+                await delay(animationDelay);
+            } else if (cellIndex % 100 === 0) {
+                // For large packs: update progress less frequently
+                const progress = 8 + (cellIndex / requiredCells) * 90;
+                updateStatus('Assign', `Serpentine-Verteilung (${cellIndex}/${requiredCells})`, progress);
+                await delay(0); // yield to UI
+            }
         }
     }
 
     if (!balancingStopped) {
         updateStatus('Assign', 'Verteilung abgeschlossen!', 100);
-        await delay(300);
+        if (useAnimation) await delay(300);
         hideStatus();
     }
     
@@ -2104,8 +2114,10 @@ async function serpentineDistribution(series, parallel) {
 }
 
 // ============================================
-// SWAP BALANCING (Step 4: Balancing)
+// SWAP BALANCING (Step 4: Balancing) - Web Worker version
 // ============================================
+let activeBalancingWorker = null;
+
 async function swapBalancing(series, parallel, resumeIteration = 0, resumeSwaps = 0) {
     let seriesArrays = currentSeriesArrays;
     
@@ -2122,6 +2134,111 @@ async function swapBalancing(series, parallel, resumeIteration = 0, resumeSwaps 
         }
     }
 
+    const requiredCells = series * parallel;
+    const useWorker = requiredCells > 200;
+
+    if (useWorker) {
+        // === WEB WORKER PATH (large packs) ===
+        return await swapBalancingWorker(series, parallel, seriesArrays);
+    } else {
+        // === MAIN THREAD PATH (small packs, with animations) ===
+        return await swapBalancingMainThread(series, parallel, seriesArrays, resumeIteration, resumeSwaps);
+    }
+}
+
+// Web Worker based balancing for large packs (no UI blocking)
+async function swapBalancingWorker(series, parallel, seriesArrays) {
+    updateStatus('Balancing', 'Starte Worker-Optimierung...', 5);
+
+    // Collect all cells from seriesArrays (DOM elements)
+    const allCells = [];
+    const cellElementMap = []; // Maps index back to DOM element
+    
+    for (let s = 0; s < series; s++) {
+        for (let p = 0; p < seriesArrays[s].length; p++) {
+            const el = seriesArrays[s][p];
+            const idx = allCells.length;
+            allCells.push({
+                capacity: parseFloat(el.dataset.capacity) || 0,
+                esr: parseFloat(el.dataset.esr) || 1,
+                uuid: el.dataset.itemId
+            });
+            cellElementMap.push(el);
+        }
+    }
+
+    return new Promise((resolve, reject) => {
+        const worker = new Worker('/static/megacellcnc/js/balancing-worker.js');
+        activeBalancingWorker = worker;
+
+        worker.onmessage = function(e) {
+            const msg = e.data;
+
+            if (msg.type === 'progress') {
+                updateStatus(msg.phase, msg.text, msg.progress);
+            } else if (msg.type === 'result') {
+                worker.terminate();
+                activeBalancingWorker = null;
+
+                // Apply result to DOM
+                updateStatus('Finalisierung', 'Platziere Zellen...', 95);
+                
+                const newSeriesArrays = Array.from({ length: series }, () => []);
+                
+                for (let s = 0; s < series; s++) {
+                    for (let p = 0; p < msg.assignment[s].length; p++) {
+                        const cellIdx = msg.assignment[s][p];
+                        const cellEl = cellElementMap[cellIdx];
+                        const slot = getSlot(s, p);
+                        
+                        newSeriesArrays[s].push(cellEl);
+                        
+                        if (slot) {
+                            slot.innerHTML = '';
+                            slot.appendChild(cellEl);
+                        }
+                    }
+                }
+
+                currentSeriesArrays = newSeriesArrays;
+                markAllCellsDone();
+                setupCellTooltips();
+                updateAllCapacities();
+                hideStatus();
+
+                showResultBanner({
+                    cells: msg.stats.cells,
+                    iterations: msg.stats.iterations,
+                    swaps: msg.stats.swaps,
+                    stdDev: msg.stats.capStdDev.toFixed(1)
+                });
+
+                clearStepCheckpoint();
+                resolve({ seriesArrays: newSeriesArrays, iterations: msg.stats.iterations, swaps: msg.stats.swaps });
+            } else if (msg.type === 'error') {
+                worker.terminate();
+                activeBalancingWorker = null;
+                reject(new Error(msg.message));
+            }
+        };
+
+        worker.onerror = function(err) {
+            worker.terminate();
+            activeBalancingWorker = null;
+            reject(err);
+        };
+
+        // Send cell data to worker
+        worker.postMessage({
+            cells: allCells,
+            series: series,
+            parallel: parallel
+        });
+    });
+}
+
+// Original main-thread balancing for small packs (with animations)
+async function swapBalancingMainThread(series, parallel, seriesArrays, resumeIteration, resumeSwaps) {
     const isResume = resumeIteration > 0;
     updateStatus('Balancing', isResume ? `Fortsetzen ab Iteration ${resumeIteration}...` : 'Swap-Optimierung startet...', 5);
     await delay(200);

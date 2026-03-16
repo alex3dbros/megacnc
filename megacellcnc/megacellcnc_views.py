@@ -578,51 +578,54 @@ def add_battery(request):
 @require_http_methods(["POST"])  # Only allow POST requests
 def save_battery_configuration(request):
     try:
-        data = json.loads(request.body.decode('utf-8'))  # Decode and load JSON data
+        data = json.loads(request.body.decode('utf-8'))
 
         battery_id = data['batteryId']
         cells_data = data['cellsData']
 
         battery = Batteries.objects.get(id=battery_id)
 
-        print("Battery ID: ", battery_id)
-        total_capacity = 0.0
-        
-        # Example of handling the data:
-        for cell_data in cells_data:
-            cell_uuid = cell_data['cellId']
-            slot_id = cell_data['slotId']
-            capacity = float(cell_data.get('capacity', 0))
-            total_capacity += capacity
-
-            cell = Cells.objects.get(UUID=cell_uuid)
-            cell.battery = battery
-            cell.bat_position = slot_id
-            cell.available = "No"
-            cell.save()
-
-            # Process this data, such as saving it to the database
-            print(cell_uuid, slot_id, capacity)
-
-        print("This is len cells data")
-        print(len(cells_data))
         if len(cells_data) == 0:
-            for cell in battery.battery_cells.all():
-                cell.battery = None
-                cell.bat_position = ""
-                cell.available = "Yes"
-                cell.save()
+            # Dissolve pack: release all cells in one bulk update
+            battery.battery_cells.all().update(
+                battery=None,
+                bat_position="",
+                available="Yes"
+            )
             battery.status = "created"
             battery.capacity = 0
         else:
-            # Update battery status and capacity
+            # Build a mapping of UUID -> (slot_id, capacity)
+            uuid_to_data = {}
+            total_capacity = 0.0
+            for cell_data in cells_data:
+                cell_uuid = cell_data['cellId']
+                slot_id = cell_data['slotId']
+                capacity = float(cell_data.get('capacity', 0))
+                total_capacity += capacity
+                uuid_to_data[cell_uuid] = (slot_id, capacity)
+
+            # Fetch all cells in one query
+            uuids = list(uuid_to_data.keys())
+            cells_to_update = list(Cells.objects.filter(UUID__in=uuids))
+
+            # Update fields in memory
+            for cell in cells_to_update:
+                slot_id, _ = uuid_to_data[cell.UUID]
+                cell.battery = battery
+                cell.bat_position = slot_id
+                cell.available = "No"
+
+            # Bulk update in one DB operation
+            Cells.objects.bulk_update(cells_to_update, ['battery', 'bat_position', 'available'], batch_size=500)
+
             battery.status = "ready"
             battery.capacity = round(total_capacity, 2)
-        
+
         battery.save()
 
         return JsonResponse({
-            'status': 'success', 
+            'status': 'success',
             'message': 'Pack configuration saved successfully!',
             'battery': {
                 'id': battery.id,
