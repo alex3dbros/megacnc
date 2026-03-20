@@ -9,6 +9,9 @@ __pycache__/
 # Distribution / packaging
 .Python
 build/
+.venv-build/
+# PyInstaller desktop bundle (see packaging/)
+dist/MegaCNC/
 develop-eggs/
 downloads/
 eggs/

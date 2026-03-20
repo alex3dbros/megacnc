@@ -23,6 +23,10 @@ The app polls Megacell charger hardware devices over HTTP every 5 seconds (via a
 - **Device / slots:** Operator-focused layout; slot charts use **Chart.js** with filled areas (voltage, current, temperature on one graph).
 - **Cleanup:** Demo routes (shop, email demos, chart demos, etc.) were removed from `megacellcnc/urls.py`; unused template files may remain in `templates/` but are not linked.
 
+### Docker (Linux / server)
+
+For **PostgreSQL + Redis + Gunicorn + Celery worker + Celery Beat** (async tasks), see **[DOCKER.md](DOCKER.md)**.
+
 ---
 
 ## Quick Start — Windows / PyCharm (Development)
@@ -111,6 +115,20 @@ This polls all registered devices every 5 seconds (same as Celery Beat would). O
 ```
 python manage.py poll_devices --interval 10   # poll every 10 seconds
 python manage.py poll_devices --once          # poll once and exit
+```
+
+### Desktop executable (Windows / Linux)
+
+You can ship the app as a **PyInstaller onedir bundle** (executable + `_internal` + copied `templates/` / `static/`). Build **Windows on Windows** and **Linux on Linux** (or WSL).
+
+- **Scripts:** `packaging/build_windows.ps1`, `packaging/build_linux.sh`
+- **Details:** [`packaging/README.md`](packaging/README.md)
+- **Runtime entry:** `packaging/launcher.py` (Waitress on port 8000, auto-migrate, background `poll_devices`, opens browser)
+
+Quick try without building:
+
+```
+python packaging/launcher.py
 ```
 
 ### PyCharm Run Configurations
@@ -239,63 +257,16 @@ Then open http://localhost:5555 for Flower.
 
 ## Deploying with Docker Compose (Ubuntu / Linux)
 
-### Prerequisites
+The canonical, up-to-date guide (services, env vars, migrations, troubleshooting) is **[DOCKER.md](DOCKER.md)**.
 
-- Ubuntu Desktop 22+ (or any Linux with Docker)
-- Internet connection
-
-### Step 1: Install Docker
+Quick reference:
 
 ```bash
-sudo apt update
-sudo apt install docker.io -y
-sudo apt install docker-compose
+docker compose up --build -d
+docker compose exec web python manage.py migrate
 ```
 
-### Step 2: Clone and start
-
-```bash
-git clone https://github.com/alex3dbros/megacnc.git
-cd megacnc
-sudo docker-compose up --build
-```
-
-### Step 3: Initialize the database
-
-In a second terminal:
-
-```bash
-sudo docker exec megacnc_web_1 python manage.py makemigrations
-sudo docker exec megacnc_web_1 python manage.py migrate
-```
-
-### Step 4: Restart and access
-
-Press `Ctrl+C` to stop, then:
-
-```bash
-sudo docker-compose up
-```
-
-Open **http://\<VM_IP\>:8000** in your browser.
-
-### Updating
-
-```bash
-cd megacnc
-git pull
-sudo docker-compose down
-sudo docker-compose up --build
-
-# Run migrations if there are DB changes:
-sudo docker exec megacnc_web_1 python manage.py makemigrations
-sudo docker exec megacnc_web_1 python manage.py migrate
-
-# If migration conflicts:
-sudo docker exec -it megacnc_web_1 sh -c "echo 'y' | python manage.py makemigrations --merge"
-```
-
-Tested on: VirtualBox VMs, Raspberry Pi 4 (4GB RAM, 32GB SD Card).
+Install Docker Engine and Compose plugin on Ubuntu via your distro’s docs (e.g. `docker.io` / `docker-compose-plugin`). Tested on VirtualBox VMs and Raspberry Pi 4 (4GB RAM, 32GB SD card).
 
 ---
 
@@ -333,6 +304,7 @@ megacnc/
   .env.example        Config template
   requirements.txt    Python dependencies
   docker-compose.yml  Production Docker setup
+  DOCKER.md           Docker on Linux (full guide for clients / ops)
   run_dev.bat         One-click Windows dev startup
   manage.py           Django CLI
 ```

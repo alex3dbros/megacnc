@@ -22,8 +22,8 @@ from django.db.models import F
 from mccprolib.api import MegacellCharger
 from megacellcnc.tasks import dispatch_command, get_device_config, save_device_config
 import msgpack
+import base64
 import re
-import pandas as pd
 import datetime
 import pytz
 
@@ -31,9 +31,8 @@ import warnings
 
 # Ignore all warnings
 warnings.filterwarnings('ignore')
-
-# To specifically ignore Pandas warnings, you can do:
-warnings.filterwarnings('ignore', category=pd.errors.PerformanceWarning)
+# Pandas (lazy-imported in get_history) performance noise
+warnings.filterwarnings('ignore', module='pandas')
 
 
 def index(request):
@@ -654,63 +653,86 @@ def new_device(request):
 def edit_device(request):
     if request.method == "POST":
         try:
-            data = json.loads(request.body)
-            device_id = int(data.get('device_id'))
-        except json.JSONDecodeError:
+            payload = json.loads(request.body)
+            device_id = int(payload.get('device_id'))
+        except (json.JSONDecodeError, TypeError, ValueError):
             return JsonResponse({'error': 'Invalid JSON'}, status=400)
 
         device = get_object_or_404(Device, id=device_id)
-        slots = device.slots.all().order_by('slot_number')
-        slots_count = device.slots.all().count()
+        slots_count = device.slots.count()
+        dev_type = (device.type or "").strip()
 
-        # Get device chemistry settings depending on device type
+        try:
+            result_async = get_device_config.delay(device_id)
+            raw = result_async.get(timeout=120)
+        except Exception as exc:
+            return JsonResponse({'error': f'Could not reach device: {exc}'}, status=502)
 
-        result_async = get_device_config.delay(device_id)
-        task_result, chems, firmware_version = result_async.get()
+        if raw is None or not isinstance(raw, (tuple, list)) or len(raw) != 3:
+            return JsonResponse({'error': 'Invalid response from device config service'}, status=502)
+
+        task_result, chems, firmware_version = raw
 
         if not task_result:
             return JsonResponse({'error': 'Device is offline or unreachable'}, status=503)
 
-        if task_result and device.type == "MCC":
-            data = {"dev_type": device.type, "max_charge_volt": round(task_result["MaV"], 2),
-                    "store_volt": round(task_result["StV"], 2),
-                    "discharge_volt": round(task_result["MiV"], 2), "max_temp": round(task_result["MaT"], 2),
-                    "discharge_cycles": task_result["DiC"], "firmware": task_result["FwV"],
-                    "discharge_current": int(task_result["DiR"]), "charging_current": 1000,
-                    "charging_timeout": task_result["McH"], "device_name": device.name, "slots_count": slots_count,
-                    "chems": chems, "max_capacity": 5000, "pre_charge_current": 0,
-                    "term_charging_current": 0, "discharge_resistance": 0,
-                    "discharge_mode": 0, "max_low_volt_recovery_time": 120}
+        body = None
 
-        elif task_result and device.type == "MCCPro":
-            dev_data = msgpack.unpackb(task_result)
+        try:
+            if dev_type == "MCC" and isinstance(task_result, dict):
+                body = {"dev_type": dev_type, "max_charge_volt": round(task_result["MaV"], 2),
+                        "store_volt": round(task_result["StV"], 2),
+                        "discharge_volt": round(task_result["MiV"], 2), "max_temp": round(task_result["MaT"], 2),
+                        "discharge_cycles": task_result["DiC"], "firmware": task_result["FwV"],
+                        "discharge_current": int(task_result["DiR"]), "charging_current": 1000,
+                        "charging_timeout": task_result["McH"], "device_name": device.name, "slots_count": slots_count,
+                        "chems": chems, "max_capacity": 5000, "pre_charge_current": 0,
+                        "term_charging_current": 0, "discharge_resistance": 0,
+                        "discharge_mode": 0, "max_low_volt_recovery_time": 120}
 
-            data = {"dev_type": device.type, "max_charge_volt": round(dev_data[2] / 1000, 2),
-                    "store_volt": round(dev_data[4] / 1000, 2),
-                    "discharge_volt": round(dev_data[3] / 1000, 2), "max_temp": round(dev_data[12], 2),
-                    "discharge_cycles": dev_data[15], "firmware": firmware_version,
-                    "discharge_current": int(dev_data[9]), "charging_current": dev_data[6],
-                    "charging_timeout": dev_data[14], "device_name": device.name, "slots_count": slots_count,
-                    "chems": chems, "max_capacity": dev_data[5], "pre_charge_current": dev_data[7],
-                    "term_charging_current": dev_data[8], "discharge_resistance": dev_data[10],
-                    "discharge_mode": dev_data[11], "max_low_volt_recovery_time": dev_data[13]}
-            print(data)
+            elif dev_type in ("MCCPro", "MCCReg") and task_result is not None:
+                if isinstance(task_result, dict):
+                    return JsonResponse({
+                        'error': 'Expected packed MCCPro/MCCReg config from device, got JSON. Check device API / DB type.'
+                    }, status=502)
+                try:
+                    if isinstance(task_result, str):
+                        raw_chem = base64.b64decode(task_result)
+                    elif isinstance(task_result, (bytes, bytearray)):
+                        raw_chem = bytes(task_result)
+                    else:
+                        raise TypeError(f"Unexpected payload type {type(task_result)}")
+                except Exception as exc:
+                    return JsonResponse({
+                        'error': f'Invalid chemistry payload from worker (expected base64 MessagePack): {exc}'
+                    }, status=502)
+                dev_data = msgpack.unpackb(raw_chem, raw=False)
 
-        elif task_result and device.type == "MCCReg":
-            dev_data = msgpack.unpackb(task_result)
+                body = {"dev_type": dev_type, "max_charge_volt": round(dev_data[2] / 1000, 2),
+                        "store_volt": round(dev_data[4] / 1000, 2),
+                        "discharge_volt": round(dev_data[3] / 1000, 2), "max_temp": round(dev_data[12], 2),
+                        "discharge_cycles": dev_data[15], "firmware": firmware_version,
+                        "discharge_current": int(dev_data[9]), "charging_current": dev_data[6],
+                        "charging_timeout": dev_data[14], "device_name": device.name, "slots_count": slots_count,
+                        "chems": chems, "max_capacity": dev_data[5], "pre_charge_current": dev_data[7],
+                        "term_charging_current": dev_data[8], "discharge_resistance": dev_data[10],
+                        "discharge_mode": dev_data[11], "max_low_volt_recovery_time": dev_data[13]}
+        except Exception as exc:
+            return JsonResponse({'error': f'Failed to parse device configuration: {exc}'}, status=502)
 
-            data = {"dev_type": device.type, "max_charge_volt": round(dev_data[2] / 1000, 2),
-                    "store_volt": round(dev_data[4] / 1000, 2),
-                    "discharge_volt": round(dev_data[3] / 1000, 2), "max_temp": round(dev_data[12], 2),
-                    "discharge_cycles": dev_data[15], "firmware": firmware_version,
-                    "discharge_current": int(dev_data[9]), "charging_current": dev_data[6],
-                    "charging_timeout": dev_data[14], "device_name": device.name, "slots_count": slots_count,
-                    "chems": chems, "max_capacity": dev_data[5], "pre_charge_current": dev_data[7],
-                    "term_charging_current": dev_data[8], "discharge_resistance": dev_data[10],
-                    "discharge_mode": dev_data[11], "max_low_volt_recovery_time": dev_data[13]}
-            print(data)
+        if body is None:
+            return JsonResponse({
+                'error': f'Unsupported device type "{dev_type}" or config format does not match (MCC / MCCPro / MCCReg).'
+            }, status=422)
 
-        return JsonResponse(data, safe=False)
+        # Frontend always JSON.parse(chems) — must be a non-empty serialized array string
+        _c = body.get("chems")
+        if _c is None or (isinstance(_c, str) and not _c.strip()):
+            body["chems"] = "[]"
+        elif not isinstance(_c, str):
+            body["chems"] = json.dumps(_c) if _c is not None else "[]"
+
+        return JsonResponse(body, safe=False)
 
 
 def save_device_settings(request):
@@ -943,6 +965,8 @@ def get_history(request):
                 #     volt_data.append(test_data.voltage)
                 #     current_data.append(test_data.current)
                 #     capacity_data.append(test_data.capacity)
+
+                import pandas as pd
 
                 df = pd.DataFrame.from_records(
                     [

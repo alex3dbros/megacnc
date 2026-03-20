@@ -1,0 +1,3 @@
+# Extra deps only for building Windows/Linux bundles (not needed at runtime in venv)
+pyinstaller==6.11.1
+pyinstaller-hooks-contrib==2024.10

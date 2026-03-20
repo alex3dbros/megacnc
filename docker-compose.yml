@@ -26,8 +26,17 @@ services:
       - db
       - redis
     environment:
-      - DATABASE_URL=postgres://postgres:MccAdmin@localhost:5432/mcccnc  # Note the use of localhost here
-      - REDIS_URL=redis://localhost:6379/0  # Note the use of localhost here
+      # Django citește DB_* din settings.py (nu parsează DATABASE_URL). host = rețea Linux host mode.
+      - DB_ENGINE=postgresql
+      - DB_NAME=mcccnc
+      - DB_USER=postgres
+      - DB_PASSWORD=MccAdmin
+      - DB_HOST=localhost
+      - DB_PORT=5432
+      - CELERY_EAGER=False
+      - CELERY_BROKER_URL=redis://localhost:6379/0
+      - CELERY_RESULT_BACKEND=redis://localhost:6379/0
+      - DJANGO_SETTINGS_MODULE=dashboard.settings
     cap_add:
       - NET_ADMIN
 
@@ -40,6 +49,17 @@ services:
     depends_on:
       - db
       - redis
+    environment:
+      - DB_ENGINE=postgresql
+      - DB_NAME=mcccnc
+      - DB_USER=postgres
+      - DB_PASSWORD=MccAdmin
+      - DB_HOST=localhost
+      - DB_PORT=5432
+      - CELERY_EAGER=False
+      - CELERY_BROKER_URL=redis://localhost:6379/0
+      - CELERY_RESULT_BACKEND=redis://localhost:6379/0
+      - DJANGO_SETTINGS_MODULE=dashboard.settings
 
   celerybeat:
     build: .
@@ -50,6 +70,17 @@ services:
     depends_on:
       - db
       - redis
+    environment:
+      - DB_ENGINE=postgresql
+      - DB_NAME=mcccnc
+      - DB_USER=postgres
+      - DB_PASSWORD=MccAdmin
+      - DB_HOST=localhost
+      - DB_PORT=5432
+      - CELERY_EAGER=False
+      - CELERY_BROKER_URL=redis://localhost:6379/0
+      - CELERY_RESULT_BACKEND=redis://localhost:6379/0
+      - DJANGO_SETTINGS_MODULE=dashboard.settings
 
 volumes:
   postgres_data:

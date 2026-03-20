@@ -327,7 +327,22 @@ function editDevice(deviceId) {
         },
         body: JSON.stringify({ 'device_id': deviceId })  // Note that we're sending an array with a single ID
     })
-    .then(response => response.json())
+    .then(async (response) => {
+        const text = await response.text();
+        let data;
+        if (text == null || String(text).trim() === '') {
+            throw new Error('Empty response from server (HTTP ' + response.status + '). If you use a reverse proxy, check its timeout / upstream.');
+        }
+        try {
+            data = JSON.parse(text);
+        } catch (e) {
+            throw new Error(response.status + ' ' + response.statusText + ' — body is not JSON (proxy 502 HTML?). First bytes: ' + String(text).slice(0, 120));
+        }
+        if (!response.ok) {
+            throw new Error(data.error || data.detail || ('HTTP ' + response.status));
+        }
+        return data;
+    })
     .then(data => {
             // Populate modal form fields with device data
 
@@ -390,8 +405,20 @@ function editDevice(deviceId) {
 
 
 
-            // Parse the JSON string into a JavaScript object
-            var chemistries = JSON.parse(data["chems"]);
+            // chems: Django serialized JSON string, or [] — never JSON.parse(undefined)
+            var chemistries = [];
+            var chemsRaw = data.chems;
+            if (chemsRaw != null && chemsRaw !== '') {
+                try {
+                    chemistries = typeof chemsRaw === 'string' ? JSON.parse(chemsRaw) : chemsRaw;
+                } catch (e) {
+                    console.warn('editDevice: invalid chems, using empty list', e);
+                    chemistries = [];
+                }
+            }
+            if (!Array.isArray(chemistries)) {
+                chemistries = [];
+            }
 
             // Initialize the chemistryOptions array and chemistryDefaults object
             var chemistryOptions = [];
@@ -477,7 +504,7 @@ function editDevice(deviceId) {
 
             $('#loadingSpinner').hide();
             $('#main-form').show();
-            if (data["dev_type"] === "MCCPro") {
+            if (data["dev_type"] === "MCCPro" || data["dev_type"] === "MCCReg") {
                 $('#form-mccpro').show();
             }
 
@@ -486,7 +513,16 @@ function editDevice(deviceId) {
             // Show the modal
 
         })
-        .catch(error => console.error('Error fetching device data:', error));
+        .catch(error => {
+            console.error('Error fetching device data:', error);
+            $('#loadingSpinner').hide();
+            $('#main-form').hide();
+            $('#form-mccpro').hide();
+            $('.modal-footer').hide();
+            if (typeof toastr !== 'undefined') {
+                toastr.error(String(error.message || error), 'Edit device');
+            }
+        });
 
 
 }

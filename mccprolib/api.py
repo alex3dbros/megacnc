@@ -87,8 +87,12 @@ class MegacellCharger:
         return result
 
     def get_cell_chemistry(self, data):
-        result = self.set_data(data, "api/get_chemistry")
-        return result
+        """Return raw response bytes (MessagePack). Do not use .text — it corrupts binary."""
+        req_uri = "http://" + self.ip + "/" + "api/get_chemistry"
+        req = requests.post(
+            req_uri, data=json.dumps(data), headers=self.headers, timeout=API_TIMEOUT
+        )
+        return req.content
 
     def reset(self):
         result = self.set_data({"secret" : 20200104}, "api/reset_charger")

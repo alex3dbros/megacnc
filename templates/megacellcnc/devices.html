@@ -3,52 +3,42 @@
         
 {% block additional_css %}
 <style>
-
-    .tableFixHead          { overflow: auto; max-height: 300px; min-height: 50px;}
-    .tableFixHead thead th { position: sticky; top: 0; z-index: 1; }
-
-    /* Just common table stuff. Really. */
-    table  { border-collapse: collapse; width: 100%; }
-    th, td { padding: 8px 16px; }
-    th     { background:#eee; }
-
-
-    .tbl-caption {
+    .mcc-devices-page .tableFixHead { overflow: auto; max-height: 320px; min-height: 50px; }
+    .mcc-devices-page .tableFixHead thead th { position: sticky; top: 0; z-index: 1; }
+    .mcc-devices-page table { border-collapse: collapse; width: 100%; }
+    .mcc-devices-page th, .mcc-devices-page td { padding: 0.5rem 0.65rem; vertical-align: middle; }
+    .mcc-devices-toolbar {
         display: flex;
+        flex-wrap: wrap;
         justify-content: space-between;
         align-items: center;
+        gap: 0.75rem;
+        padding: 0.75rem 1rem;
+        border-bottom: 1px solid var(--mcc-border-subtle, rgba(255,255,255,0.08));
     }
-    .heading {
-        margin-bottom: 0;
+    .mcc-devices-toolbar .heading { margin-bottom: 0; }
+    .mcc-devices-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }
+    .mcc-assign-project {
+        min-width: 11rem;
+        max-width: 18rem;
+        font-size: 0.8rem;
     }
-
-
-
 </style>
-
-{% endblock %}		
+{% endblock %}
 {% block content %}
 
-<!--**********************************
-    Content body start
-***********************************-->
-<div class="content-body">
-    <!-- row -->	
-    <div class="page-titles">
-        <ol class="breadcrumb">
-            <li><h5 class="bc-title">{{page_title}}</h5></li>
-            <li class="breadcrumb-item"><a href="javascript:void(0)">
-                <svg width="17" height="17" viewBox="0 0 17 17" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M2.125 6.375L8.5 1.41667L14.875 6.375V14.1667C14.875 14.5424 14.7257 14.9027 14.4601 15.1684C14.1944 15.4341 13.8341 15.5833 13.4583 15.5833H3.54167C3.16594 15.5833 2.80561 15.4341 2.53993 15.1684C2.27426 14.9027 2.125 14.5424 2.125 14.1667V6.375Z" stroke="#2C2C2C" stroke-linecap="round" stroke-linejoin="round"/>
-                    <path d="M6.375 15.5833V8.5H10.625V15.5833" stroke="#2C2C2C" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-                Home </a>
-            </li>
-            <li class="breadcrumb-item active"><a href="javascript:void(0)">{{page_title}}</a></li>
-        </ol>
-            <a class="text-primary fs-13" data-bs-toggle="offcanvas" href="#offcanvasExample1" role="button" aria-controls="offcanvasExample1">+ Add Device</a>
+<div class="content-body mcc-devices-page">
+    <div class="mcc-page-head">
+        <div>
+            <h1>Devices</h1>
+            <div class="mcc-breadcrumb"><a href="{% url 'megacellcnc:index' %}">Home</a> / Chargers</div>
+        </div>
+        <div class="mcc-operator-bar d-none d-md-flex">
+            <span class="mcc-pill mcc-pill--live"><span class="mcc-dot"></span> Operator</span>
+        </div>
     </div>
-    <div class="container-fluid">
+
+    <div class="container-fluid px-0">
         <div class="row">
             <div class="col-xl-3 col-sm-6">
                 <div class="card box-hover">
@@ -75,13 +65,18 @@
                     <div class="card-body p-0">
                         <div class="table-responsive active-projects shorting">
 
-                            <div class="tbl-caption">
-                                <h4 class="heading mb-0">Devices</h4>
-
-                                <div class="help-desk">
-                                    <button type="button" id="deleteDevicesBtn" class="btn btn-danger"><i class="fa-solid fa-trash me-2"></i>Delete</button>
+                            <div class="tbl-caption mcc-devices-toolbar">
+                                <h4 class="heading mb-0">Device list</h4>
+                                <div class="mcc-devices-actions">
+                                    <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="offcanvas" data-bs-target="#offcanvasExample1" aria-controls="offcanvasExample1">
+                                        <i class="fa-solid fa-plus me-1"></i> Add new device
+                                    </button>
+                                    <button type="button" class="btn btn-outline-info btn-sm" id="mcc-btn-open-scan" data-bs-toggle="offcanvas" data-bs-target="#offcanvasExample1" aria-controls="offcanvasExample1">
+                                        <i class="fa-solid fa-magnifying-glass me-1"></i> Scan network
+                                    </button>
+                                    <span class="text-muted small d-none d-lg-inline ms-1" title="Pick a project per row in the table">Assign: use Project column</span>
+                                    <button type="button" id="deleteDevicesBtn" class="btn btn-danger btn-sm"><i class="fa-solid fa-trash me-1"></i>Delete selected</button>
                                 </div>
-
                             </div>
 
 
@@ -91,8 +86,8 @@
                                 <tr>
                                     <th>
                                         <div class="form-check-all custom-checkbox ms-0">
-                                            <input type="checkbox"  class="form-check-input" id="checkDevices" >
-                                            <label class="form-check-label" for="checkAll"></label>
+                                            <input type="checkbox" class="form-check-input" id="checkDevices">
+                                            <label class="form-check-label" for="checkDevices"></label>
                                         </div>
                                     </th>
                                     <th>Name</th>
@@ -123,7 +118,14 @@
                                         <a href="{% url 'megacellcnc:device-slots' %}?dev_id={{ device.id }}">{{ device.name }}</a>
                                     </td>
                                     <td><div class="status-{{ device.status|lower|add:'-device' }}">{{ device.status|capfirst }}</div></td>
-                                    <td>{{ device.project.Name }}</td>
+                                    <td>
+                                        <select class="form-select form-select-sm mcc-assign-project" data-device-id="{{ device.id }}" aria-label="Assign project for {{ device.name }}">
+                                            <option value="unassigned" {% if not device.project %}selected{% endif %}>— Unassigned —</option>
+                                            {% for p in projects %}
+                                            <option value="{{ p.id }}" {% if device.project_id == p.id %}selected{% endif %}>{{ p.Name }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </td>
                                     <td>{{ device.type }}</td>
                                     <td>{{ device.global_chemistry }}</td>
                                     <td>{{ device.ip }}</td>
@@ -139,7 +141,7 @@
                                 </tr>
 
                                 {% empty %}
-                                <tr><td colspan="7" style="text-align:center;">No devices found.</td></tr>
+                                <tr><td colspan="10" class="text-center text-muted py-4">No devices found.</td></tr>
                                 {% endfor %}
 
                                 </tbody>
@@ -168,7 +170,8 @@
     </div>
     <div class="offcanvas-body">
     <div class="container-fluid">
-
+        <p class="text-muted small mb-3">Add a device: set IP range or manual IP, <strong>Scan network</strong>, select discovered units, then fill prefix and project and submit.</p>
+        <div id="mcc-device-scan-anchor"></div>
 
         <form id="ipRangeForm" method="post">
             {% csrf_token %}
@@ -183,7 +186,7 @@
 
             <div class="col-xl-6 mb-3">
                 <label for="deviceManualIp" class="form-label" >Manual Ip</label>
-                <input type="text" class="form-control" id="deviceManualIp"  name="device_manual_ip" placeholder="192.168.x.x">
+                <input type="text" class="form-control" id="device_manual_ip" name="device_manual_ip" placeholder="192.168.x.x">
             </div>
 
             <button type="button" id="scanDevicesBtn" class="btn btn-primary">
@@ -556,7 +559,56 @@
     });
 </script>
 
+<script>
+(function() {
+  function getCookie(name) {
+    var v = null;
+    if (document.cookie && document.cookie !== '') {
+      document.cookie.split(';').forEach(function(part) {
+        part = part.trim();
+        if (part.indexOf(name + '=') === 0)
+          v = decodeURIComponent(part.substring(name.length + 1));
+      });
+    }
+    return v;
+  }
+  document.querySelectorAll('.mcc-assign-project').forEach(function(sel) {
+    sel.addEventListener('change', function() {
+      var deviceId = this.getAttribute('data-device-id');
+      var projectId = this.value === 'unassigned' ? 'unassigned' : this.value;
+      fetch('{% url "megacellcnc:assign-device-project" %}', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: JSON.stringify({ device_id: parseInt(deviceId, 10), project_id: projectId })
+      }).then(function(r) {
+        if (!r.ok) throw new Error('Request failed');
+        return r.json();
+      }).then(function() {
+        if (typeof toastr !== 'undefined') toastr.success('Project assignment updated');
+        window.location.reload();
+      }).catch(function() {
+        if (typeof toastr !== 'undefined') toastr.error('Could not update project');
+      });
+    });
+  });
 
+  var oc = document.getElementById('offcanvasExample1');
+  var scanBtn = document.getElementById('mcc-btn-open-scan');
+  if (oc && scanBtn) {
+    scanBtn.addEventListener('click', function() {
+      function onShown() {
+        oc.removeEventListener('shown.bs.offcanvas', onShown);
+        var anchor = document.getElementById('mcc-device-scan-anchor');
+        if (anchor) anchor.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+      oc.addEventListener('shown.bs.offcanvas', onShown);
+    });
+  }
+})();
+</script>
 
 {% endblock %}
 

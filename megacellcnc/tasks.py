@@ -3,6 +3,7 @@ from megacellcnc.models import Device, Slot, Chemistry, CellTestData
 from celery.exceptions import SoftTimeLimitExceeded
 from mccprolib.api import MegacellCharger
 from megacellcnc.functions import portscan, add_new_cell
+import base64
 import logging
 from django.db import transaction
 from django.core import serializers
@@ -257,6 +258,9 @@ def get_device_config(device_id):
                 mccpro_chemistries_json = serializers.serialize('json', chems)
                 data = {"CiD": 0}
                 device_conf = tester.get_cell_chemistry(data)
+                # Celery JSON result backend cannot carry raw bytes cleanly — use base64.
+                if isinstance(device_conf, (bytes, bytearray)):
+                    device_conf = base64.b64encode(bytes(device_conf)).decode("ascii")
                 return device_conf, mccpro_chemistries_json, tester.device_type["FwV"]
 
             elif tester.device_type["ChT"] == "MCCReg":
@@ -264,8 +268,18 @@ def get_device_config(device_id):
                 mcc_chemistries_json = serializers.serialize('json', chems)
                 data = {"CiD": 0}
                 device_conf = tester.get_cell_chemistry(data)
+                if isinstance(device_conf, (bytes, bytearray)):
+                    device_conf = base64.b64encode(bytes(device_conf)).decode("ascii")
 
                 return device_conf, mcc_chemistries_json, tester.device_type["FwV"]
+
+            # Classic MCC sometimes reports ChT == "MCC" (not Pro/Reg) — use JSON config path.
+            elif tester.device_type.get("ChT") == "MCC":
+                chems = Chemistry.objects.filter(device_type="MCC")
+                mcc_chemistries_json = serializers.serialize("json", chems)
+                device_conf = tester.get_config()
+                fw = tester.device_type.get("FwV") or tester.device_type.get("McC", "")
+                return device_conf, mcc_chemistries_json, fw
 
         elif tester.device_type and 'McC' in tester.device_type:
             chems = Chemistry.objects.filter(device_type="MCC")
@@ -273,6 +287,10 @@ def get_device_config(device_id):
             device_conf = tester.get_config()
 
             return device_conf, mcc_chemistries_json, tester.device_type["McC"]
+
+        # Port open but API shape not recognized — avoid returning None (breaks Celery .get() unpack).
+        return {}, {}, ""
+
     else:
         return {}, {}, ""
 

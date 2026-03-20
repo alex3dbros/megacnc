@@ -14,10 +14,64 @@ from pathlib import Path
 from dotenv import load_dotenv
 import os
 
-# Build paths inside the project like this: BASE_DIR / 'subdir'.
-BASE_DIR = Path(__file__).resolve().parent.parent
+# PyInstaller / desktop bundle: project data (templates, static, .env, db) lives next to the exe.
+# Set by packaging/launcher.py before Django loads.
+_bundle = os.getenv("MEGACNC_BUNDLE_ROOT")
+if _bundle:
+    BASE_DIR = Path(_bundle).resolve()
+else:
+    BASE_DIR = Path(__file__).resolve().parent.parent
 
-load_dotenv(BASE_DIR / '.env')
+load_dotenv(BASE_DIR / ".env")
+
+
+def _discover_template_dirs():
+    """
+    Dev: BASE_DIR/templates.
+    PyInstaller onedir: often under BASE_DIR/megacnc_dt_* or BASE_DIR/_internal/megacnc_dt_*.
+    """
+    names = ("megacnc_dt_templates", "templates")
+    roots = [BASE_DIR]
+    internal = BASE_DIR / "_internal"
+    if internal.is_dir():
+        roots.append(internal)
+    out = []
+    seen = set()
+    for root in roots:
+        for name in names:
+            p = (root / name).resolve()
+            if p.is_dir():
+                key = str(p)
+                if key not in seen:
+                    seen.add(key)
+                    out.append(p)
+    return out if out else [BASE_DIR / "templates"]
+
+
+def _discover_static_dirs():
+    names = ("megacnc_dt_static", "static")
+    roots = [BASE_DIR]
+    internal = BASE_DIR / "_internal"
+    if internal.is_dir():
+        roots.append(internal)
+    out = []
+    seen = set()
+    for root in roots:
+        for name in names:
+            p = (root / name).resolve()
+            if p.is_dir():
+                key = str(p)
+                if key not in seen:
+                    seen.add(key)
+                    out.append(str(p))
+    return tuple(out) if out else (str(BASE_DIR / "static"),)
+
+
+# Optional: separate writable dir for SQLite (e.g. onefile or portable USB)
+_data = os.getenv("MEGACNC_DATA_DIR")
+if _data:
+    _data_path = Path(_data).resolve()
+    _data_path.mkdir(parents=True, exist_ok=True)
 
 SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-dp#h4@*pio(2yfpeuu-f7va!^92c#fy&wif+goo&^g(bzy5d9b')
 
@@ -55,7 +109,7 @@ ROOT_URLCONF = 'dashboard.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [Path(BASE_DIR,'templates'),],
+        'DIRS': _discover_template_dirs(),
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -76,10 +130,20 @@ WSGI_APPLICATION = 'dashboard.wsgi.application'
 DB_ENGINE = os.getenv('DB_ENGINE', 'postgresql')
 
 if DB_ENGINE == 'sqlite3':
+    _sqlite_name = (
+        Path(_data).resolve() / "db.sqlite3"
+        if _data
+        else BASE_DIR / "db.sqlite3"
+    )
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': BASE_DIR / 'db.sqlite3',
+            'NAME': _sqlite_name,
+            # Waitress + background poller thread (desktop bundle) need multi-threaded SQLite access
+            'OPTIONS': {
+                'timeout': 25,
+                'check_same_thread': False,
+            },
         }
     }
 else:
@@ -154,7 +218,7 @@ USE_TZ = True
 STATIC_URL = 'static/'
 
 if DEBUG:
-    STATICFILES_DIRS = (os.path.join(BASE_DIR, 'static'),)
+    STATICFILES_DIRS = _discover_static_dirs()
 else:
     STATIC_ROOT = os.path.join(BASE_DIR, 'static')
 
