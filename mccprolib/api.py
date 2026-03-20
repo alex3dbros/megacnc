@@ -1,6 +1,8 @@
 import requests
 import json
 
+API_TIMEOUT = 5
+
 
 class MegacellCharger:
     def __init__(self, ip):
@@ -95,13 +97,13 @@ class MegacellCharger:
 
     def get_data(self, data, api_addr):
         req_uri = "http://" + self.ip + "/" + api_addr
-        req = requests.post(req_uri, data=json.dumps(data), headers=self.headers)
+        req = requests.post(req_uri, data=json.dumps(data), headers=self.headers, timeout=API_TIMEOUT)
         return req.json()
 
     def set_data(self, data, api_addr):
         req_uri = "http://" + self.ip + "/" + api_addr
-        req = requests.post(req_uri, data=json.dumps(data), headers=self.headers)
-        return req.content
+        req = requests.post(req_uri, data=json.dumps(data), headers=self.headers, timeout=API_TIMEOUT)
+        return req.text
 
     def get_device_type(self):
         data = {}

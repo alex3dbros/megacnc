@@ -114,14 +114,12 @@ def devices(request):
         notes = request.POST.get('notes')
         added_devices = 0
         print("this is project id: %s" % project_id)
-        # Fetch the Projects instance corresponding to the project_id
         try:
             project_instance = Projects.objects.get(id=project_id)
             print(project_instance)
-        except Projects.DoesNotExist:
-            # Handle the case where the project with the given name does not exist
-            print(f"Project with name '{project_id}' does not exist.")
-            # You might want to create a new project here or handle this error appropriately
+        except (Projects.DoesNotExist, ValueError, TypeError):
+            messages.error(request, 'Please select a valid project before adding devices.')
+            return redirect('/devices/')
 
         print(devices_details)
 
@@ -286,10 +284,12 @@ def get_cells(request):
 
 
 def get_battery_cells(request):
-    battery_id = int(request.GET.get('bat_id'))
-    print(battery_id)
+    bat_id_str = request.GET.get('bat_id')
+    if not bat_id_str:
+        return JsonResponse({'error': 'bat_id is required'}, status=400)
+    battery_id = int(bat_id_str)
 
-    battery = Batteries.objects.get(id=battery_id)
+    battery = get_object_or_404(Batteries, id=battery_id)
     cells_data = []
     for cell in battery.battery_cells.all():
         match = re.search(r'-S(\d+)', cell.UUID)
@@ -328,7 +328,7 @@ def batteries(request):
     projects_data = [{'id': prj.id, 'name': prj.Name} for prj in projects]
     batteries = Batteries.objects.annotate(cells_count=Count('battery_cells'))
     for battery in batteries:
-        battery.series_parallel = battery.series * battery.parallel if battery.series and battery.parallel else 0
+        battery.series_parallel = (battery.series or 0) * (battery.parallel or 0)
 
     context = {
         "page_title":"Batteries",
@@ -444,9 +444,8 @@ def handle_device_action(request):
 
     try:
         device = Device.objects.get(id=deviceId)
-    # Now you can use 'device' object for further operations
     except Device.DoesNotExist:
-        return "Fail"
+        return JsonResponse({'error': 'Device not found'}, status=404)
 
 
 
@@ -468,7 +467,12 @@ def handle_device_action(request):
     else:
         action_type = "regular"
 
-    dispatch_command.delay(data, request_data, action_type)
+    try:
+        result = dispatch_command.delay(data, request_data, action_type)
+        if hasattr(result, 'get'):
+            result.get(timeout=30)
+    except Exception as e:
+        return JsonResponse({'error': f'Command failed: {e}'}, status=500)
 
     return JsonResponse({'message': f'{action.capitalize()} action submitted for selected devices.'})
 
@@ -503,7 +507,7 @@ def get_updated_slots(request, device_id):
 
         if slot.active_cell:
             match = re.search(r'-S(\d+)', slot.active_cell.UUID)
-            serial_number = int(match.group(1))
+            serial_number = int(match.group(1)) if match else 0
 
             slot_info.update({
                 'active_cell_uuid': serial_number,
@@ -544,7 +548,7 @@ def get_project_slots(request, project_id):
 
             if slot.active_cell:
                 match = re.search(r'-S(\d+)', slot.active_cell.UUID)
-                serial_number = int(match.group(1))
+                serial_number = int(match.group(1)) if match else 0
                 slot_info.update({
                     'active_cell_uuid': serial_number,
                     'active_cell_type': slot.active_cell.cell_type,
@@ -624,9 +628,10 @@ def edit_device(request):
         # Get device chemistry settings depending on device type
 
         result_async = get_device_config.delay(device_id)
-        task_result, chems, firmware_version = result_async.get()  # Be cautious with get(), it can lead to deadlocks
+        task_result, chems, firmware_version = result_async.get()
 
-        # Use the task result in your response or further processing
+        if not task_result:
+            return JsonResponse({'error': 'Device is offline or unreachable'}, status=503)
 
         if task_result and device.type == "MCC":
             data = {"dev_type": device.type, "max_charge_volt": round(task_result["MaV"], 2),

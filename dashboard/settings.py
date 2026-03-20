@@ -11,22 +11,19 @@ https://docs.djangoproject.com/en/5.0/ref/settings/
 """
 
 from pathlib import Path
+from dotenv import load_dotenv
 import os
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+load_dotenv(BASE_DIR / '.env')
 
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/5.0/howto/deployment/checklist/
+SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-dp#h4@*pio(2yfpeuu-f7va!^92c#fy&wif+goo&^g(bzy5d9b')
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-dp#h4@*pio(2yfpeuu-f7va!^92c#fy&wif+goo&^g(bzy5d9b'
+DEBUG = os.getenv('DEBUG', 'True').lower() in ('true', '1', 'yes')
 
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
-
-ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '*').split(',')
 
 
 # Application definition
@@ -75,28 +72,39 @@ TEMPLATES = [
 WSGI_APPLICATION = 'dashboard.wsgi.application'
 
 
-# Database
-# https://docs.djangoproject.com/en/5.0/ref/settings/#databases
+# Database — set DB_ENGINE=sqlite3 in .env to use SQLite (no PostgreSQL needed)
+DB_ENGINE = os.getenv('DB_ENGINE', 'postgresql')
 
-
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'mcccnc',  # Your PostgreSQL database name
-        'USER': 'postgres',  # Your PostgreSQL username
-        'PASSWORD': 'MccAdmin',  # Your PostgreSQL password
-        'HOST': 'localhost',  # Your PostgreSQL host (use 'localhost' if running on the same machine)
-        'PORT': '5432',  # Leave as an empty string to use the default PostgreSQL port (5432)
+if DB_ENGINE == 'sqlite3':
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
     }
-}
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': os.getenv('DB_NAME', 'mcccnc'),
+            'USER': os.getenv('DB_USER', 'postgres'),
+            'PASSWORD': os.getenv('DB_PASSWORD', 'MccAdmin'),
+            'HOST': os.getenv('DB_HOST', 'localhost'),
+            'PORT': os.getenv('DB_PORT', '5432'),
+        }
+    }
 
 # Celery Configuration
-CELERY_BROKER_URL = 'redis://localhost:6379/0'
-CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
+# Set CELERY_EAGER=True in .env to run tasks synchronously (no Redis/Celery needed)
+CELERY_TASK_ALWAYS_EAGER = os.getenv('CELERY_EAGER', 'False').lower() in ('true', '1', 'yes')
+CELERY_TASK_EAGER_PROPAGATES = CELERY_TASK_ALWAYS_EAGER
+
+CELERY_BROKER_URL = os.getenv('CELERY_BROKER_URL', 'redis://localhost:6379/0')
+CELERY_RESULT_BACKEND = os.getenv('CELERY_RESULT_BACKEND', 'redis://localhost:6379/0')
 CELERY_ACCEPT_CONTENT = ['application/json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
-CELERY_TIMEZONE = 'UTC'  # Adjust to your timezone
+CELERY_TIMEZONE = 'UTC'
 CELERY_IMPORTS = ('megacellcnc.tasks',)
 DJANGO_CELERY_BEAT_TZ_AWARE=False
 from celery.schedules import crontab
@@ -104,7 +112,7 @@ from celery.schedules import crontab
 CELERY_BEAT_SCHEDULE = {
     'check-devices-status-5s': {
         'task': 'megacellcnc.tasks.check_all_devices',
-        'schedule': 5.0,  # Run every 5 seconds
+        'schedule': 5.0,
     },
 }
 

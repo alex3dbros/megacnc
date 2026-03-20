@@ -210,22 +210,30 @@ def dispatch_command(data, request_data, action_type):
 
     try:
         device = Device.objects.get(id=deviceId)
-    # Now you can use 'device' object for further operations
     except Device.DoesNotExist:
         return "Fail"
 
     tester = MegacellCharger(device.ip)
-    if action_type == "regular":
-        result = tester.set_cells(request_data)
-        return result
 
-    elif action_type == "macro":
-        result = tester.set_cells_macro(request_data)
+    cells = request_data.get("cells", [])
+    # ESP8266 can only handle max 2 cells per request (memory constraint)
+    batches = [cells[i:i + 2] for i in range(0, len(cells), 2)]
 
-        return result
+    results = []
+    for batch in batches:
+        batch_data = {"cells": batch}
+        try:
+            if action_type == "macro":
+                result = tester.set_cells_macro(batch_data)
+            else:
+                result = tester.set_cells(batch_data)
+            logger.info(f"Dispatch to {device.ip}: {batch} -> {result}")
+            results.append(result)
+        except Exception as e:
+            logger.error(f"Dispatch to {device.ip} failed: {e}")
+            results.append(str(e))
 
-    else:
-        return False
+    return results
 
 
 @shared_task
@@ -266,7 +274,7 @@ def get_device_config(device_id):
 
             return device_conf, mcc_chemistries_json, tester.device_type["McC"]
     else:
-        return {}, {}
+        return {}, {}, ""
 
 
 @shared_task

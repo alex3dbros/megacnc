@@ -32,6 +32,8 @@ register.filter('getdata', getdata)
 
 @register.filter(name='format_duration')
 def format_duration(value):
+    if value is None:
+        return '00:00:00'
     hours, remainder = divmod(int(value), 3600)
     minutes, seconds = divmod(remainder, 60)
     return '{:02}:{:02}:{:02}'.format(hours, minutes, seconds)
@@ -39,6 +41,8 @@ def format_duration(value):
 
 @register.filter(name='round2')
 def round2(value):
+    if value is None:
+        return "0.00"
     return "{:.2f}".format(round(value, 2))
 
 # request.path	                  /home/
