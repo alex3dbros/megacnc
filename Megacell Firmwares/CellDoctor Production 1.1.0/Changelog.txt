@@ -1,0 +1,61 @@
+# Changelog
+
+## v1.1.0 (2026-03-20)
+
+Major update focused on performance, stability, memory optimization, and adding a web dashboard interface.
+
+### New Features
+
+- **Web Dashboard**: Full dark-themed web UI accessible at `http://<device-ip>/`, with real-time cell monitoring, system stats (heap, RSSI, fan, temperature, uptime, fragmentation), and controls for charge/discharge/store/dispose/ESR/macro per cell or all cells.
+- **Dashboard Settings Page**: Chemistry selection (preset or custom), hardware config (fan override, temp source, cell grouping), menu settings (WiFi, OTA, cycle display), reboot, and factory reset -- all from the browser.
+- **OTA Web Upload**: Firmware and SPIFFS filesystem images can be uploaded via drag-and-drop from the dashboard OTA page. Config files are automatically backed up and restored during SPIFFS updates.
+- **Gzip-compressed dashboard**: `index.html` is served as gzip (41KB -> 10KB, 75% reduction), with an auto-compression build script (`gzip_assets.py`).
+- **PlatformIO build system**: Project converted from Arduino IDE to PlatformIO with USB (`release`) and OTA (`ota`) build environments.
+- **OTA firmware upload**: ArduinoOTA support for wireless firmware deployment from PlatformIO/VS Code.
+- **Cell grouping support in dashboard**: Groups are displayed as combined cards with expandable sub-cells, reflecting the hardware cell grouping configuration.
+- **API documentation**: Added `API_README.md` with full reference for all HTTP endpoints, request/response formats, and state IDs for external integration (MegaCNC).
+
+### Performance & Memory Optimizations
+
+- **Round-robin cell processing**: Cells are processed in rotation instead of all-at-once, reducing per-loop CPU and I2C bus contention.
+- **MacroMachine zero-heap events**: Replaced `std::vector<std::pair<String, bool>>` with a fixed `MacroEvent[6]` array using enums. Eliminates ~4KB of fragmented heap allocation when running macros on all 16 cells simultaneously.
+- **Zero-heap API responses**: `handle_dash_data()` and `handle_get_settings()` write HTTP header + JSON body directly to the TCP socket in a single `client.write()` call -- no `String` or `DynamicJsonDocument` heap allocation.
+- **Streaming cell info**: `handle_get_cells_info()` (used by MegaCNC) streams JSON per-cell directly to the socket instead of building a ~5KB `String` through concatenation. Eliminates the primary source of heap fragmentation.
+- **Single TCP write**: Combined HTTP headers and JSON body into one buffer/write to allocate only one TCP segment buffer (~1.5KB) instead of two (~3KB).
+- **Compact dashboard JSON**: Cell data sent as arrays `[state, voltage, current, chargeCap, dischargeCap, groupId, temp]` instead of verbose objects, reducing response size from ~5KB to ~540 bytes.
+- **lwIP low-memory variant**: Switched to `PIO_FRAMEWORK_ARDUINO_LWIP2_LOW_MEMORY` for reduced TCP/IP stack memory footprint.
+- **Reduced DynamicJsonDocument sizes**: Tuned allocation sizes across all handlers to match actual payload requirements.
+- **Adaptive dashboard polling**: JavaScript client adjusts polling interval (5s normal, 10s when heap < 3KB) and pauses polling entirely during batch command execution.
+- **Client-side command batching**: Multi-cell commands are sent in batches of 2 with 250ms delays to prevent heap exhaustion from concurrent request processing.
+- **TCP keepalive disabled**: `server.keepAlive(false)` reduces idle connection memory overhead.
+- **Removed unnecessary CORS headers**: Eliminated 5 CORS headers from same-origin dashboard requests.
+
+### Bug Fixes
+
+- **Fan control in Dispose state**: Fans now correctly start when cells enter the Dispose state.
+- **Chemistry change crash**: Fixed Exception 0 crash when changing chemistry from the menu (missing `return proceed` in `MCCMenu.h::chemSetFunction`).
+- **Fan display inversion**: Corrected active-LOW fan logic so the dashboard icon matches physical fan state.
+- **Macro restart after stop**: Fixed `lastStateTrigger` not resetting when a macro is stopped, which prevented measure-cap from restarting without removing and reinserting the cell.
+- **Macro cleanup on cell stop**: Any manual cell command (charge, discharge, stop, etc.) now automatically stops any running macro for that cell, preventing the MacroMachine from getting stuck in `MEASURE_CAPACITY`.
+- **Macro self-transition**: State table updated to allow `EVT_MEASURE_CAPACITY` to trigger a fresh restart even if the MacroMachine is already in `MEASURE_CAPACITY` state.
+- **SOC display flickering**: Added hysteresis to battery icon calculation to prevent rapid icon switching.
+- **Voltage/current sampling rates**: Restored original hardware-defined sampling rates (20 for voltage, 40 for current) that were inadvertently changed.
+- **WiFi credential persistence**: Default WiFi credentials are no longer overwritten during firmware updates. SPIFFS upload backs up and restores all `.pack` config files.
+- **Gzip double-encoding**: Fixed `ERR_CONTENT_DECODING_FAILED` caused by manually adding `Content-Encoding: gzip` when `ESP8266WebServer::streamFile()` already handles it for `.gz` files.
+
+### API Changes
+
+- **No breaking changes** to existing MegaCNC endpoints (`/api/who_am_i`, `/api/get_cells_info`, `/api/get_chemistry`, `/api/set_cell`, `/api/set_cell_macro`, etc.). All request/response formats remain identical.
+- **New endpoints added** for the web dashboard (see `API_README.md` for details):
+  - `GET /api/dash_data` -- compact cell data for dashboard polling
+  - `GET /api/chemistries` -- list chemistry presets
+  - `POST /api/apply_chem` -- apply preset or custom chemistry
+  - `GET /api/settings` -- device settings
+  - `POST /api/save_hw`, `POST /api/save_menu` -- save settings
+  - `POST /api/reboot`, `POST /api/do_factory_reset` -- system commands
+  - `POST /api/update`, `POST /api/update_spiffs` -- OTA web upload
+
+### Known Limitations
+
+- ESP8266 heap remains tight (~4-5KB free) when all 16 cells are active with both the web dashboard and MegaCNC connected. The device returns HTTP 503 when memory is critically low; clients should retry after 1-2 seconds.
+- `GET /api/get_config_info` returns an empty response (implementation was commented out in the original firmware).
