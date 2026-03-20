@@ -16,6 +16,13 @@ Software for controlling Megacell charger lithium cell testing devices.
 
 The app polls Megacell charger hardware devices over HTTP every 5 seconds (via a Celery Beat periodic task), stores cell voltage/capacity/ESR data in the database, and serves a web dashboard on port 8000.
 
+### UI (premium dark shell)
+
+- **Theme:** Dark-only layout aligned with Deep Cycle Power branding (blue / lime accents). Global overrides live in `static/megacellcnc/css/megacnc-premium.css` (loaded from `dz.py`).
+- **Dashboard:** Projects overview + **assign device to project** via dropdown (POST `assign-device-project/`). No need to delete/re-add devices.
+- **Device / slots:** Operator-focused layout; slot charts use **Chart.js** with filled areas (voltage, current, temperature on one graph).
+- **Cleanup:** Demo routes (shop, email demos, chart demos, etc.) were removed from `megacellcnc/urls.py`; unused template files may remain in `templates/` but are not linked.
+
 ---
 
 ## Quick Start — Windows / PyCharm (Development)

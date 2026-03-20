@@ -5,32 +5,28 @@
 
 
 <style>
-
-    .tableFixHead          { overflow: auto; max-height: 300px; min-height: 50px;}
-    .tableFixHead thead th { position: sticky; top: 0; z-index: 1; }
-
-    /* Just common table stuff. Really. */
-    table  { border-collapse: collapse; width: 100%; }
-    th, td { padding: 8px 16px; }
-    th     { background:#eee; }
-
+    /* Project page: dark-friendly tables (avoid light #eee headers) */
+    .mcc-project-page table { border-collapse: collapse; width: 100%; }
+    .mcc-project-page th,
+    .mcc-project-page td { padding: 0.45rem 0.65rem; vertical-align: middle; }
 
     .tbl-caption {
         display: flex;
         justify-content: space-between;
         align-items: center;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        padding: 0.75rem 1rem;
+        border-bottom: 1px solid var(--mcc-border-subtle, rgba(255,255,255,0.08));
     }
-    .heading {
-        margin-bottom: 0;
+    .heading { margin-bottom: 0; }
+
+    .help-desk button {
+        display: block;
+        width: 100%;
+        margin-bottom: 10px;
+        text-align: left;
     }
-
-.help-desk button {
-    display: block; /* Make buttons block-level elements */
-    width: 100%; /* Each button takes up the full width */
-    margin-bottom: 10px; /* Optional: adds space between buttons */
-    text-align: left;
-}
-
 </style>
 
 
@@ -40,8 +36,8 @@
 <!--**********************************
     Content body start
 ***********************************-->
-<div class="content-body">
-    <div id="deviceInfo" data-project-id="{{project.id}}" data-device-id="{{ device.id }}" data-slot-count="{{ slots|length }}"></div>
+<div class="content-body mcc-project-page">
+    <div id="deviceInfo" data-project-id="{{ project.id }}" data-device-id="" data-slot-count="0" hidden aria-hidden="true"></div>
     <!-- row -->
     <div class="page-titles">
         <ol class="breadcrumb">
@@ -70,11 +66,11 @@
 				<!-- row -->
 				<div class="row">
 
-            <div class="col-xl-3 col-sm-6">
-            <div class="card box-hover">
-                <div class="card-body">
-                    <div class="d-flex align-items-center">
-                        <div class="icon-box icon-box-lg bg-success-light rounded-circle">
+            <div class="col-12">
+            <div class="card box-hover mcc-project-hero-card">
+                <div class="card-body py-3">
+                    <div class="d-flex align-items-center flex-wrap gap-3">
+                        <div class="icon-box icon-box-lg bg-success-light rounded-circle flex-shrink-0">
                             <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                                 <path d="M12.0001 8.32733V15.6537" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
                                 <path d="M15.6668 11.9905H8.3335" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
@@ -82,15 +78,13 @@
                             </svg>
 
                         </div>
-                        <div class="total-projects ms-3">
-                            <h3 class="text-success count">{{device_count}}</h3>
+                        <div class="total-projects flex-shrink-0">
+                            <h3 class="text-success count mb-0">{{ device_count }}</h3>
                             <span>Total Devices</span>
-
                         </div>
-                        <div class="total-projects ms-3" style="padding-left: 30px; text-align: right;">
-                            <span>{{device.status}}</span>
-                            <h3 class="text-success count" >{{device.name}}</h3>
-
+                        <div class="mcc-project-hero-name flex-grow-1 min-w-0">
+                            <span class="text-muted d-block" style="font-size: 0.8rem;">Project</span>
+                            <h4 class="mb-0 mcc-project-hero-title" title="{{ project.Name }}">{{ project.Name }}</h4>
                         </div>
                     </div>
                 </div>
@@ -101,97 +95,23 @@
         </div>
 
         <div class="row">
-
             <div class="col-xl-12">
                 <div class="card">
-                    <div class="card-body">
-                        <div class="row task">
-                            <div class="col-xl-1 col-sm-4 col-6">
-                                <div class="task-summary">
-                                    <div class="d-flex align-items-center">
-                                        <h2 id="count-not-inserted" class="text-primary count">-</h2>
-                                        <span>Not Inserted</span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="col-xl-1 col-sm-4 col-6">
-                                <div class="task-summary">
-                                    <div class="d-flex align-items-center">
-                                        <h2 id="count-regular-cells" class="text-primary count">-</h2>
-                                        <span>Regular Cells</span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="col-xl-1 col-sm-4 col-6">
-                                <div class="task-summary">
-                                    <div class="d-flex align-items-center">
-                                        <h2 id="count-low-voltage" class="text-primary count">-</h2>
-                                        <span>Low Voltage</span>
-                                    </div>
-                                </div>
-                            </div>
-
-
-                            <div class="col-xl-1 col-sm-4 col-6">
-                                <div class="task-summary">
-                                    <div class="d-flex align-items-center">
-                                        <h2 id="count-charging" class="text-purple count">-</h2>
-                                        <span>Charging</span>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-xl-1 col-sm-4 col-6">
-                                <div class="task-summary">
-                                    <div class="d-flex align-items-center">
-                                        <h2 id="count-discharging" class="text-warning count">-</h2>
-                                        <span>Discharging</span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="col-xl-1 col-sm-4 col-6">
-                                <div class="task-summary">
-                                    <div class="d-flex align-items-center">
-                                        <h2 id="count-charged" class="text-danger count">-</h2>
-                                        <span>Charged</span>
-                                    </div>
-                                </div>
-                            </div>
-
-
-                            <div class="col-xl-1 col-sm-4 col-6">
-                                <div class="task-summary">
-                                    <div class="d-flex align-items-center">
-                                        <h2 id="count-stored" class="text-danger count">-</h2>
-                                        <span>Stored</span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="col-xl-1 col-sm-4 col-6">
-                                <div class="task-summary">
-                                    <div class="d-flex align-items-center">
-                                        <h2 id="count-discharged" class="text-danger count">-</h2>
-                                        <span>Discharged</span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="col-xl-1 col-sm-4 col-6">
-                                <div class="task-summary">
-                                    <div class="d-flex align-items-center">
-                                        <h2 id="count-bad" class="text-success count">-</h2>
-                                        <span>Bad</span>
-                                    </div>
-                                </div>
-                            </div>
+                    <div class="card-body py-3">
+                        <div class="mcc-status-pills mcc-project-summary" role="list" aria-label="Slot state summary">
+                            <div class="mcc-status-pill" role="listitem"><strong id="count-not-inserted">–</strong><span>Not inserted</span></div>
+                            <div class="mcc-status-pill" role="listitem"><strong id="count-regular-cells">–</strong><span>Regular cells</span></div>
+                            <div class="mcc-status-pill" role="listitem"><strong id="count-low-voltage">–</strong><span>Low voltage</span></div>
+                            <div class="mcc-status-pill" role="listitem"><strong id="count-charging">–</strong><span>Charging</span></div>
+                            <div class="mcc-status-pill" role="listitem"><strong id="count-discharging">–</strong><span>Discharging</span></div>
+                            <div class="mcc-status-pill" role="listitem"><strong id="count-charged">–</strong><span>Charged</span></div>
+                            <div class="mcc-status-pill" role="listitem"><strong id="count-stored">–</strong><span>Stored</span></div>
+                            <div class="mcc-status-pill" role="listitem"><strong id="count-discharged">–</strong><span>Discharged</span></div>
+                            <div class="mcc-status-pill" role="listitem"><strong id="count-bad">–</strong><span>Bad</span></div>
                         </div>
                     </div>
                 </div>
             </div>
-
             </div>
 
 <!--Device tables-->
@@ -201,20 +121,19 @@
         <div class="col-xl-12">
                 <div class="card">
                     <div class="card-body p-0">
-                        <div class="table-responsive active-projects task-table">
+                        <div class="table-responsive active-projects task-table mcc-project-table-viewport">
                             <div class="tbl-caption">
-                                <h4 class="heading mb-0">{{device.id}} : {{device.name}} - {{device.status}} - {{device.type}}</h4>
-
+                                <h4 class="heading mb-0">{{ device.id }} : {{ device.name }} — {{ device.status }} — {{ device.type }}</h4>
                             </div>
 
-                            <table id="slotstable_{{device.id}}" class="table">
+                            <table id="slotstable_{{ device.id }}" class="table">
                                 <thead>
                                 <tr>
                                     <th>
                                         {% if forloop.first %}
                                             <div class="form-check-checkall custom-checkbox ms-0">
-                                                <input type="checkbox" class="form-check-input" id="checkSlots" >
-                                                <label class="form-check-label" for="checkAll"></label>
+                                                <input type="checkbox" class="form-check-input" id="checkSlots">
+                                                <label class="form-check-label" for="checkSlots"></label>
                                             </div>
                                         {% else %}
                                             <div style="display:none;"></div> {# Hidden div for subsequent iterations #}
@@ -238,13 +157,13 @@
 
                                 </tr>
                                 </thead>
-                                <tbody id="slot-table-body" data-initial-slot-count="{{ slots|length }}">
+                                <tbody id="slot-table-body-{{ device.id }}">
                                 {% for slot in device.slots.all %}
                                 <tr>
                                     <td>
                                         <div class="form-check custom-checkbox">
-                                            <input type="checkbox" class="form-check-input" id="customCheckBox{{ forloop.counter }}" required="" value="device_{{device.id}}_{{slot.slot_number}}" name="slot_number">
-                                            <label class="form-check-label" for="customCheckBox{{ forloop.counter }}"></label>
+                                            <input type="checkbox" class="form-check-input" id="customCheckBox{{ device.id }}_{{ forloop.counter }}" value="device_{{ device.id }}_{{ slot.slot_number }}" name="slot_number">
+                                            <label class="form-check-label" for="customCheckBox{{ device.id }}_{{ forloop.counter }}"></label>
                                         </div>
                                     </td>
 

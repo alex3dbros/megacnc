@@ -1,0 +1,539 @@
+/**
+ * Mega CNC — Deep Cycle Power premium shell (dark only, desktop)
+ */
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap");
+
+:root {
+  --mcc-bg-deep: #0a0c10;
+  --mcc-bg-panel: #12151c;
+  --mcc-bg-elevated: #181c26;
+  --mcc-border: rgba(59, 130, 246, 0.18);
+  --mcc-border-subtle: rgba(255, 255, 255, 0.06);
+  --mcc-text: #e8eaef;
+  --mcc-text-muted: #8b92a8;
+  --mcc-accent: #3b82f6;
+  --mcc-accent-dim: rgba(59, 130, 246, 0.12);
+  --mcc-lime: #84cc16;
+  --mcc-orange: #f97316;
+  --mcc-danger: #ef4444;
+  --mcc-radius: 14px;
+  --mcc-radius-sm: 10px;
+  --mcc-font: "Inter", "Segoe UI", system-ui, sans-serif;
+  --mcc-mono: "JetBrains Mono", "Consolas", monospace;
+}
+
+body.mcc-premium {
+  font-family: var(--mcc-font) !important;
+  background: var(--mcc-bg-deep) !important;
+  color: var(--mcc-text) !important;
+}
+
+body.mcc-premium #main-wrapper,
+body.mcc-premium .content-body {
+  background: var(--mcc-bg-deep) !important;
+}
+
+body.mcc-premium .content-body {
+  min-height: calc(100vh - 4rem);
+  padding: 1.25rem 1.75rem 2.5rem;
+}
+
+/* Sidebar */
+body.mcc-premium .deznav {
+  background: var(--mcc-bg-panel) !important;
+  border-right: 1px solid var(--mcc-border-subtle) !important;
+  box-shadow: 4px 0 24px rgba(0, 0, 0, 0.35);
+}
+
+body.mcc-premium .deznav .metismenu > li > a {
+  color: var(--mcc-text-muted) !important;
+  border-radius: var(--mcc-radius-sm);
+  margin: 2px 8px;
+  padding: 0.65rem 0.85rem !important;
+}
+
+body.mcc-premium .deznav .metismenu > li > a:hover,
+body.mcc-premium .deznav .metismenu > li.mm-active > a {
+  background: var(--mcc-accent-dim) !important;
+  color: var(--mcc-text) !important;
+}
+
+body.mcc-premium .deznav .menu-title {
+  color: var(--mcc-text-muted) !important;
+  font-size: 0.7rem !important;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding-left: 1rem !important;
+  margin-top: 0.5rem;
+}
+
+body.mcc-premium .help-desk .btn-primary {
+  background: linear-gradient(135deg, #2563eb, #1d4ed8) !important;
+  border: none !important;
+  border-radius: var(--mcc-radius-sm) !important;
+  font-weight: 600;
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35);
+}
+
+/* Nav header logo strip */
+body.mcc-premium .nav-header {
+  background: var(--mcc-bg-panel) !important;
+  border-bottom: 1px solid var(--mcc-border-subtle);
+}
+
+body.mcc-premium .nav-header .brand-logo img {
+  max-height: 42px;
+  width: auto;
+  object-fit: contain;
+}
+
+/* Top header */
+body.mcc-premium .header {
+  background: var(--mcc-bg-elevated) !important;
+  border-bottom: 1px solid var(--mcc-border-subtle);
+}
+
+/* Cards & panels */
+body.mcc-premium .mcc-card,
+body.mcc-premium .card.mcc-surface {
+  background: var(--mcc-bg-elevated) !important;
+  border: 1px solid var(--mcc-border-subtle) !important;
+  border-radius: var(--mcc-radius) !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+}
+
+body.mcc-premium .mcc-card .card-body,
+body.mcc-premium .card.mcc-surface .card-body {
+  color: var(--mcc-text);
+}
+
+/* KPI */
+.mcc-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+@media (max-width: 1200px) {
+  .mcc-kpi-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+.mcc-kpi {
+  background: var(--mcc-bg-elevated);
+  border: 1px solid var(--mcc-border-subtle);
+  border-radius: var(--mcc-radius);
+  padding: 1.15rem 1.35rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.mcc-kpi::before {
+  content: "";
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--mcc-accent), var(--mcc-lime));
+  opacity: 0.85;
+}
+
+.mcc-kpi .mcc-kpi-label {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--mcc-text-muted);
+  margin-bottom: 0.35rem;
+}
+
+.mcc-kpi .mcc-kpi-value {
+  font-size: 1.85rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--mcc-text);
+}
+
+/* Page chrome */
+.mcc-page-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.mcc-page-head h1 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin: 0 0 0.25rem;
+  color: var(--mcc-text);
+}
+
+.mcc-breadcrumb {
+  font-size: 0.8rem;
+  color: var(--mcc-text-muted);
+}
+
+.mcc-breadcrumb a { color: var(--mcc-accent); text-decoration: none; }
+
+/* Operator bar */
+.mcc-operator-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.mcc-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.85rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  border: 1px solid var(--mcc-border);
+  background: var(--mcc-accent-dim);
+  color: #93c5fd;
+}
+
+.mcc-pill--live {
+  border-color: rgba(132, 204, 22, 0.45);
+  background: rgba(132, 204, 22, 0.12);
+  color: #bef264;
+}
+
+.mcc-pill--live .mcc-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--mcc-lime);
+  box-shadow: 0 0 8px var(--mcc-lime);
+  animation: mcc-pulse 1.8s ease-in-out infinite;
+}
+
+@keyframes mcc-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.45; }
+}
+
+/* Project fleet cards */
+.mcc-fleet-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.75rem;
+}
+
+.mcc-project-card h3 {
+  font-size: 1rem;
+  font-weight: 700;
+  margin: 0 0 0.5rem;
+}
+
+.mcc-project-meta {
+  font-size: 0.8rem;
+  color: var(--mcc-text-muted);
+  margin-bottom: 0.75rem;
+}
+
+.mcc-device-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.65rem;
+  margin: 0.25rem 0.35rem 0.25rem 0;
+  background: var(--mcc-bg-panel);
+  border: 1px solid var(--mcc-border-subtle);
+  border-radius: 8px;
+  font-size: 0.8rem;
+}
+
+.mcc-device-chip a {
+  color: var(--mcc-accent);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.mcc-status-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--mcc-text-muted);
+}
+.mcc-status-dot.online { background: var(--mcc-lime); box-shadow: 0 0 6px var(--mcc-lime); }
+.mcc-status-dot.offline { background: var(--mcc-danger); }
+
+/* Tables */
+.mcc-table-wrap {
+  border-radius: var(--mcc-radius);
+  border: 1px solid var(--mcc-border-subtle);
+  overflow: hidden;
+  background: var(--mcc-bg-elevated);
+}
+
+.mcc-table {
+  width: 100%;
+  margin: 0;
+  font-size: 0.82rem;
+  border-collapse: collapse;
+}
+
+.mcc-table thead th {
+  background: var(--mcc-bg-panel);
+  color: var(--mcc-text-muted);
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 0.68rem;
+  letter-spacing: 0.06em;
+  padding: 0.65rem 0.85rem;
+  border-bottom: 1px solid var(--mcc-border-subtle);
+}
+
+.mcc-table tbody td {
+  padding: 0.55rem 0.85rem;
+  border-bottom: 1px solid var(--mcc-border-subtle);
+  color: var(--mcc-text);
+  vertical-align: middle;
+}
+
+.mcc-table tbody tr:hover td {
+  background: rgba(59, 130, 246, 0.05);
+}
+
+.mcc-table .mono {
+  font-family: var(--mcc-mono);
+  font-size: 0.78rem;
+}
+
+.mcc-table a {
+  color: var(--mcc-accent);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.mcc-table a:hover { text-decoration: underline; }
+
+.mcc-select-project {
+  background: var(--mcc-bg-panel);
+  color: var(--mcc-text);
+  border: 1px solid var(--mcc-border-subtle);
+  border-radius: 8px;
+  padding: 0.35rem 0.5rem;
+  font-size: 0.78rem;
+  min-width: 140px;
+}
+
+.mcc-section-title {
+  font-size: 1rem;
+  font-weight: 700;
+  margin: 0 0 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+/* Device slots page */
+.mcc-device-hero {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 1rem;
+  align-items: center;
+  margin-bottom: 1.25rem;
+}
+
+@media (max-width: 900px) {
+  .mcc-device-hero { grid-template-columns: 1fr; }
+}
+
+.mcc-device-title {
+  font-size: 1.35rem;
+  font-weight: 800;
+  margin: 0 0 0.35rem;
+}
+
+.mcc-device-meta {
+  font-size: 0.85rem;
+  color: var(--mcc-text-muted);
+}
+
+.mcc-status-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.mcc-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.85rem;
+  background: var(--mcc-bg-elevated);
+  border: 1px solid var(--mcc-border-subtle);
+  border-radius: 999px;
+  font-size: 0.78rem;
+}
+
+.mcc-status-pill strong {
+  font-size: 1.05rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--mcc-text);
+}
+
+.mcc-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  align-items: center;
+  padding: 0.75rem;
+  background: var(--mcc-bg-panel);
+  border-radius: var(--mcc-radius-sm);
+  border: 1px solid var(--mcc-border-subtle);
+  margin-bottom: 0.75rem;
+}
+
+.mcc-toolbar .btn {
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.4rem 0.75rem;
+  border-radius: 8px;
+}
+
+.mcc-chart-panel {
+  background: #0d0f14;
+  border: 1px solid var(--mcc-border-subtle);
+  border-radius: var(--mcc-radius-sm);
+  padding: 1rem;
+  margin-top: 0.5rem;
+}
+
+.mcc-chart-panel .card-title {
+  color: var(--mcc-text);
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+/* Chart canvas container — compact so expanded row doesn’t hide other slots */
+.mcc-chart-canvas-wrap {
+  position: relative;
+  height: 168px;
+  max-height: 22vh;
+}
+
+/* Printer / tools row */
+.mcc-tools-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+  font-size: 0.8rem;
+  color: var(--mcc-text-muted);
+  margin-bottom: 1rem;
+}
+
+.mcc-tools-row #qz-status {
+  font-weight: 700;
+  color: var(--mcc-orange);
+}
+
+/* Hide theme preloader noise */
+body.mcc-premium #preloader {
+  background: var(--mcc-bg-deep);
+}
+
+/* Legacy card overrides inside premium pages */
+body.mcc-premium .content-body .card:not(.mcc-skip-override) {
+  background: var(--mcc-bg-elevated) !important;
+  border-color: var(--mcc-border-subtle) !important;
+}
+
+/* ─── Device slots: sticky commands + scrollable grid (16+ rows visible) ─── */
+body.mcc-premium .mcc-slots-sticky-bar {
+  position: sticky;
+  top: var(--mcc-sticky-top, 0);
+  z-index: 120;
+  background: linear-gradient(180deg, var(--mcc-bg-elevated) 90%, rgba(18, 22, 38, 0.85));
+  border-bottom: 1px solid var(--mcc-border-subtle);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+body.mcc-premium .mcc-slots-sticky-bar .mcc-toolbar-actions {
+  margin-bottom: 0;
+}
+
+body.mcc-premium .mcc-slots-table-viewport {
+  overflow-x: auto;
+  overflow-y: auto;
+  max-height: min(78vh, calc(100vh - 280px));
+  min-height: 560px;
+  -webkit-overflow-scrolling: touch;
+}
+
+body.mcc-premium .mcc-slots-table-viewport #slotSpecial thead th {
+  position: sticky;
+  top: 0;
+  z-index: 8;
+  box-shadow: 0 1px 0 var(--mcc-border-subtle);
+}
+
+body.mcc-premium .mcc-slots-table-viewport #slotSpecial tbody td {
+  padding: 0.32rem 0.45rem;
+  vertical-align: middle;
+}
+
+body.mcc-premium .mcc-chart-panel {
+  padding: 0.6rem 0.75rem;
+}
+
+body.mcc-premium .mcc-chart-panel .nav-pills .nav-link {
+  padding: 0.3rem 0.65rem;
+  font-size: 0.78rem;
+}
+
+body.mcc-premium .mcc-chart-panel .card-title {
+  font-size: 0.88rem;
+  margin-bottom: 0.5rem !important;
+}
+
+/* Project details: hero card (full project name) */
+body.mcc-premium .mcc-project-hero-card .card-body {
+  min-height: 4.5rem;
+}
+
+body.mcc-premium .mcc-project-hero-title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  line-height: 1.35;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  hyphens: auto;
+}
+
+/* Project details: summary pills + scrollable device tables */
+body.mcc-premium .mcc-project-summary {
+  margin-bottom: 0;
+}
+
+body.mcc-premium .mcc-project-summary .mcc-status-pill {
+  min-width: 7.5rem;
+}
+
+body.mcc-premium .mcc-project-table-viewport {
+  overflow-x: auto;
+  overflow-y: auto;
+  max-height: min(72vh, calc(100vh - 320px));
+  min-height: 420px;
+  -webkit-overflow-scrolling: touch;
+}
+
+body.mcc-premium .mcc-project-table-viewport table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 6;
+  background: var(--mcc-bg-elevated, #151922);
+  box-shadow: 0 1px 0 var(--mcc-border-subtle);
+}
+

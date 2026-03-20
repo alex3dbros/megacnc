@@ -1,5 +1,6 @@
 from django.db import models
 from django.utils import timezone
+import re
 
 
 class Projects(models.Model):
@@ -153,6 +154,14 @@ class Slot(models.Model):
 
     chemistry = models.ForeignKey(Chemistry, on_delete=models.SET_NULL, null=True, blank=True, related_name='slots')
     # Add any other fields that are relevant to the slot, such as status, voltage, etc.
+
+    @property
+    def active_cell_uuid(self):
+        """Serial segment from cell UUID for operator display (matches JSON slot updates)."""
+        if not self.active_cell or not self.active_cell.UUID:
+            return ''
+        m = re.search(r'-S(\d+)', self.active_cell.UUID)
+        return m.group(1) if m else ''
 
     def __str__(self):
         return f"Slot {self.slot_number} of Device {self.device.name}"

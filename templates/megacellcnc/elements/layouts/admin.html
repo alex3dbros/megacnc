@@ -30,7 +30,7 @@
         {% endblock %}
         
     </head>
-    <body data-typography="poppins" data-layout="vertical" data-nav-headerbg="black" data-headerbg="color_1">
+    <body class="mcc-premium" data-typography="poppins" data-layout="vertical" data-nav-headerbg="black" data-headerbg="color_1">
 
     <!--*******************
         Preloader start
@@ -49,6 +49,7 @@
         Main wrapper start
     ***********************************-->
     <div id="main-wrapper">
+        {% csrf_token %}
 
         <!--**********************************
             Nav header start
@@ -60,15 +61,6 @@
             Nav header end
         ***********************************-->
 		
-		<!--**********************************
-            Chat box start
-        ***********************************-->
-
-        {% include 'megacellcnc/elements/chatbox.html' %}
-
-		<!--**********************************
-            Chat box End
-        ***********************************-->
 		
 		<!--**********************************
             Header start

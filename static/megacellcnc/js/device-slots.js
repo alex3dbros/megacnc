@@ -125,6 +125,8 @@ function updateSlots() {
                 document.getElementById('count-discharging').textContent = dischargingCellsCount;
                 document.getElementById('count-stored').textContent = storedCellsCount;
                 document.getElementById('count-bad').textContent = badCellsCount;
+                var lr = document.getElementById('mcc-last-refresh');
+                if (lr) lr.textContent = new Date().toLocaleTimeString();
             }
         })
         .catch(error => console.error('Error updating slots:', error));
@@ -214,14 +216,15 @@ async function sendAction(action) {
             },
             body: JSON.stringify({ action, slots_number, deviceId })
         })
-            .then(response => response.json())
-            .then(data => {
-
-                toastr.success(data.message, "Success");
-
-
+            .then(response => response.json().then(data => ({ ok: response.ok, data })))
+            .then(({ ok, data }) => {
+                if (ok) toastr.success(data.message || 'Done', 'Success');
+                else toastr.error(data.error || 'Command failed', 'Error');
             })
-            .catch(error => console.error('Error:', error));
+            .catch(error => {
+                console.error('Error:', error);
+                toastr.error('Network or server error', 'Error');
+            });
 
     }
 
@@ -281,47 +284,11 @@ document.querySelectorAll('.saveCellBtn').forEach(btn => {
 });
 
 var slotChart = function(deviceId, slot) {
-    // Dual line chart
     if (jQuery(`#slot_${slot}_chart`).length > 0) {
-        const lineChart_3 = document.getElementById(`slot_${slot}_chart`).getContext('2d');
+        const ctx = document.getElementById(`slot_${slot}_chart`).getContext('2d');
+        const grid = 'rgba(148, 163, 184, 0.12)';
+        const tick = '#94a3b8';
 
-        // Generate gradients
-        const lineChart_3gradientStroke1 = lineChart_3.createLinearGradient(500, 0, 100, 0);
-        lineChart_3gradientStroke1.addColorStop(0, "rgb(175,165,1)");
-        lineChart_3gradientStroke1.addColorStop(1, "rgb(175,165,1)");
-
-        const lineChart_3gradientStroke2 = lineChart_3.createLinearGradient(500, 0, 100, 0);
-        lineChart_3gradientStroke2.addColorStop(0, "rgba(255, 92, 0, 1)");
-        lineChart_3gradientStroke2.addColorStop(1, "rgba(255, 92, 0, 1)");
-
-        const lineChart_3gradientStroke3 = lineChart_3.createLinearGradient(500, 0, 100, 0);
-        lineChart_3gradientStroke3.addColorStop(0, "rgb(0,255,224)");
-        lineChart_3gradientStroke3.addColorStop(1, "rgb(0,255,224)");
-
-
-        // Save the original draw function
-        var originalLineDraw = Chart.controllers.line.prototype.draw;
-
-        // Extend the line chart controller to include custom drawing behavior
-        Chart.controllers.line = Chart.controllers.line.extend({
-            draw: function() {
-                originalLineDraw.apply(this, arguments); // Call the original draw function
-
-                let ctx = this.chart.ctx;
-                let _stroke = ctx.stroke;
-                ctx.stroke = function() {
-                    ctx.save();
-                    ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
-                    ctx.shadowBlur = 10;
-                    ctx.shadowOffsetX = 0;
-                    ctx.shadowOffsetY = 4;
-                    _stroke.apply(this, arguments);
-                    ctx.restore();
-                };
-            }
-        });
-
-                // AJAX call to get device data by deviceId
         fetch("/get-history/", {
             method: 'POST',
             headers: {
@@ -332,109 +299,83 @@ var slotChart = function(deviceId, slot) {
         })
         .then(response => response.json())
         .then(data => {
-            console.log(data)
-            new Chart(lineChart_3, {
+            new Chart(ctx, {
                 type: 'line',
                 data: {
-                    defaultFontFamily: 'Poppins',
                     labels: data.labels,
                     datasets: [
                         {
-                            label: "V",
+                            label: "Voltage (V)",
                             data: data.volts,
-                            borderColor: lineChart_3gradientStroke1,
-                            borderWidth: "2",
-                            backgroundColor: 'transparent',
-                            pointBackgroundColor: 'rgba(0,227,6,0.5)',
+                            borderColor: "rgba(251, 191, 36, 0.95)",
+                            borderWidth: 2,
+                            pointRadius: 0,
+                            pointHoverRadius: 3,
+                            fill: true,
+                            backgroundColor: "rgba(251, 191, 36, 0.14)",
+                            lineTension: 0.35,
                             yAxisID: 'y-axis-1'
                         },
                         {
-                            label: "C",
+                            label: "Current",
                             data: data.current,
-                            borderColor: lineChart_3gradientStroke2,
-                            borderWidth: "2",
-                            backgroundColor: 'transparent',
-                            pointBackgroundColor: 'rgba(255, 92, 0, 1)',
+                            borderColor: "rgba(59, 130, 246, 0.95)",
+                            borderWidth: 2,
+                            pointRadius: 0,
+                            fill: true,
+                            backgroundColor: "rgba(59, 130, 246, 0.12)",
+                            lineTension: 0.35,
                             yAxisID: 'y-axis-2'
                         },
-
                         {
-                            label: "Temp",
+                            label: "Temp (°C)",
                             data: data.temp,
-                            borderColor: lineChart_3gradientStroke3,
-                            borderWidth: "2",
-                            backgroundColor: 'transparent',
-                            pointBackgroundColor: 'rgb(15,196,252)',
+                            borderColor: "rgba(236, 72, 153, 0.9)",
+                            borderWidth: 2,
+                            pointRadius: 0,
+                            fill: true,
+                            backgroundColor: "rgba(236, 72, 153, 0.1)",
+                            lineTension: 0.35,
                             yAxisID: 'y-axis-3'
                         }
-
                     ]
                 },
                 options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
                     legend: {
-                        display: true, // This will show the legend
-                        position: 'top', // Position of the legend. Possible values: 'top', 'left', 'bottom', 'right'
-                        labels: {
-                            fontColor: '#ffffff', // Color of the text in the legend
-                            fontSize: 12, // Size of the text in the legend
-                            // You can add more styling options as needed
-                        }
+                        display: true,
+                        position: 'top',
+                        labels: { fontColor: '#e2e8f0', fontSize: 11, boxWidth: 10, padding: 14 }
                     },
+                    tooltips: { mode: 'index', intersect: false },
                     scales: {
                         yAxes: [
                             {
                                 id: 'y-axis-1',
                                 type: 'linear',
                                 position: 'left',
-                                ticks: {
-                                    beginAtZero: true, // Starts the scale at 0
-                                    fontColor: '#ffffff',
-                                    // No need to set max and min; Chart.js will adjust automatically
-                                },
-                                gridLines: {
-                                    color: "rgba(255, 255, 255, 0.1)"
-                                }
+                                ticks: { beginAtZero: false, fontColor: tick, padding: 6 },
+                                gridLines: { color: grid, zeroLineColor: grid }
                             },
                             {
                                 id: 'y-axis-2',
                                 type: 'linear',
                                 position: 'right',
-                                ticks: {
-                                    beginAtZero: true, // Starts the scale at 0
-                                    fontColor: '#ffffff',
-                                    // No need to set max and min; Chart.js will adjust automatically
-                                },
-                                gridLines: {
-                                    color: "rgba(255, 255, 255, 0.1)",
-                                    drawOnChartArea: false, // Only want the grid lines for one axis to show up
-                                }
+                                ticks: { beginAtZero: true, fontColor: tick, padding: 6 },
+                                gridLines: { display: false }
                             },
-
                             {
                                 id: 'y-axis-3',
                                 type: 'linear',
                                 position: 'right',
-                                ticks: {
-                                    beginAtZero: true, // Starts the scale at 0
-                                    fontColor: '#ffffff',
-                                    // No need to set max and min; Chart.js will adjust automatically
-                                },
-                                gridLines: {
-                                    color: "rgba(255, 255, 255, 0.1)",
-                                    drawOnChartArea: false, // Only want the grid lines for one axis to show up
-                                }
+                                ticks: { beginAtZero: true, fontColor: tick, padding: 6 },
+                                gridLines: { display: false }
                             }
-
-
                         ],
                         xAxes: [{
-                            ticks: {
-                                padding: 5,
-                                fontColor: '#ffffff',
-                            },
-                            gridLines: {
-                                color: "rgba(255, 255, 255, 0.1)"
-                            }
+                            ticks: { fontColor: tick, padding: 4, maxRotation: 45 },
+                            gridLines: { color: grid, zeroLineColor: grid }
                         }]
                     }
                 }
@@ -446,47 +387,11 @@ var slotChart = function(deviceId, slot) {
 var chartInstance;
 
 var realtimeChart = function(deviceId, slot) {
-    // Dual line chart
-    if (jQuery(`#slot_${slot}_chart`).length > 0) {
-        const lineChart_3 = document.getElementById(`slot_${slot}_realtimechart`).getContext('2d');
+    if (jQuery(`#slot_${slot}_realtimechart`).length > 0) {
+        const ctx = document.getElementById(`slot_${slot}_realtimechart`).getContext('2d');
+        const grid = 'rgba(148, 163, 184, 0.12)';
+        const tick = '#94a3b8';
 
-        // Generate gradients
-        const lineChart_3gradientStroke1 = lineChart_3.createLinearGradient(500, 0, 100, 0);
-        lineChart_3gradientStroke1.addColorStop(0, "rgb(175,165,1)");
-        lineChart_3gradientStroke1.addColorStop(1, "rgb(175,165,1)");
-
-        const lineChart_3gradientStroke2 = lineChart_3.createLinearGradient(500, 0, 100, 0);
-        lineChart_3gradientStroke2.addColorStop(0, "rgba(255, 92, 0, 1)");
-        lineChart_3gradientStroke2.addColorStop(1, "rgba(255, 92, 0, 1)");
-
-        const lineChart_3gradientStroke3 = lineChart_3.createLinearGradient(500, 0, 100, 0);
-        lineChart_3gradientStroke3.addColorStop(0, "rgb(0,255,224)");
-        lineChart_3gradientStroke3.addColorStop(1, "rgb(0,255,224)");
-
-
-        // Save the original draw function
-        var originalLineDraw = Chart.controllers.line.prototype.draw;
-
-        // Extend the line chart controller to include custom drawing behavior
-        Chart.controllers.line = Chart.controllers.line.extend({
-            draw: function() {
-                originalLineDraw.apply(this, arguments); // Call the original draw function
-
-                let ctx = this.chart.ctx;
-                let _stroke = ctx.stroke;
-                ctx.stroke = function() {
-                    ctx.save();
-                    ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
-                    ctx.shadowBlur = 10;
-                    ctx.shadowOffsetX = 0;
-                    ctx.shadowOffsetY = 4;
-                    _stroke.apply(this, arguments);
-                    ctx.restore();
-                };
-            }
-        });
-
-                // AJAX call to get device data by deviceId
         fetch("/get-history/", {
             method: 'POST',
             headers: {
@@ -497,109 +402,82 @@ var realtimeChart = function(deviceId, slot) {
         })
         .then(response => response.json())
         .then(data => {
-            console.log(data)
-            chartInstance = new Chart(lineChart_3, {
+            chartInstance = new Chart(ctx, {
                 type: 'line',
                 data: {
-                    defaultFontFamily: 'Poppins',
                     labels: data.labels,
                     datasets: [
                         {
-                            label: "V",
+                            label: "Voltage (V)",
                             data: data.volts,
-                            borderColor: lineChart_3gradientStroke1,
-                            borderWidth: "2",
-                            backgroundColor: 'transparent',
-                            pointBackgroundColor: 'rgba(0,227,6,0.5)',
+                            borderColor: "rgba(251, 191, 36, 0.95)",
+                            borderWidth: 2,
+                            pointRadius: 0,
+                            fill: true,
+                            backgroundColor: "rgba(251, 191, 36, 0.14)",
+                            lineTension: 0.35,
                             yAxisID: 'y-axis-1'
                         },
                         {
-                            label: "C",
+                            label: "Current",
                             data: data.current,
-                            borderColor: lineChart_3gradientStroke2,
-                            borderWidth: "2",
-                            backgroundColor: 'transparent',
-                            pointBackgroundColor: 'rgba(255, 92, 0, 1)',
+                            borderColor: "rgba(59, 130, 246, 0.95)",
+                            borderWidth: 2,
+                            pointRadius: 0,
+                            fill: true,
+                            backgroundColor: "rgba(59, 130, 246, 0.12)",
+                            lineTension: 0.35,
                             yAxisID: 'y-axis-2'
                         },
-
                         {
-                            label: "Temp",
+                            label: "Temp (°C)",
                             data: data.temp,
-                            borderColor: lineChart_3gradientStroke3,
-                            borderWidth: "2",
-                            backgroundColor: 'transparent',
-                            pointBackgroundColor: 'rgb(15,196,252)',
+                            borderColor: "rgba(236, 72, 153, 0.9)",
+                            borderWidth: 2,
+                            pointRadius: 0,
+                            fill: true,
+                            backgroundColor: "rgba(236, 72, 153, 0.1)",
+                            lineTension: 0.35,
                             yAxisID: 'y-axis-3'
                         }
-
                     ]
                 },
                 options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
                     legend: {
-                        display: true, // This will show the legend
-                        position: 'top', // Position of the legend. Possible values: 'top', 'left', 'bottom', 'right'
-                        labels: {
-                            fontColor: '#ffffff', // Color of the text in the legend
-                            fontSize: 12, // Size of the text in the legend
-                            // You can add more styling options as needed
-                        }
+                        display: true,
+                        position: 'top',
+                        labels: { fontColor: '#e2e8f0', fontSize: 11, boxWidth: 10, padding: 14 }
                     },
+                    tooltips: { mode: 'index', intersect: false },
                     scales: {
                         yAxes: [
                             {
                                 id: 'y-axis-1',
                                 type: 'linear',
                                 position: 'left',
-                                ticks: {
-                                    beginAtZero: true, // Starts the scale at 0
-                                    fontColor: '#ffffff',
-                                    // No need to set max and min; Chart.js will adjust automatically
-                                },
-                                gridLines: {
-                                    color: "rgba(255, 255, 255, 0.1)"
-                                }
+                                ticks: { beginAtZero: false, fontColor: tick, padding: 6 },
+                                gridLines: { color: grid, zeroLineColor: grid }
                             },
                             {
                                 id: 'y-axis-2',
                                 type: 'linear',
                                 position: 'right',
-                                ticks: {
-                                    beginAtZero: true, // Starts the scale at 0
-                                    fontColor: '#ffffff',
-                                    // No need to set max and min; Chart.js will adjust automatically
-                                },
-                                gridLines: {
-                                    color: "rgba(255, 255, 255, 0.1)",
-                                    drawOnChartArea: false, // Only want the grid lines for one axis to show up
-                                }
+                                ticks: { beginAtZero: true, fontColor: tick, padding: 6 },
+                                gridLines: { display: false }
                             },
-
                             {
                                 id: 'y-axis-3',
                                 type: 'linear',
                                 position: 'right',
-                                ticks: {
-                                    beginAtZero: true, // Starts the scale at 0
-                                    fontColor: '#ffffff',
-                                    // No need to set max and min; Chart.js will adjust automatically
-                                },
-                                gridLines: {
-                                    color: "rgba(255, 255, 255, 0.1)",
-                                    drawOnChartArea: false, // Only want the grid lines for one axis to show up
-                                }
+                                ticks: { beginAtZero: true, fontColor: tick, padding: 6 },
+                                gridLines: { display: false }
                             }
-
-
                         ],
                         xAxes: [{
-                            ticks: {
-                                padding: 5,
-                                fontColor: '#ffffff',
-                            },
-                            gridLines: {
-                                color: "rgba(255, 255, 255, 0.1)"
-                            }
+                            ticks: { fontColor: tick, padding: 4, maxRotation: 45 },
+                            gridLines: { color: grid, zeroLineColor: grid }
                         }]
                     }
                 }
@@ -827,43 +705,27 @@ $('.expandBtn').click(function() {
         var accordionRow = `
             <tr class="accordion-content" data-slot-number="${slotNumber}">
                 <td colspan="${colspan}">
-                    <div class="col-xl-6 col-lg-6">
-                        <div class="card">
-                            <div class="card-header">
-                                <h4 class="card-title">Slot ${slotNumber} Chart</h4>
-                            </div>
-                            
-                            
-                            
-                            <ul class="nav nav-pills mb-4 light">
-                                <li class=" nav-item">
-                                    <a href="#navpills-1_slot${slotNumber}" class="nav-link active" data-bs-toggle="tab" aria-expanded="false">All History</a>
-                                </li>
-                                <li class="nav-item">
-                                    <a href="#navpills-2_slot${slotNumber}" class="nav-link" data-bs-toggle="tab" aria-expanded="false">Realtime</a>
-                                </li>
-                            </ul>
-                            <div class="tab-content">
-                                <div id="navpills-1_slot${slotNumber}" class="tab-pane active">
-                                    <div class="row">
-                                        <div class="col-md-12">                             
-                                                <canvas id="slot_${slotNumber}_chart"></canvas>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div id="navpills-2_slot${slotNumber}" class="tab-pane">
-                                    <div class="row">
-                                        <div class="col-md-12"> 
-                                            <canvas id="slot_${slotNumber}_realtimechart"></canvas>
-                                        </div>
-                                    </div>
+                    <div class="mcc-chart-panel">
+                        <h4 class="card-title mb-3">Slot ${slotNumber} — Voltage, current &amp; temperature</h4>
+                        <ul class="nav nav-pills mb-3 light">
+                            <li class="nav-item">
+                                <a href="#navpills-1_slot${slotNumber}" class="nav-link active" data-bs-toggle="tab">All history</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="#navpills-2_slot${slotNumber}" class="nav-link" data-bs-toggle="tab">Realtime</a>
+                            </li>
+                        </ul>
+                        <div class="tab-content">
+                            <div id="navpills-1_slot${slotNumber}" class="tab-pane active">
+                                <div class="mcc-chart-canvas-wrap">
+                                    <canvas id="slot_${slotNumber}_chart"></canvas>
                                 </div>
                             </div>
-                            
-                            
-                            
-                            
-
+                            <div id="navpills-2_slot${slotNumber}" class="tab-pane">
+                                <div class="mcc-chart-canvas-wrap">
+                                    <canvas id="slot_${slotNumber}_realtimechart"></canvas>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </td>

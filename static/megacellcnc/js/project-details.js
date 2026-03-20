@@ -29,7 +29,9 @@ $(document).ready(function() {
 
 
 function round2(value) {
-    return Number(value).toFixed(2);
+    const n = Number(value);
+    if (value == null || Number.isNaN(n)) return '—';
+    return n.toFixed(2);
 }
 
 function formatDuration(seconds) {
@@ -50,27 +52,13 @@ function formatDuration(seconds) {
 
 
 function updateSlots() {
-
     const deviceInfoElement = document.getElementById('deviceInfo');
-    const deviceID = deviceInfoElement.getAttribute('data-device-id');
-    const initialSlotCount = parseInt(deviceInfoElement.getAttribute('data-slot-count'), 10);
-
+    if (!deviceInfoElement) return;
     const projectID = deviceInfoElement.getAttribute('data-project-id');
 
-    let notInsertedCount = 0;
-    let regularCellsCount = 0;
-    let lowVoltageCellsCount = 0;
-    let chargingCellsCount = 0;
-    let dischargingCellsCount = 0;
-    let storedCellsCount = 0;
-    let badCellsCount = 0;
-
-
-
-    fetch(`/projectdetails/${projectID}/update-slots/`)   // Adjust the URL to your endpoint that returns all devices and their slots for a project
+    fetch(`/projectdetails/${projectID}/update-slots/`)
         .then(response => response.json())
         .then(devices => {
-            // Reset counters for each device
             let notInsertedCount = 0;
             let regularCellsCount = 0;
             let chargedCount = 0;
@@ -82,90 +70,65 @@ function updateSlots() {
             let badCellsCount = 0;
 
             devices.forEach(device => {
-
-
                 device.slots.forEach(slot => {
-                    // Build a unique ID for each slot element based on device ID and slot number
                     const slotIdPrefix = `device_${device.id}_slot_${slot.slot_number}`;
+                    const el = (suffix) => document.getElementById(`${slotIdPrefix}_${suffix}`);
+                    const set = (suffix, text) => {
+                        const node = el(suffix);
+                        if (node) node.textContent = text;
+                    };
 
-                    document.getElementById(`${slotIdPrefix}_number`).textContent = slot.slot_number;
-                    document.getElementById(`${slotIdPrefix}_voltage`).textContent = round2(slot.voltage);
-                    document.getElementById(`${slotIdPrefix}_current`).textContent = round2(slot.current);
-                    document.getElementById(`${slotIdPrefix}_esr`).textContent = round2(slot.esr);
-                    document.getElementById(`${slotIdPrefix}_capacity`).textContent = round2(slot.capacity);
-                    document.getElementById(`${slotIdPrefix}_charge_capacity`).textContent = round2(slot.charge_capacity);
-                    document.getElementById(`${slotIdPrefix}_state`).textContent = slot.state;
-                    document.getElementById(`${slotIdPrefix}_action_running_time`).textContent = formatDuration(slot.action_running_time);
-                    document.getElementById(`${slotIdPrefix}_completed_cycles`).textContent = `${slot.completed_cycles} / ${slot.discharge_cycles_set}`;
-                    document.getElementById(`${slotIdPrefix}_temperature`).textContent = round2(slot.temperature);
-                    document.getElementById(`${slotIdPrefix}_max_volt`).textContent = round2(slot.max_volt);
-                    document.getElementById(`${slotIdPrefix}_store_volt`).textContent = round2(slot.store_volt);
-                    document.getElementById(`${slotIdPrefix}_min_volt`).textContent = round2(slot.min_volt);
-                    document.getElementById(`${slotIdPrefix}_cell_id`).textContent = slot.active_cell_uuid;
+                    set('number', slot.slot_number);
+                    set('voltage', round2(slot.voltage));
+                    set('current', round2(slot.current));
+                    set('esr', round2(slot.esr));
+                    set('capacity', round2(slot.capacity));
+                    set('charge_capacity', round2(slot.charge_capacity));
+                    set('state', slot.state);
+                    set('action_running_time', formatDuration(slot.action_running_time));
+                    set('completed_cycles', `${slot.completed_cycles} / ${slot.discharge_cycles_set}`);
+                    set('temperature', round2(slot.temperature));
+                    set('max_volt', round2(slot.max_volt));
+                    set('store_volt', round2(slot.store_volt));
+                    set('min_volt', round2(slot.min_volt));
+                    set('cell_id', slot.active_cell_uuid);
 
-                    let selector = `a[data-slot-id="${slotIdPrefix}"]`;
-                    let link = document.querySelector(selector);
-                    if (link) {
-                        link.setAttribute('data-cell-capacity', slot.capacity.toFixed(2));
+                    const link = document.querySelector(`a[data-slot-id="${slotIdPrefix}"]`);
+                    if (link && slot.capacity != null) {
+                        link.setAttribute('data-cell-capacity', Number(slot.capacity).toFixed(2));
                     }
 
-
-                    // Increment counters based on slot state
-                    if (slot.state === "Not Inserted") {
-                        notInsertedCount++;
-                    }
-
-                    if (slot.state === "Regular Cell") {
-                        regularCellsCount++;
-                    }
-
-                    if (slot.state === "LVC Cell") {
-                        lowVoltageCellsCount++;
-                    }
-
-                    if (slot.state === "Started Charging" || slot.state === "LVC Charging" || slot.state === "mCap Started Charging") {
+                    if (slot.state === 'Not Inserted') notInsertedCount++;
+                    if (slot.state === 'Regular Cell') regularCellsCount++;
+                    if (slot.state === 'LVC Cell') lowVoltageCellsCount++;
+                    if (slot.state === 'Started Charging' || slot.state === 'LVC Charging' || slot.state === 'mCap Started Charging') {
                         chargingCellsCount++;
                     }
-
-                    if (slot.state === "Started Discharging") {
-                        dischargingCellsCount++;
-                    }
-
-                    if (slot.state === "Stored") {
-                        storedCellsCount++;
-                    }
-
-                    if (slot.state === "Bad Cell") {
-                        badCellsCount++;
-                    }
-
-                    if (slot.state === "Charged") {
-                        chargedCount++;
-                    }
-
-                    if (slot.state === "Discharged") {
-                        dischargedCount++;
-                    }
-
-                    // Update other counters based on slot state...
-
+                    if (slot.state === 'Started Discharging') dischargingCellsCount++;
+                    if (slot.state === 'Stored') storedCellsCount++;
+                    if (slot.state === 'Bad Cell') badCellsCount++;
+                    if (slot.state === 'Charged') chargedCount++;
+                    if (slot.state === 'Discharged') dischargedCount++;
                 });
-
-                // Update summary counts for the current device
-                document.getElementById('count-not-inserted').textContent = notInsertedCount;
-                document.getElementById('count-regular-cells').textContent = regularCellsCount;
-                document.getElementById('count-low-voltage').textContent = lowVoltageCellsCount;
-                document.getElementById('count-charging').textContent = chargingCellsCount;
-                document.getElementById('count-discharging').textContent = dischargingCellsCount;
-                document.getElementById('count-charged').textContent = chargedCount;
-                document.getElementById('count-discharged').textContent = dischargedCount;
-                document.getElementById('count-stored').textContent = storedCellsCount;
-                document.getElementById('count-bad').textContent = badCellsCount;
-                // Update other summary counts similarly...
             });
+
+            // Project-wide totals (all devices)
+            const setCount = (id, n) => {
+                const node = document.getElementById(id);
+                if (node) node.textContent = String(n);
+            };
+            setCount('count-not-inserted', notInsertedCount);
+            setCount('count-regular-cells', regularCellsCount);
+            setCount('count-low-voltage', lowVoltageCellsCount);
+            setCount('count-charging', chargingCellsCount);
+            setCount('count-discharging', dischargingCellsCount);
+            setCount('count-charged', chargedCount);
+            setCount('count-discharged', dischargedCount);
+            setCount('count-stored', storedCellsCount);
+            setCount('count-bad', badCellsCount);
         })
         .catch(error => console.error('Error updating slots:', error));
-    }
+}
 
 
 

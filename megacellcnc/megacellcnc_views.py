@@ -37,27 +37,65 @@ warnings.filterwarnings('ignore', category=pd.errors.PerformanceWarning)
 
 
 def index(request):
-    devices = Device.objects.all().order_by('id')
-    devices_count = Device.objects.count()  # A small optimization to avoid querying all then counting
-    projects = Projects.objects.all()
-    # Count the total number of projects
+    devices = Device.objects.select_related('project', 'global_chemistry').order_by('id')
+    devices_count = devices.count()
+    projects = Projects.objects.all().prefetch_related(
+        Prefetch('devices', queryset=Device.objects.select_related('global_chemistry').order_by('id'))
+    )
     total_projects = Projects.objects.count()
-
-    # Count the total number of Cells across all Projects
     total_cells = Cells.objects.count()
     good_cells = Cells.objects.filter(capacity__gt=1000).count()
+    online_devices = Device.objects.filter(status__iexact='online').count()
 
     context = {
-        "page_title": "Devices",
+        "page_title": "Dashboard",
         "devices": devices,
         "devices_count": devices_count,
         "projects": projects,
         "total_cells": total_cells,
         "good_cells": good_cells,
-        "total_projects": total_projects
+        "total_projects": total_projects,
+        "online_devices": online_devices,
     }
 
     return render(request, 'megacellcnc/index.html', context)
+
+
+@require_POST
+def assign_device_project(request):
+    try:
+        data = json.loads(request.body.decode('utf-8'))
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        return JsonResponse({'error': 'Invalid JSON'}, status=400)
+
+    device_id = data.get('device_id')
+    project_id = data.get('project_id')
+
+    device = get_object_or_404(Device, pk=device_id)
+    old_pid = device.project_id
+
+    if project_id in (None, '', 'unassigned'):
+        device.project = None
+    else:
+        try:
+            pid = int(project_id)
+        except (TypeError, ValueError):
+            return JsonResponse({'error': 'Invalid project_id'}, status=400)
+        device.project = get_object_or_404(Projects, pk=pid)
+
+    device.save(update_fields=['project'])
+
+    affected = {pid for pid in (old_pid, device.project_id) if pid is not None}
+    for pid in affected:
+        pr = Projects.objects.get(pk=pid)
+        pr.DevCnt = Device.objects.filter(project=pr).count()
+        pr.save(update_fields=['DevCnt'])
+
+    return JsonResponse({
+        'ok': True,
+        'project_id': device.project_id,
+        'project_name': device.project.Name if device.project else None,
+    })
 
 def settings(request):
     projects = Projects.objects.all()

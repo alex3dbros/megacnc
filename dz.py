@@ -14,6 +14,7 @@ dz_array = {
             "css":[
                     f"{folder_name}/vendor/bootstrap-select/dist/css/bootstrap-select.min.css",
                     f"{folder_name}/css/style.css",
+                    f"{folder_name}/css/megacnc-premium.css",
 					f"{folder_name}/css/fa-all.min.css",
 					f"{folder_name}/vendor/toastr/css/toastr.min.css",
                 ],
