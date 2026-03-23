@@ -29,7 +29,12 @@ class PrinterSettings(models.Model):
     LabelRotation = models.IntegerField(default=0)
     CustomField1 = models.CharField(default="deepcyclepower.com",max_length=150)
     LabelShape = models.CharField(default="square",max_length=150)
-
+    # JSON: layout for draw_landscape_label (cell); see megacellcnc.label_layout.DEFAULT_CELL_LABEL_LAYOUT
+    CellLabelLayoutJson = models.TextField(default="{}", blank=True)
+    # JSON: layout for draw_square_label (cell square); see label_layout_absolute.DEFAULT_SQUARE_ABSOLUTE
+    SquareLabelLayoutJson = models.TextField(default="{}", blank=True)
+    # JSON: layout for draw_battery_pack_label; see DEFAULT_BATTERY_LABEL_LAYOUT
+    BatteryLabelLayoutJson = models.TextField(default="{}", blank=True)
 
     def __str__(self):
         return self.PrinterName
@@ -178,6 +183,12 @@ class Batteries(models.Model):
     status = models.CharField(max_length=150)
     creation_date = models.DateTimeField(default=timezone.now)
     available = models.CharField(max_length=150)
+    # Draft pack layout: { "projectId": int, "cellsData": [ {"cellId","slotId","capacity"}, ... ] }
+    draft_json = models.JSONField(null=True, blank=True)
+    notes = models.TextField(blank=True, default='')
+    # Measured pack ESR after assembly (optional)
+    pack_esr = models.FloatField(null=True, blank=True)
+    manufacturing_date = models.DateField(null=True, blank=True)
 
     def __str__(self):
         return self.UUID

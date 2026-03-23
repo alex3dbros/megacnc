@@ -4,6 +4,123 @@
 {% block additional_css %}
 
 <style>
+	.mcc-lc-split { display: flex; gap: 16px; align-items: flex-start; flex-wrap: wrap; }
+	.mcc-lc-split > .mcc-lc-editor-col { flex: 1 1 340px; min-width: 280px; max-width: 560px; }
+	.mcc-lc-split > .mcc-lc-preview-col { flex: 1 1 280px; min-width: 200px; max-width: 480px; }
+	.mcc-lc-host { max-width: 100%; overflow: visible; position: relative; }
+	.mcc-lc-canvas {
+		position: relative;
+		background: #e8e8e8;
+		border: 2px solid #555;
+		border-radius: 6px;
+		box-sizing: content-box;
+	}
+	.mcc-lc-box {
+		position: absolute;
+		border: 2px dashed rgba(0, 80, 180, 0.85);
+		background: rgba(255,255,255,0.35);
+		cursor: grab;
+		font-size: 11px;
+		line-height: 1.2;
+		padding: 2px 4px;
+		overflow: hidden;
+		user-select: none;
+		display: flex;
+		flex-direction: column;
+	}
+	.mcc-lc-box .mcc-lc-tit {
+		font-size: 9px;
+		color: #246;
+		font-weight: 600;
+		text-transform: uppercase;
+		letter-spacing: 0.02em;
+		flex-shrink: 0;
+	}
+	.mcc-lc-box .mcc-lc-demo {
+		font-size: clamp(7px, 0.9vw, 10px);
+		color: #111;
+		line-height: 1.1;
+		word-break: break-word;
+		overflow: hidden;
+		flex: 1;
+		white-space: pre-wrap;
+	}
+	.mcc-lc-box:active { cursor: grabbing; }
+	.mcc-lc-box.mcc-lc-brand-locked {
+		position: relative;
+		cursor: default;
+		border-style: solid;
+		border-color: rgba(100, 100, 120, 0.7);
+		border-width: 1px;
+		margin-bottom: 6px;
+		width: fit-content;
+		min-width: 200px;
+		display: flex;
+		flex-direction: column;
+	}
+	.mcc-lc-box.mcc-lc-selected {
+		border-color: #c60;
+		box-shadow: 0 0 0 2px rgba(204, 102, 0, 0.35);
+		background: rgba(255,255,255,0.65);
+		z-index: 3;
+	}
+	.mcc-lc-box.mcc-lc-qr {
+		border: 2px solid #0a0;
+		background: rgba(0,200,80,0.2);
+	}
+	.mcc-lc-resize {
+		position: absolute;
+		right: 0; bottom: 0;
+		width: 14px; height: 14px;
+		background: #0a0;
+		cursor: nwse-resize;
+	}
+	.mcc-lc-resize-wh {
+		position: absolute;
+		right: 0; bottom: 0;
+		width: 14px; height: 14px;
+		background: #36a;
+		cursor: nwse-resize;
+		z-index: 2;
+	}
+	/* Inline font popover that appears above selected box */
+	.mcc-lc-font-pop {
+		position: absolute;
+		z-index: 10;
+		background: #1a2332;
+		border: 1px solid #445;
+		border-radius: 4px;
+		padding: 3px 6px;
+		display: flex;
+		align-items: center;
+		gap: 4px;
+		white-space: nowrap;
+		box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+		pointer-events: auto;
+	}
+	.mcc-lc-font-pop label { font-size: 10px; color: #aab; margin: 0; }
+	.mcc-lc-font-pop input {
+		width: 48px;
+		padding: 1px 4px;
+		font-size: 11px;
+		border: 1px solid #556;
+		border-radius: 3px;
+		background: #111a24;
+		color: #eee;
+		text-align: center;
+	}
+	.mcc-lc-font-pop input:focus { outline: 1px solid #c60; border-color: #c60; }
+	.mcc-lc-rot-btn {
+		border: 1px solid #556; border-radius: 3px; background: #111a24; color: #eee;
+		font-size: 14px; line-height: 1; padding: 1px 5px; cursor: pointer;
+	}
+	.mcc-lc-rot-btn:hover { background: #263040; border-color: #c60; }
+	.mcc-lc-box { transform-origin: center center; }
+	.mcc-label-preview { background: #222; border-radius: 4px; display: block; max-width: 100%; max-height: 420px; object-fit: contain; object-position: top left; }
+	#smartwizard > .tab-content { height: auto !important; overflow: visible !important; }
+</style>
+
+<style>
 
 	.printer-list {
     margin-top: 10px;
@@ -494,6 +611,9 @@ input[type='radio'] {
 								<li><a class="nav-link" href="#label_settings">
 									<span>2</span>
 								</a></li>
+								<li><a class="nav-link" href="#qr_label_editor">
+									<span>3</span>
+								</a></li>
 							</ul>
 
 							<div id="alertContainer"></div>
@@ -648,6 +768,89 @@ input[type='radio'] {
 									</div>
 
 
+								</div>
+
+								<!-- QR / label layout editor (v2: canvas size + drag) -->
+								<div id="qr_label_editor" class="tab-pane" role="tabpanel">
+									<div class="row mb-2">
+										<div class="col-12">
+											<h4 class="panel-title">Label layout editor</h4>
+											<p class="text-muted small mb-0">Drag blocks to reposition, resize with the <strong class="text-primary">blue corner</strong>. QR size uses the <strong style="color:#0a0;">green corner</strong>. Click a field to set its font size. Press <strong>Preview</strong> to see the rendered label, then <strong>Save</strong> to store your layout.</p>
+										</div>
+									</div>
+									<ul class="nav nav-tabs mb-3" role="tablist">
+										<li class="nav-item" role="presentation">
+											<button class="nav-link active" id="bat-layout-tab" data-bs-toggle="tab" data-bs-target="#bat-layout-pane" type="button" role="tab">Battery pack</button>
+										</li>
+										<li class="nav-item" role="presentation">
+											<button class="nav-link" id="cell-layout-tab" data-bs-toggle="tab" data-bs-target="#cell-layout-pane" type="button" role="tab">Cell (landscape)</button>
+										</li>
+										<li class="nav-item" role="presentation">
+											<button class="nav-link" id="sq-layout-tab" data-bs-toggle="tab" data-bs-target="#sq-layout-pane" type="button" role="tab">Cell (square)</button>
+										</li>
+									</ul>
+									<div class="tab-content">
+										<div class="tab-pane fade show active" id="bat-layout-pane" role="tabpanel">
+											<div class="d-flex flex-wrap gap-2 align-items-end mb-2">
+												<div><label class="small">W px</label><input type="number" class="form-control form-control-sm" id="bat-canvas-w" value="520" min="120" max="1200" style="width:72px"></div>
+												<div><label class="small">H px</label><input type="number" class="form-control form-control-sm" id="bat-canvas-h" value="360" min="80" max="900" style="width:72px"></div>
+												<button type="button" class="btn btn-sm btn-outline-primary" id="bat-apply-size">Apply</button>
+												<div class="form-check mb-0"><input class="form-check-input" type="checkbox" id="bat-use-bg"><label class="form-check-label small" for="bat-use-bg">Template bg</label></div>
+												<button type="button" class="btn btn-sm btn-primary" id="bat-preview-btn">Preview</button>
+												<button type="button" class="btn btn-sm btn-outline-secondary" id="bat-reset-btn">Defaults</button>
+												<button type="button" class="btn btn-sm btn-primary" onclick="savePrinterInDb();">Save layout</button>
+											</div>
+											<div class="mcc-lc-split">
+												<div class="mcc-lc-editor-col">
+													<div id="bat-canvas-host" class="mcc-lc-host"></div>
+												</div>
+												<div class="mcc-lc-preview-col">
+													<label class="small text-muted d-block mb-1">Server preview</label>
+													<img id="previewBatteryImg" class="mcc-label-preview border rounded" alt="">
+												</div>
+											</div>
+										</div>
+										<div class="tab-pane fade" id="cell-layout-pane" role="tabpanel">
+											<div class="d-flex flex-wrap gap-2 align-items-end mb-2">
+												<div><label class="small">W px</label><input type="number" class="form-control form-control-sm" id="cell-canvas-w" value="400" min="120" max="1200" style="width:72px"></div>
+												<div><label class="small">H px</label><input type="number" class="form-control form-control-sm" id="cell-canvas-h" value="280" min="80" max="900" style="width:72px"></div>
+												<button type="button" class="btn btn-sm btn-outline-primary" id="cell-apply-size">Apply</button>
+												<div class="form-check mb-0"><input class="form-check-input" type="checkbox" id="cell-use-bg"><label class="form-check-label small" for="cell-use-bg">Template bg</label></div>
+												<button type="button" class="btn btn-sm btn-primary" id="cell-preview-btn">Preview</button>
+												<button type="button" class="btn btn-sm btn-outline-secondary" id="cell-reset-btn">Defaults</button>
+												<button type="button" class="btn btn-sm btn-primary" onclick="savePrinterInDb();">Save layout</button>
+											</div>
+											<div class="mcc-lc-split">
+												<div class="mcc-lc-editor-col">
+													<div id="cell-canvas-host" class="mcc-lc-host"></div>
+												</div>
+												<div class="mcc-lc-preview-col">
+													<label class="small text-muted d-block mb-1">Server preview</label>
+													<img id="previewCellImg" class="mcc-label-preview border rounded" alt="">
+												</div>
+											</div>
+										</div>
+										<div class="tab-pane fade" id="sq-layout-pane" role="tabpanel">
+											<div class="d-flex flex-wrap gap-2 align-items-end mb-2">
+												<div><label class="small">W px</label><input type="number" class="form-control form-control-sm" id="sq-canvas-w" value="500" min="120" max="1200" style="width:72px"></div>
+												<div><label class="small">H px</label><input type="number" class="form-control form-control-sm" id="sq-canvas-h" value="480" min="80" max="900" style="width:72px"></div>
+												<button type="button" class="btn btn-sm btn-outline-primary" id="sq-apply-size">Apply</button>
+												<div class="form-check mb-0"><input class="form-check-input" type="checkbox" id="sq-use-bg"><label class="form-check-label small" for="sq-use-bg">Template bg</label></div>
+												<button type="button" class="btn btn-sm btn-primary" id="sq-preview-btn">Preview</button>
+												<button type="button" class="btn btn-sm btn-outline-secondary" id="sq-reset-btn">Defaults</button>
+												<button type="button" class="btn btn-sm btn-primary" onclick="savePrinterInDb();">Save layout</button>
+											</div>
+											<div class="mcc-lc-split">
+												<div class="mcc-lc-editor-col">
+													<div id="sq-canvas-host" class="mcc-lc-host"></div>
+												</div>
+												<div class="mcc-lc-preview-col">
+													<label class="small text-muted d-block mb-1">Server preview</label>
+													<img id="previewSquareImg" class="mcc-label-preview border rounded" alt="">
+												</div>
+											</div>
+										</div>
+									</div>
 								</div>
 
 

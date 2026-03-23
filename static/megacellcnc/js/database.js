@@ -1,3 +1,10 @@
+/* cell id -> history Chart */
+var mccDbHistoryCharts = {};
+
+function mccDbTfGet() {
+    return window.MegaCNCChartTimeframe ? MegaCNCChartTimeframe.get() : '5m';
+}
+
 function getCookie(name) {
     let cookieValue = null;
     if (document.cookie && document.cookie !== '') {
@@ -49,17 +56,23 @@ function initializeChart(deviceId, cellId) {
     $container.data('chart-initialized', false)
 
     if ($container.is(':visible') && !$container.data('chart-initialized')) {
-        slotChart(deviceId, cellId);
+        slotChart(deviceId, cellId, mccDbTfGet());
         $container.data('chart-initialized', true);
     }
 
 }
 
 
-var slotChart = function(deviceId, cellId) {
+var slotChart = function(deviceId, cellId, timeframe) {
     // Dual line chart
     if (jQuery(`#cell_${cellId}_chart`).length > 0) {
+        const tf = timeframe != null ? timeframe : mccDbTfGet();
         const lineChart_3 = document.getElementById(`cell_${cellId}_chart`).getContext('2d');
+
+        if (mccDbHistoryCharts[cellId]) {
+            mccDbHistoryCharts[cellId].destroy();
+            delete mccDbHistoryCharts[cellId];
+        }
 
         // Generate gradients
         const lineChart_3gradientStroke1 = lineChart_3.createLinearGradient(500, 0, 100, 0);
@@ -75,41 +88,39 @@ var slotChart = function(deviceId, cellId) {
         lineChart_3gradientStroke3.addColorStop(1, "rgb(0,255,224)");
 
 
-        // Save the original draw function
-        var originalLineDraw = Chart.controllers.line.prototype.draw;
+        if (!window._mccDbLineShadowExtended) {
+            var originalLineDraw = Chart.controllers.line.prototype.draw;
+            Chart.controllers.line = Chart.controllers.line.extend({
+                draw: function() {
+                    originalLineDraw.apply(this, arguments);
+                    var ctx = this.chart.ctx;
+                    var _stroke = ctx.stroke;
+                    ctx.stroke = function() {
+                        ctx.save();
+                        ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
+                        ctx.shadowBlur = 10;
+                        ctx.shadowOffsetX = 0;
+                        ctx.shadowOffsetY = 4;
+                        _stroke.apply(this, arguments);
+                        ctx.restore();
+                    };
+                }
+            });
+            window._mccDbLineShadowExtended = true;
+        }
 
-        // Extend the line chart controller to include custom drawing behavior
-        Chart.controllers.line = Chart.controllers.line.extend({
-            draw: function() {
-                originalLineDraw.apply(this, arguments); // Call the original draw function
-
-                let ctx = this.chart.ctx;
-                let _stroke = ctx.stroke;
-                ctx.stroke = function() {
-                    ctx.save();
-                    ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
-                    ctx.shadowBlur = 10;
-                    ctx.shadowOffsetX = 0;
-                    ctx.shadowOffsetY = 4;
-                    _stroke.apply(this, arguments);
-                    ctx.restore();
-                };
-            }
-        });
-
-                // AJAX call to get device data by deviceId
         fetch("/get-history/", {
             method: 'POST',
             headers: {
                 'X-CSRFToken': getCookie('csrftoken'),
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ 'device_id': deviceId, 'cell_id': cellId, 'slot_id': -1, 'timeframe': "5m"})
+            body: JSON.stringify({ 'device_id': deviceId, 'cell_id': cellId, 'slot_id': -1, 'timeframe': tf })
         })
         .then(response => response.json())
         .then(data => {
             console.log(data)
-            new Chart(lineChart_3, {
+            mccDbHistoryCharts[cellId] = new Chart(lineChart_3, {
                 type: 'line',
                 data: {
                     defaultFontFamily: 'Poppins',
@@ -217,10 +228,14 @@ var slotChart = function(deviceId, cellId) {
             });
         });
     }
-}
+};
 
-
-
+$(document).on('change', '.mcc-history-timeframe[data-mcc-context="database"]', function () {
+    var $t = $(this);
+    var tf = $t.val();
+    if (window.MegaCNCChartTimeframe) MegaCNCChartTimeframe.save(tf);
+    slotChart(parseInt($t.attr('data-device-id'), 10), parseInt($t.attr('data-cell-id'), 10), tf);
+});
 
 function setupTabEvents(cellId, deviceId) {
     console.log("Tab events 1");
@@ -234,7 +249,9 @@ function setupTabEvents(cellId, deviceId) {
 
         // Assuming $container is defined and accessible in this scope
         if (target === `#navpills-1_cell${cellId}` && !$container.data('chart-initialized')) {
-            slotChart(deviceId, cellId);
+            slotChart(deviceId, cellId, mccDbTfGet());
+            var $sel = $(`.mcc-history-timeframe[data-mcc-context="database"][data-cell-id="${cellId}"]`);
+            if ($sel.length) $sel.val(mccDbTfGet());
             console.log("I called slotchart");
             $container.data('chart-initialized', true);
         }
@@ -405,6 +422,12 @@ $('#database-tbl').on('click', '.expandBtn', function() {
                         <div>
                                 <div class="card-header">
                                     <h4 class="card-title">Chart</h4>
+                                </div>
+                                <div class="px-3 pb-2 d-flex flex-wrap align-items-center gap-2 mcc-history-toolbar">
+                                    <label class="small text-muted mb-0">History resolution</label>
+                                    <select class="form-select form-select-sm mcc-history-timeframe" style="max-width: 15rem" data-mcc-context="database" data-device-id="-1" data-cell-id="${cellID}" id="mcc_hist_tf_cell_${cellID}">
+                                        ${window.MegaCNCChartTimeframe ? MegaCNCChartTimeframe.optionTags() : '<option value="5m" selected>5 min (default, fast)</option><option value="1m">1 min</option><option value="30s">30 sec</option><option value="10s">10 sec (dense)</option>'}
+                                    </select>
                                 </div>
                                 
                                 <div class="tab-content">

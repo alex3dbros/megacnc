@@ -7,7 +7,15 @@ from django.views.decorators.http import require_POST
 from django.views.decorators.csrf import csrf_exempt
 from django.urls import reverse
 from .functions import scan_for_devices, add_new_cell, draw_dual_label, gather_label_data, draw_square_label, \
-    draw_landscape_label, generate_uuid_for_cell, gather_label_cell_data, generate_battery_uuid
+    draw_landscape_label, generate_uuid_for_cell, gather_label_cell_data, generate_battery_uuid, \
+    draw_battery_pack_label
+from .label_layout import (
+    battery_layout_from_printer,
+    cell_layout_from_printer,
+    square_layout_from_printer,
+    PREVIEW_BATTERY_LABEL_DICT,
+    PREVIEW_BATTERY_CUSTOM_LINE,
+)
 from datetime import timedelta
 import json
 from django.db import transaction
@@ -18,6 +26,7 @@ from django.views.decorators.http import require_http_methods
 
 
 from django.utils import timezone
+from django.utils.dateparse import parse_date
 from django.db.models import F
 from mccprolib.api import MegacellCharger
 from megacellcnc.tasks import dispatch_command, get_device_config, save_device_config
@@ -302,19 +311,168 @@ def delete_cells(request):
     # Handle other HTTP methods or return an error response
 
 
+@require_http_methods(["POST"])
+def delete_batteries(request):
+    """
+    Delete battery packs. Optional cell_disposition:
+    - release: unassign cells, set available=Yes
+    - delete_cells: delete cell records
+    - keep_unavailable: unassign cells, set available=No
+    """
+    try:
+        data = json.loads(request.body)
+        battery_ids = data.get('battery_ids')
+        cell_disposition = data.get('cell_disposition', 'release')
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'Invalid JSON'}, status=400)
+
+    if not battery_ids:
+        return JsonResponse({'error': 'No batteries selected'}, status=400)
+
+    if cell_disposition not in ('release', 'delete_cells', 'keep_unavailable'):
+        return JsonResponse({'error': 'Invalid cell_disposition'}, status=400)
+
+    try:
+        ids = [int(x) for x in battery_ids]
+    except (TypeError, ValueError):
+        return JsonResponse({'error': 'Invalid battery ids'}, status=400)
+
+    with transaction.atomic():
+        for bid in ids:
+            bat = Batteries.objects.filter(id=bid).first()
+            if not bat:
+                continue
+            qs = Cells.objects.filter(battery=bat)
+            if cell_disposition == 'delete_cells':
+                qs.delete()
+            elif cell_disposition == 'keep_unavailable':
+                qs.update(battery=None, bat_position='', available='No')
+            else:
+                qs.update(battery=None, bat_position='', available='Yes')
+            bat.delete()
+
+    return JsonResponse({'message': f'Successfully deleted {len(ids)} battery pack(s).'})
+
+
+@require_http_methods(["GET"])
+def battery_detail(request, battery_id):
+    battery = get_object_or_404(Batteries, id=battery_id)
+    return JsonResponse({
+        'id': battery.id,
+        'name': battery.name,
+        'notes': battery.notes or '',
+        'pack_esr': battery.pack_esr,
+        'manufacturing_date': battery.manufacturing_date.isoformat() if battery.manufacturing_date else None,
+        'uuid': battery.UUID,
+        'capacity': battery.capacity,
+        'series': battery.series,
+        'parallel': battery.parallel,
+    })
+
+
+@require_http_methods(["POST"])
+def update_battery(request):
+    try:
+        data = json.loads(request.body.decode('utf-8'))
+    except json.JSONDecodeError:
+        return JsonResponse({'status': 'error', 'message': 'Invalid JSON'}, status=400)
+
+    battery_id = data.get('battery_id')
+    battery = get_object_or_404(Batteries, id=battery_id)
+
+    if 'name' in data:
+        battery.name = (data.get('name') or '').strip()[:150]
+    if 'notes' in data:
+        battery.notes = (data.get('notes') or '')
+    if 'pack_esr' in data:
+        pe = data.get('pack_esr')
+        if pe in (None, ''):
+            battery.pack_esr = None
+        else:
+            try:
+                battery.pack_esr = float(pe)
+            except (TypeError, ValueError):
+                return JsonResponse({'status': 'error', 'message': 'Invalid pack ESR'}, status=400)
+    if 'manufacturing_date' in data:
+        raw = data.get('manufacturing_date')
+        if raw:
+            d = parse_date(str(raw))
+            battery.manufacturing_date = d
+        else:
+            battery.manufacturing_date = None
+
+    battery.save()
+    return JsonResponse({'status': 'success', 'message': 'Battery pack updated.'})
+
+
+@require_http_methods(["POST"])
+def print_battery_pack_label(request):
+    try:
+        data = json.loads(request.body.decode('utf-8'))
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'Invalid JSON'}, status=400)
+
+    is_demo = int(data.get('isDemo', 0))
+    battery_id = data.get('batteryId')
+
+    printer = PrinterSettings.objects.all().first()
+    if not printer:
+        return JsonResponse({'error': 'No printer configured'}, status=400)
+
+    if is_demo:
+        battery = Batteries.objects.order_by('-id').first()
+        if not battery:
+            return JsonResponse({'error': 'No battery packs to preview'}, status=400)
+    else:
+        if not battery_id:
+            return JsonResponse({'error': 'batteryId required'}, status=400)
+        battery = get_object_or_404(Batteries, id=battery_id)
+
+    custom = printer.CustomField1 or ''
+    label = draw_battery_pack_label(battery, custom, battery_layout_from_printer(printer))
+
+    return JsonResponse({
+        'label': f'{label}',
+        'message': 'Label generated',
+    })
+
+
 def get_cells(request):
     project_id = request.GET.get('project_id')
+    for_pack_battery_id = request.GET.get('for_pack_battery_id')
+
+    exclude_uuids = []
+    if for_pack_battery_id:
+        try:
+            bid = int(for_pack_battery_id)
+            bat = Batteries.objects.filter(id=bid).first()
+            if bat and bat.draft_json:
+                exclude_uuids = [
+                    x['cellId'] for x in bat.draft_json.get('cellsData', [])
+                    if x.get('cellId')
+                ]
+        except (TypeError, ValueError):
+            pass
+
     if project_id == 'all':
-        cells = Cells.objects.filter(available="Yes")
+        cells = Cells.objects.filter(available="Yes", battery__isnull=True)
     else:
-        cells = Cells.objects.filter(project_id=project_id, available="Yes")
+        cells = Cells.objects.filter(project_id=project_id, available="Yes", battery__isnull=True)
+
+    if exclude_uuids:
+        cells = cells.exclude(UUID__in=exclude_uuids)
 
     cells_data = []
     for cell in cells:
         match = re.search(r'-S(\d+)', cell.UUID)
         if match:
             serial_number = int(match.group(1))
-            cdata = {'id': serial_number, 'capacity': cell.capacity, 'uuid': cell.UUID}
+            cdata = {
+                'id': serial_number,
+                'capacity': cell.capacity,
+                'uuid': cell.UUID,
+                'esr': cell.esr,
+            }
             cells_data.append(cdata)
 
     return JsonResponse({'cells': cells_data})
@@ -328,15 +486,55 @@ def get_battery_cells(request):
 
     battery = get_object_or_404(Batteries, id=battery_id)
     cells_data = []
-    for cell in battery.battery_cells.all():
-        match = re.search(r'-S(\d+)', cell.UUID)
-        if match:
-            serial_number = int(match.group(1))
-            cdata = {'id': serial_number, 'capacity': cell.capacity, 'uuid': cell.UUID, 'bat_position': cell.bat_position}
-            cells_data.append(cdata)
+    assigned = list(battery.battery_cells.all())
+    if assigned:
+        for cell in assigned:
+            match = re.search(r'-S(\d+)', cell.UUID)
+            if match:
+                serial_number = int(match.group(1))
+                cdata = {
+                    'id': serial_number,
+                    'capacity': cell.capacity,
+                    'uuid': cell.UUID,
+                    'bat_position': cell.bat_position,
+                    'esr': cell.esr,
+                }
+                cells_data.append(cdata)
+    elif battery.draft_json:
+        for item in battery.draft_json.get('cellsData', []) or []:
+            cell_uuid = item.get('cellId')
+            slot_id = item.get('slotId')
+            if not cell_uuid:
+                continue
+            try:
+                cell = Cells.objects.get(UUID=cell_uuid)
+            except Cells.DoesNotExist:
+                continue
+            match = re.search(r'-S(\d+)', cell.UUID)
+            if match:
+                serial_number = int(match.group(1))
+                cdata = {
+                    'id': serial_number,
+                    'capacity': cell.capacity,
+                    'uuid': cell.UUID,
+                    'bat_position': slot_id,
+                    'esr': cell.esr,
+                }
+                cells_data.append(cdata)
 
+    draft_project_id = None
+    if battery.draft_json:
+        draft_project_id = battery.draft_json.get('projectId')
+    if draft_project_id is None and assigned:
+        draft_project_id = assigned[0].project_id
 
-    return JsonResponse({'cells': cells_data})
+    return JsonResponse({
+        'cells': cells_data,
+        'draftProjectId': draft_project_id,
+        'packStatus': battery.status,
+        'series': battery.series,
+        'parallel': battery.parallel,
+    })
 
 
 def database(request):
@@ -376,71 +574,124 @@ def batteries(request):
 
 
 def add_battery(request):
-    if request.method == 'POST':
-        battery_name = request.POST['battery_name']
-        series = request.POST['series']
-        parallel = request.POST['parallel']
-        uuid = generate_battery_uuid()
-        print("I got add battery request %s "% battery_name)
+    if request.method != 'POST':
+        return redirect(reverse('megacellcnc:batteries'))
 
-        new_battery = Batteries(
+    battery_name = (request.POST.get('battery_name') or '').strip()
+    try:
+        series = int(request.POST.get('series', '0'))
+        parallel = int(request.POST.get('parallel', '0'))
+    except (TypeError, ValueError):
+        messages.error(request, 'Series and parallel must be whole numbers.')
+        return redirect(reverse('megacellcnc:batteries'))
 
-            name=battery_name,
-            UUID=uuid,
-            series=series,
-            parallel=parallel,
-            voltage=0,
-            capacity=0,
-            status="Created",
-            available="Yes"
+    if not battery_name or series < 1 or parallel < 1:
+        messages.error(request, 'Battery name is required; series and parallel must be at least 1.')
+        return redirect(reverse('megacellcnc:batteries'))
 
-        )
+    uuid = generate_battery_uuid()
 
-        new_battery.save()
-
-        return redirect('/batteries/')
+    new_battery = Batteries(
+        name=battery_name,
+        UUID=uuid,
+        series=series,
+        parallel=parallel,
+        cell_type='',
+        voltage=0,
+        capacity=0,
+        status="Created",
+        available="Yes",
+    )
+    new_battery.save()
+    messages.success(request, f'Battery "{battery_name}" created ({series}S{parallel}P).')
+    return redirect(reverse('megacellcnc:batteries'))
 
 
 @require_http_methods(["POST"])  # Only allow POST requests
 def save_battery_configuration(request):
     try:
-        data = json.loads(request.body.decode('utf-8'))  # Decode and load JSON data
-
-        battery_id = data['batteryId']
-        cells_data = data['cellsData']
-
-        battery = Batteries.objects.get(id=battery_id)
-
-        print("Battery ID: ", battery_id)
-        # Example of handling the data:
-        for cell in cells_data:
-            cell_uuid = cell['cellId']
-            slot_id = cell['slotId']
-            capacity = cell['capacity']
-
-            cell = Cells.objects.get(UUID=cell_uuid)
-            cell.battery = battery
-            cell.bat_position = slot_id
-            cell.available = "No"
-            cell.save()
-
-
-
-            # Process this data, such as saving it to the database
-            print(cell_uuid, slot_id, capacity)
-
-        print("This is len cells data")
-        print(len(cells_data))
-        if len(cells_data) == 0:
-            for cell in battery.battery_cells.all():
-                cell.battery = None
-                cell.bat_position = ""
-                cell.available = "Yes"
-                cell.save()
-
-        return JsonResponse({'status': 'success', 'message': 'Pack configuration saved successfully!'})
-    except json.JSONDecodeError as e:
+        data = json.loads(request.body.decode('utf-8'))
+    except json.JSONDecodeError:
         return JsonResponse({'status': 'error', 'message': 'Invalid JSON'}, status=400)
+
+    battery_id = data.get('batteryId')
+    cells_data = data.get('cellsData') or []
+    is_draft = bool(data.get('isDraft'))
+    project_id = data.get('projectId')
+
+    try:
+        battery = Batteries.objects.get(id=battery_id)
+    except Batteries.DoesNotExist:
+        return JsonResponse({'status': 'error', 'message': 'Battery not found'}, status=404)
+
+    series = battery.series or 0
+    parallel = battery.parallel or 0
+    required = series * parallel
+
+    if not is_draft and required > 0 and len(cells_data) != required:
+        return JsonResponse({
+            'status': 'error',
+            'message': (
+                f'A complete pack requires exactly {required} cells in slots '
+                f'(you have {len(cells_data)}). Use “Save draft” for incomplete progress.'
+            ),
+        }, status=400)
+
+    if not is_draft:
+        for item in cells_data:
+            cell_uuid = item.get('cellId')
+            try:
+                c = Cells.objects.get(UUID=cell_uuid)
+            except Cells.DoesNotExist:
+                return JsonResponse({'status': 'error', 'message': 'Cell not found'}, status=404)
+            if c.battery_id and c.battery_id != battery.id:
+                return JsonResponse({
+                    'status': 'error',
+                    'message': 'One or more cells are already assigned to another pack.',
+                }, status=400)
+
+    try:
+        with transaction.atomic():
+            battery = Batteries.objects.select_for_update().get(id=battery_id)
+            Cells.objects.filter(battery=battery).update(
+                battery=None, bat_position='', available='Yes'
+            )
+
+            if is_draft:
+                battery.draft_json = {
+                    'projectId': project_id,
+                    'cellsData': cells_data,
+                }
+                battery.status = 'Draft'
+                battery.save(update_fields=['draft_json', 'status'])
+            else:
+                battery.draft_json = None
+                battery.status = 'Complete'
+                battery.save(update_fields=['draft_json', 'status'])
+
+                for item in cells_data:
+                    cell_uuid = item['cellId']
+                    slot_id = item['slotId']
+                    cell = Cells.objects.select_for_update().get(UUID=cell_uuid)
+                    cell.battery = battery
+                    cell.bat_position = slot_id
+                    cell.available = "No"
+                    cell.save()
+
+    except Cells.DoesNotExist:
+        return JsonResponse({'status': 'error', 'message': 'Cell not found'}, status=404)
+    except KeyError as e:
+        return JsonResponse({'status': 'error', 'message': f'Missing field: {e}'}, status=400)
+
+    if is_draft:
+        return JsonResponse({
+            'status': 'success',
+            'message': 'Draft saved. Cells are not assigned in the database until you finalize.',
+        })
+    return JsonResponse({
+        'status': 'success',
+        'message': 'Pack finalized — cells assigned to the battery.',
+    })
 
 def device_slots(request):
     dev_id = request.GET.get('dev_id')
@@ -751,11 +1002,11 @@ def save_printer_settings(request):
     if request.method == "POST":
         try:
             data = json.loads(request.body)
-            printerName = data.get('printerName')
-            labelWidth = float(data.get('labelWidth'))
-            labelHeight = float(data.get('labelHeight'))
-            labelRotation = int(data.get('labelRotation'))
-            dualLabel = int(data.get('dualLabel'))
+            printerName = data.get('printerName') or ''
+            labelWidth = float(data.get('labelWidth') or 0)
+            labelHeight = float(data.get('labelHeight') or 0)
+            labelRotation = int(data.get('labelRotation') or 0)
+            dualLabel = int(data.get('dualLabel') or 0)
             printerHost = data.get('printerHost')
             customField1 = data.get('customField1')
             label_shape = data.get('label_shape')
@@ -773,16 +1024,24 @@ def save_printer_settings(request):
             printer_settings.CustomField1 = customField1
             printer_settings.LabelShape = label_shape
 
-            printer_settings.save()  # Don't forget to save the object
+            cell_l = data.get('cellLabelLayoutJson')
+            bat_l = data.get('batteryLabelLayoutJson')
+            sq_l = data.get('squareLabelLayoutJson')
+            if cell_l is not None:
+                printer_settings.CellLabelLayoutJson = cell_l if isinstance(cell_l, str) else json.dumps(cell_l)
+            if bat_l is not None:
+                printer_settings.BatteryLabelLayoutJson = bat_l if isinstance(bat_l, str) else json.dumps(bat_l)
+            if sq_l is not None:
+                printer_settings.SquareLabelLayoutJson = sq_l if isinstance(sq_l, str) else json.dumps(sq_l)
 
-            print(printerName, labelWidth, labelHeight, labelRotation, dualLabel)
-
+            printer_settings.save()
 
         except json.JSONDecodeError:
             return JsonResponse({'error': 'Invalid JSON'}, status=400)
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
 
-        # save_device_config.delay(device_id, data)
-        return JsonResponse({'message': f'Successfully saved device info.'})
+        return JsonResponse({'message': 'Settings saved successfully.'})
 
 
 def get_printer_settings(request):
@@ -804,7 +1063,10 @@ def get_printer_settings(request):
                 'labelHeight': printer.LabelHeight,
                 'labelRotation': printer.LabelRotation,
                 'customField1': printer.CustomField1,
-                'label_shape': printer.LabelShape
+                'label_shape': printer.LabelShape,
+                'cellLabelLayoutJson': getattr(printer, 'CellLabelLayoutJson', None) or '{}',
+                'squareLabelLayoutJson': getattr(printer, 'SquareLabelLayoutJson', None) or '{}',
+                'batteryLabelLayoutJson': getattr(printer, 'BatteryLabelLayoutJson', None) or '{}',
             }
 
 
@@ -863,9 +1125,9 @@ def print_label(request):
                     if isDemo:
 
                         if printer.LabelShape == "square":
-                            label = draw_square_label([], printer.CustomField1)
+                            label = draw_square_label([], printer.CustomField1, square_layout_from_printer(printer))
                         else:
-                            label = draw_landscape_label([], printer.CustomField1)
+                            label = draw_landscape_label([], printer.CustomField1, cell_layout_from_printer(printer))
 
                         response_data = {
                             "label": f"{label}"
@@ -879,9 +1141,9 @@ def print_label(request):
                         label_data = gather_label_cell_data(slots)
 
                     if printer.LabelShape == "square":
-                        label = draw_square_label(label_data, printer.CustomField1)
+                        label = draw_square_label(label_data, printer.CustomField1, square_layout_from_printer(printer))
                     else:
-                        label = draw_landscape_label(label_data, printer.CustomField1)
+                        label = draw_landscape_label(label_data, printer.CustomField1, cell_layout_from_printer(printer))
 
                     response_data = {
                         "label": f"{label}"
@@ -890,6 +1152,33 @@ def print_label(request):
 
         except json.JSONDecodeError:
             return JsonResponse({'error': 'Invalid JSON'}, status=400)
+
+
+@require_http_methods(["POST"])
+def preview_label_layout(request):
+    """Live preview for settings QR label editor (cell / battery); uses demo data."""
+    try:
+        data = json.loads(request.body.decode('utf-8'))
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'Invalid JSON'}, status=400)
+
+    kind = data.get('kind')
+    layout = data.get('layout') or {}
+    printer = PrinterSettings.objects.all().first()
+    custom = (printer.CustomField1 if printer else '') or ''
+    if not custom.strip():
+        custom = PREVIEW_BATTERY_CUSTOM_LINE
+
+    if kind == 'battery':
+        label = draw_battery_pack_label(PREVIEW_BATTERY_LABEL_DICT, custom, layout)
+    elif kind == 'cell':
+        label = draw_landscape_label([], custom, layout)
+    elif kind == 'square':
+        label = draw_square_label([], custom, layout)
+    else:
+        return JsonResponse({'error': 'kind must be battery, cell, or square'}, status=400)
+
+    return JsonResponse({'label': label, 'message': 'ok'})
 
 
 def save_cell(request):
@@ -987,22 +1276,37 @@ def get_history(request):
                 df['timestamp'] = df['timestamp'].dt.tz_convert(local_timezone)
                 df.set_index('timestamp', inplace=True)
 
-                # Resample the data by minute, taking the mean for each minute
+                # History charts: full series resampled to bucket size (mean).
+                # "5m" = fast default (5-minute buckets). "rt_10s" = realtime window only (last 30 min).
 
                 if timeframe == "5m":
-                    resampled_df = df.resample('5min').mean()  # 'T' stands for minute
-                elif timeframe == "10s":
-                    resampled_df = df.resample('10s').mean()
-                    resampled_df = resampled_df.last('30min')
+                    resampled_df = df.resample("5min").mean()
                 elif timeframe == "1m":
-                    resampled_df = df.resample('1min').mean()
-                    resampled_df = resampled_df.last('8H')
+                    resampled_df = df.resample("1min").mean()
+                elif timeframe == "30s":
+                    resampled_df = df.resample("30s").mean()
+                elif timeframe == "10s":
+                    resampled_df = df.resample("10s").mean()
+                elif timeframe == "rt_10s":
+                    resampled_df = df.resample("10s").mean()
+                    # Explicit window (pandas .last() on DataFrame is brittle across versions)
+                    if len(resampled_df.index) > 0:
+                        end_ts = resampled_df.index.max()
+                        start_ts = end_ts - pd.Timedelta(minutes=30)
+                        resampled_df = resampled_df.loc[resampled_df.index >= start_ts]
+                else:
+                    resampled_df = df.resample("5min").mean()
 
-                # Drop rows with NaN values
+                # Keep rows that have the main signals; fill temp NaNs from resample gaps
+                resampled_df = resampled_df.dropna(subset=["voltage", "current"], how="any")
+                if "temperature" in resampled_df.columns:
+                    resampled_df["temperature"] = (
+                        resampled_df["temperature"].ffill().bfill().fillna(0)
+                    )
                 cleaned_df = resampled_df.dropna()
-                cleaned_df['voltage'] = cleaned_df['voltage'].round(2)
-                cleaned_df['current'] = cleaned_df['current'].round(2)
-                cleaned_df['temperature'] = cleaned_df['temperature'].astype(int)
+                cleaned_df["voltage"] = cleaned_df["voltage"].round(2)
+                cleaned_df["current"] = cleaned_df["current"].round(2)
+                cleaned_df["temperature"] = cleaned_df["temperature"].round(0).astype(int)
                 # Now, extract the resampled data back to lists
                 labels = cleaned_df.index.strftime('%Y-%m-%d %H:%M:%S').tolist()
                 volt_data = cleaned_df['voltage'].tolist()

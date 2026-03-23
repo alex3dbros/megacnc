@@ -38,6 +38,20 @@ body.mcc-premium .content-body {
   padding: 1.25rem 1.75rem 2.5rem;
 }
 
+/*
+ * Theme sets [data-header-position="fixed"] .content-body { padding-top: 3.125rem; }
+ * The rule above resets padding and was hiding the first row under the fixed header bar.
+ */
+body.mcc-premium[data-header-position="fixed"] .content-body {
+  padding-top: calc(3.125rem + 1.25rem);
+}
+
+@media only screen and (max-width: 47.9375rem) {
+  body.mcc-premium[data-header-position="fixed"] .content-body {
+    padding-top: calc(3.1rem + 1.25rem);
+  }
+}
+
 /* Sidebar */
 body.mcc-premium .deznav {
   background: var(--mcc-bg-panel) !important;

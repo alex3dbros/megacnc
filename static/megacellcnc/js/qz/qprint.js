@@ -1825,31 +1825,45 @@ function setPrinter(printer) {
 
 function savePrinterInDb() {
 
-    let cf = getUpdatedConfig();
-    let printer = cfg.getPrinter();
-    if (printer && printer.name != undefined) {
-
-        let printerName = printer.name;
-        let labelWidth = includedValue($("#pxlWidth"));
-        let labelHeight = includedValue($("#pxlHeight"));
-        let labelRotation = includedValue($("#pxlRotation"));
-        let customField1 = includedValue($("#customField1"));
-        let dualLabel = document.getElementById('doubleLabelCheckbox').checked;
-        let printerHost = includedValue($("#connectionHost"));
-
-        let squareLabelShape = document.getElementById('squareLabelShape').checked;
-        let landscapeLabelShape = document.getElementById('landscapeLabelShape').checked;
-
-        let label_shape;
-
-        if (squareLabelShape) {
-            label_shape = "square";
-        } else if (landscapeLabelShape) {
-            label_shape = "landscape";
-        } else {
-            // Optional: handle the case where neither is checked, if needed
-            label_shape = "square"; // or any default value you prefer
+    let printerName = '';
+    try {
+        let cf = getUpdatedConfig();
+        let printer = cfg.getPrinter();
+        if (printer && printer.name != undefined) {
+            printerName = printer.name;
         }
+    } catch (e) { /* QZ not connected */ }
+
+    if (!printerName) {
+        printerName = includedValue($("#printerSearch")) || '';
+    }
+
+    let labelWidth = includedValue($("#pxlWidth")) || 0;
+    let labelHeight = includedValue($("#pxlHeight")) || 0;
+    let labelRotation = includedValue($("#pxlRotation")) || 0;
+    let customField1 = includedValue($("#customField1")) || '';
+    let dualLabel = document.getElementById('doubleLabelCheckbox').checked;
+    let printerHost = includedValue($("#connectionHost")) || 'localhost';
+
+    let squareLabelShape = document.getElementById('squareLabelShape').checked;
+    let landscapeLabelShape = document.getElementById('landscapeLabelShape').checked;
+
+    let label_shape;
+
+    if (squareLabelShape) {
+        label_shape = "square";
+    } else if (landscapeLabelShape) {
+        label_shape = "landscape";
+    } else {
+        label_shape = "square";
+    }
+
+    let cellLabelLayoutJson = '{}';
+    let batteryLabelLayoutJson = '{}';
+    let squareLabelLayoutJson = '{}';
+    if (typeof collectCellLayoutJson === 'function') cellLabelLayoutJson = collectCellLayoutJson();
+    if (typeof collectBatteryLayoutJson === 'function') batteryLabelLayoutJson = collectBatteryLayoutJson();
+    if (typeof collectSquareLayoutJson === 'function') squareLabelLayoutJson = collectSquareLayoutJson();
 
     fetch(`/save-printer-settings/`, {
         method: 'POST',
@@ -1858,17 +1872,16 @@ function savePrinterInDb() {
             'X-CSRFToken': getCookie('csrftoken')
         },
         body: JSON.stringify({ printerName, labelWidth, labelHeight, labelRotation, dualLabel, printerHost,
-            customField1, label_shape})
+            customField1, label_shape, cellLabelLayoutJson, batteryLabelLayoutJson, squareLabelLayoutJson})
     })
         .then(response => response.json())
         .then(data => {
             toastr.success(data.message, "Success");
         })
-        .catch(error => console.error('Error:', error));
-
-
-    }
-
+        .catch(error => {
+            console.error('Error:', error);
+            toastr.error("Failed to save settings.", "Error");
+        });
 
 }
 
@@ -1902,6 +1915,18 @@ function loadExistingPrinter() {
 
             $("#squareLabelShape").prop('checked', data.label_shape === "square");
             $("#landscapeLabelShape").prop('checked', data.label_shape === "landscape");
+
+            if (typeof applyLabelLayoutsFromServer === 'function') {
+                applyLabelLayoutsFromServer(data);
+                setTimeout(function () {
+                    var b = document.getElementById('bat-preview-btn');
+                    var c = document.getElementById('cell-preview-btn');
+                    var sq = document.getElementById('sq-preview-btn');
+                    if (b) b.click();
+                    if (c) c.click();
+                    if (sq) sq.click();
+                }, 300);
+            }
 
 
 
@@ -1984,4 +2009,27 @@ function printLabels(slots, deviceId) {
         })
         .catch(error => console.error('Error:', error));
 
+}
+
+
+function printBatteryPackLabel(batteryId) {
+    var isDemo = 0;
+    fetch('/print-battery-pack-label/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: JSON.stringify({ isDemo: isDemo, batteryId: batteryId })
+    })
+        .then(function (response) { return response.json(); })
+        .then(function (data) {
+            var config = getUpdatedConfig();
+            var printData = [
+                { type: 'pixel', format: 'image', flavor: 'base64', data: data.label }
+            ];
+            qz.print(config, printData).catch(displayError);
+            toastr.success(data.message || 'Printed', 'Success');
+        })
+        .catch(function (error) { console.error('Error:', error); });
 }

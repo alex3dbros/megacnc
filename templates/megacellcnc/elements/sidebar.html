@@ -5,12 +5,13 @@
 			<li class="menu-title">Mega CNC</li>
 
 			<li><a href="{% url 'megacellcnc:index' %}" class="" aria-expanded="false">
-				<div class="menu-icon">
-					<svg width="22" height="22" viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg">
-						<path d="M6.75713 9.35157V15.64" stroke="#888888" stroke-linecap="round" stroke-linejoin="round"/>
-						<path d="M11.0349 6.34253V15.64" stroke="#888888" stroke-linecap="round" stroke-linejoin="round"/>
-						<path d="M15.2428 12.6746V15.64" stroke="#888888" stroke-linecap="round" stroke-linejoin="round"/>
-						<path fill-rule="evenodd" clip-rule="evenodd" d="M15.2952 1.83333H6.70474C3.7103 1.83333 1.83331 3.95274 1.83331 6.95306V15.0469C1.83331 18.0473 3.70157 20.1667 6.70474 20.1667H15.2952C18.2984 20.1667 20.1666 18.0473 20.1666 15.0469V6.95306C20.1666 3.95274 18.2984 1.83333 15.2952 1.83333Z" stroke="#888888" stroke-linecap="round" stroke-linejoin="round"/>
+				<div class="menu-icon" title="Dashboard">
+					<svg width="22" height="22" viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+						<!-- Dashboard: 2x2 grid -->
+						<rect x="3" y="3" width="6.5" height="6.5" rx="1.2" stroke="#888888" stroke-width="1.2" fill="none"/>
+						<rect x="12.5" y="3" width="6.5" height="6.5" rx="1.2" stroke="#888888" stroke-width="1.2" fill="none"/>
+						<rect x="3" y="12.5" width="6.5" height="6.5" rx="1.2" stroke="#888888" stroke-width="1.2" fill="none"/>
+						<rect x="12.5" y="12.5" width="6.5" height="6.5" rx="1.2" stroke="#888888" stroke-width="1.2" fill="none"/>
 					</svg>
 				</div>
 				<span class="nav-text">Dashboard</span>
@@ -19,12 +20,10 @@
 
 
 			<li><a href="{% url 'megacellcnc:project' %}" class="" aria-expanded="false">
-				<div class="menu-icon">
-					<svg width="22" height="22" viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg">
-						<path d="M6.75713 9.35157V15.64" stroke="#888888" stroke-linecap="round" stroke-linejoin="round"/>
-						<path d="M11.0349 6.34253V15.64" stroke="#888888" stroke-linecap="round" stroke-linejoin="round"/>
-						<path d="M15.2428 12.6746V15.64" stroke="#888888" stroke-linecap="round" stroke-linejoin="round"/>
-						<path fill-rule="evenodd" clip-rule="evenodd" d="M15.2952 1.83333H6.70474C3.7103 1.83333 1.83331 3.95274 1.83331 6.95306V15.0469C1.83331 18.0473 3.70157 20.1667 6.70474 20.1667H15.2952C18.2984 20.1667 20.1666 18.0473 20.1666 15.0469V6.95306C20.1666 3.95274 18.2984 1.83333 15.2952 1.83333Z" stroke="#888888" stroke-linecap="round" stroke-linejoin="round"/>
+				<div class="menu-icon" title="Projects">
+					<svg width="22" height="22" viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+						<!-- Folder -->
+						<path d="M4 7.5h4.5l1.2-2H17a1.5 1.5 0 0 1 1.5 1.5v9A1.5 1.5 0 0 1 17 17.5H5A1.5 1.5 0 0 1 3.5 16V9A1.5 1.5 0 0 1 5 7.5z" stroke="#888888" stroke-width="1.2" fill="none" stroke-linejoin="round"/>
 					</svg>
 				</div>	
 					<span class="nav-text">Projects</span>
@@ -33,12 +32,13 @@
 
 
 			<li><a href="{% url 'megacellcnc:devices' %}" class="" aria-expanded="false">
-				<div class="menu-icon">
-					<svg width="22" height="22" viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg">
-						<path d="M6.75713 9.35157V15.64" stroke="#888888" stroke-linecap="round" stroke-linejoin="round"/>
-						<path d="M11.0349 6.34253V15.64" stroke="#888888" stroke-linecap="round" stroke-linejoin="round"/>
-						<path d="M15.2428 12.6746V15.64" stroke="#888888" stroke-linecap="round" stroke-linejoin="round"/>
-						<path fill-rule="evenodd" clip-rule="evenodd" d="M15.2952 1.83333H6.70474C3.7103 1.83333 1.83331 3.95274 1.83331 6.95306V15.0469C1.83331 18.0473 3.70157 20.1667 6.70474 20.1667H15.2952C18.2984 20.1667 20.1666 18.0473 20.1666 15.0469V6.95306C20.1666 3.95274 18.2984 1.83333 15.2952 1.83333Z" stroke="#888888" stroke-linecap="round" stroke-linejoin="round"/>
+				<div class="menu-icon" title="Devices">
+					<svg width="22" height="22" viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+						<!-- Charger / device box -->
+						<rect x="4" y="5" width="14" height="11" rx="2" stroke="#888888" stroke-width="1.2" fill="none"/>
+						<path d="M8 18v2.5M14 18v2.5" stroke="#888888" stroke-width="1.2" stroke-linecap="round"/>
+						<circle cx="11" cy="10.5" r="2.2" stroke="#888888" stroke-width="1.2" fill="none"/>
+						<path d="M11 12.7v2" stroke="#888888" stroke-width="1.2" stroke-linecap="round"/>
 					</svg>
 				</div>
 				<span class="nav-text">Devices</span>
@@ -47,12 +47,13 @@
 
 
 			<li><a href="{% url 'megacellcnc:database' %}" class="" aria-expanded="false">
-				<div class="menu-icon">
-					<svg width="22" height="22" viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg">
-						<path d="M6.75713 9.35157V15.64" stroke="#888888" stroke-linecap="round" stroke-linejoin="round"/>
-						<path d="M11.0349 6.34253V15.64" stroke="#888888" stroke-linecap="round" stroke-linejoin="round"/>
-						<path d="M15.2428 12.6746V15.64" stroke="#888888" stroke-linecap="round" stroke-linejoin="round"/>
-						<path fill-rule="evenodd" clip-rule="evenodd" d="M15.2952 1.83333H6.70474C3.7103 1.83333 1.83331 3.95274 1.83331 6.95306V15.0469C1.83331 18.0473 3.70157 20.1667 6.70474 20.1667H15.2952C18.2984 20.1667 20.1666 18.0473 20.1666 15.0469V6.95306C20.1666 3.95274 18.2984 1.83333 15.2952 1.83333Z" stroke="#888888" stroke-linecap="round" stroke-linejoin="round"/>
+				<div class="menu-icon" title="Database">
+					<svg width="22" height="22" viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+						<!-- Stacked cylinders (database) -->
+						<ellipse cx="11" cy="5" rx="6" ry="2.2" stroke="#888888" stroke-width="1.2" fill="none"/>
+						<path d="M5 5v3c0 1.2 2.7 2.2 6 2.2s6-1 6-2.2V5" stroke="#888888" stroke-width="1.2" fill="none"/>
+						<path d="M5 9v3c0 1.2 2.7 2.2 6 2.2s6-1 6-2.2V9" stroke="#888888" stroke-width="1.2" fill="none"/>
+						<path d="M5 13v3c0 1.2 2.7 2.2 6 2.2s6-1 6-2.2V13" stroke="#888888" stroke-width="1.2" fill="none"/>
 					</svg>
 				</div>
 				<span class="nav-text">Database</span>
@@ -60,12 +61,12 @@
 			</li>
 
 			<li><a href="{% url 'megacellcnc:batteries' %}" class="" aria-expanded="false">
-				<div class="menu-icon">
-					<svg width="22" height="22" viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg">
-						<path d="M6.75713 9.35157V15.64" stroke="#888888" stroke-linecap="round" stroke-linejoin="round"/>
-						<path d="M11.0349 6.34253V15.64" stroke="#888888" stroke-linecap="round" stroke-linejoin="round"/>
-						<path d="M15.2428 12.6746V15.64" stroke="#888888" stroke-linecap="round" stroke-linejoin="round"/>
-						<path fill-rule="evenodd" clip-rule="evenodd" d="M15.2952 1.83333H6.70474C3.7103 1.83333 1.83331 3.95274 1.83331 6.95306V15.0469C1.83331 18.0473 3.70157 20.1667 6.70474 20.1667H15.2952C18.2984 20.1667 20.1666 18.0473 20.1666 15.0469V6.95306C20.1666 3.95274 18.2984 1.83333 15.2952 1.83333Z" stroke="#888888" stroke-linecap="round" stroke-linejoin="round"/>
+				<div class="menu-icon" title="Batteries">
+					<svg width="22" height="22" viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+						<!-- Battery -->
+						<rect x="3.5" y="7" width="13" height="8" rx="1.5" stroke="#888888" stroke-width="1.2" fill="none"/>
+						<path d="M16.5 9.5h2.2v3H16.5" stroke="#888888" stroke-width="1.2" stroke-linejoin="round" fill="none"/>
+						<rect x="6" y="9.5" width="6" height="3" rx="0.5" fill="#888888" opacity="0.35"/>
 					</svg>
 				</div>
 				<span class="nav-text">Batteries</span>
@@ -74,12 +75,11 @@
 
 
 			<li><a href="{% url 'megacellcnc:settings' %}" class="" aria-expanded="false">
-				<div class="menu-icon">
-					<svg width="22" height="22" viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg">
-						<path d="M6.75713 9.35157V15.64" stroke="#888888" stroke-linecap="round" stroke-linejoin="round"/>
-						<path d="M11.0349 6.34253V15.64" stroke="#888888" stroke-linecap="round" stroke-linejoin="round"/>
-						<path d="M15.2428 12.6746V15.64" stroke="#888888" stroke-linecap="round" stroke-linejoin="round"/>
-						<path fill-rule="evenodd" clip-rule="evenodd" d="M15.2952 1.83333H6.70474C3.7103 1.83333 1.83331 3.95274 1.83331 6.95306V15.0469C1.83331 18.0473 3.70157 20.1667 6.70474 20.1667H15.2952C18.2984 20.1667 20.1666 18.0473 20.1666 15.0469V6.95306C20.1666 3.95274 18.2984 1.83333 15.2952 1.83333Z" stroke="#888888" stroke-linecap="round" stroke-linejoin="round"/>
+				<div class="menu-icon" title="Settings">
+					<svg width="22" height="22" viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+						<!-- Gear -->
+						<circle cx="11" cy="11" r="2.5" stroke="#888888" stroke-width="1.2" fill="none"/>
+						<path d="M11 3.5v2M11 16.5v2M18.5 11h-2M5.5 11h-2M16.1 5.9l-1.4 1.4M7.3 14.7l-1.4 1.4M16.1 16.1l-1.4-1.4M7.3 7.3L5.9 5.9" stroke="#888888" stroke-width="1.2" stroke-linecap="round"/>
 					</svg>
 				</div>
 				<span class="nav-text">Settings</span>

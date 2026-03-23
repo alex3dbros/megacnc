@@ -432,6 +432,7 @@ dz_array = {
 							f"{folder_name}/vendor/datatables/js/jszip.min.js",
 							f"{folder_name}/js/plugins-init/datatables.init.js",
 							f"{folder_name}/vendor/tagify/dist/tagify.js",
+							f"{folder_name}/js/chart-timeframe.js",
 							f"{folder_name}/js/device-slots.js",
 
 
@@ -462,6 +463,7 @@ dz_array = {
 							f"{folder_name}/vendor/datatables/js/jszip.min.js",
 							f"{folder_name}/js/plugins-init/datatables.init.js",
 							f"{folder_name}/vendor/tagify/dist/tagify.js",
+							f"{folder_name}/js/chart-timeframe.js",
 							f"{folder_name}/js/database.js",
 							f"{folder_name}/js/xlsx.full.min.js",
 
@@ -522,6 +524,7 @@ dz_array = {
 							f"{folder_name}/js/qz/jsrsasign-all-min.js",
 							f"{folder_name}/js/qz/qz-tray.js",
 							f"{folder_name}/js/qz/qprint.js",
+							f"{folder_name}/js/label-layout-editor.js",
 
 
 

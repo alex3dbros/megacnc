@@ -42,6 +42,8 @@ Major update focused on performance, stability, memory optimization, and adding 
 - **Voltage/current sampling rates**: Restored original hardware-defined sampling rates (20 for voltage, 40 for current) that were inadvertently changed.
 - **WiFi credential persistence**: Default WiFi credentials are no longer overwritten during firmware updates. SPIFFS upload backs up and restores all `.pack` config files.
 - **Gzip double-encoding**: Fixed `ERR_CONTENT_DECODING_FAILED` caused by manually adding `Content-Encoding: gzip` when `ESP8266WebServer::streamFile()` already handles it for `.gz` files.
+- **Abnormal charging detection improvement and provided transition so it can continue the test.
+
 
 ### API Changes
 

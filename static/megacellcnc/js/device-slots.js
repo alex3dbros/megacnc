@@ -19,7 +19,16 @@ function getCookie(name) {
 
 $(".export-btn").appendTo(".help-desk.slots-table");
 
+/* slot number -> Chart instance for "All history" tab */
+var mccSlotHistoryCharts = {};
 
+function mccTfGet() {
+    return window.MegaCNCChartTimeframe ? MegaCNCChartTimeframe.get() : '5m';
+}
+
+function mccTfSave(v) {
+    if (window.MegaCNCChartTimeframe) MegaCNCChartTimeframe.save(v);
+}
 
 function round2(value) {
     return Number(value).toFixed(2);
@@ -283,11 +292,18 @@ document.querySelectorAll('.saveCellBtn').forEach(btn => {
     });
 });
 
-var slotChart = function(deviceId, slot) {
+var slotChart = function(deviceId, slot, timeframe) {
     if (jQuery(`#slot_${slot}_chart`).length > 0) {
-        const ctx = document.getElementById(`slot_${slot}_chart`).getContext('2d');
+        const tf = timeframe != null ? timeframe : mccTfGet();
+        const canvas = document.getElementById(`slot_${slot}_chart`);
+        const ctx = canvas.getContext('2d');
         const grid = 'rgba(148, 163, 184, 0.12)';
         const tick = '#94a3b8';
+
+        if (mccSlotHistoryCharts[slot]) {
+            mccSlotHistoryCharts[slot].destroy();
+            delete mccSlotHistoryCharts[slot];
+        }
 
         fetch("/get-history/", {
             method: 'POST',
@@ -295,11 +311,11 @@ var slotChart = function(deviceId, slot) {
                 'X-CSRFToken': getCookie('csrftoken'),
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ 'device_id': deviceId, 'slot_id': slot, 'timeframe': "5m" })
+            body: JSON.stringify({ 'device_id': deviceId, 'slot_id': slot, 'timeframe': tf })
         })
         .then(response => response.json())
         .then(data => {
-            new Chart(ctx, {
+            mccSlotHistoryCharts[slot] = new Chart(ctx, {
                 type: 'line',
                 data: {
                     labels: data.labels,
@@ -382,15 +398,29 @@ var slotChart = function(deviceId, slot) {
             });
         });
     }
-}
+};
+
+$(document).on('change', '.mcc-history-timeframe[data-mcc-context="slots"]', function () {
+    var $t = $(this);
+    var tf = $t.val();
+    mccTfSave(tf);
+    slotChart(parseInt($t.attr('data-device-id'), 10), parseInt($t.attr('data-slot'), 10), tf);
+});
 
 var chartInstance;
+var mccRealtimeCharts = {};
 
 var realtimeChart = function(deviceId, slot) {
     if (jQuery(`#slot_${slot}_realtimechart`).length > 0) {
-        const ctx = document.getElementById(`slot_${slot}_realtimechart`).getContext('2d');
+        const canvas = document.getElementById(`slot_${slot}_realtimechart`);
+        const ctx = canvas.getContext('2d');
         const grid = 'rgba(148, 163, 184, 0.12)';
         const tick = '#94a3b8';
+
+        if (mccRealtimeCharts[slot]) {
+            mccRealtimeCharts[slot].destroy();
+            delete mccRealtimeCharts[slot];
+        }
 
         fetch("/get-history/", {
             method: 'POST',
@@ -398,18 +428,24 @@ var realtimeChart = function(deviceId, slot) {
                 'X-CSRFToken': getCookie('csrftoken'),
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ 'device_id': deviceId, 'slot_id': slot, 'timeframe': "10s"})
+            body: JSON.stringify({ 'device_id': deviceId, 'slot_id': slot, 'timeframe': 'rt_10s' })
         })
         .then(response => response.json())
         .then(data => {
+            if (data.error) {
+                console.error('get-history (realtime):', data.error);
+            }
+            var volts = data.volts || [];
+            var cur = data.current || [];
+            var temps = data.temp || [];
             chartInstance = new Chart(ctx, {
                 type: 'line',
                 data: {
-                    labels: data.labels,
+                    labels: data.labels || [],
                     datasets: [
                         {
                             label: "Voltage (V)",
-                            data: data.volts,
+                            data: volts,
                             borderColor: "rgba(251, 191, 36, 0.95)",
                             borderWidth: 2,
                             pointRadius: 0,
@@ -420,7 +456,7 @@ var realtimeChart = function(deviceId, slot) {
                         },
                         {
                             label: "Current",
-                            data: data.current,
+                            data: cur,
                             borderColor: "rgba(59, 130, 246, 0.95)",
                             borderWidth: 2,
                             pointRadius: 0,
@@ -431,7 +467,7 @@ var realtimeChart = function(deviceId, slot) {
                         },
                         {
                             label: "Temp (°C)",
-                            data: data.temp,
+                            data: temps,
                             borderColor: "rgba(236, 72, 153, 0.9)",
                             borderWidth: 2,
                             pointRadius: 0,
@@ -482,6 +518,15 @@ var realtimeChart = function(deviceId, slot) {
                     }
                 }
             });
+            mccRealtimeCharts[slot] = chartInstance;
+            requestAnimationFrame(function () {
+                if (mccRealtimeCharts[slot]) {
+                    mccRealtimeCharts[slot].resize();
+                }
+            });
+        })
+        .catch(function (err) {
+            console.error('realtimeChart fetch:', err);
         });
     }
 }
@@ -494,16 +539,22 @@ function updateRealtimeChart(chart, deviceId, slot) {
             'X-CSRFToken': getCookie('csrftoken'),
             'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ 'device_id': deviceId, 'slot_id': slot, 'timeframe': "10s"})
+        body: JSON.stringify({ 'device_id': deviceId, 'slot_id': slot, 'timeframe': 'rt_10s' })
     })
     .then(response => response.json())
     .then(data => {
-        chart.data.labels = data.labels;
-        chart.data.datasets[0].data = data.volts; // Update voltage data
-        chart.data.datasets[1].data = data.current; // Update current data
-        chart.data.datasets[2].data = data.temp; // Update capacity data
-
+        if (!chart || data.error) return;
+        chart.data.labels = data.labels || [];
+        chart.data.datasets[0].data = data.volts || [];
+        chart.data.datasets[1].data = data.current || [];
+        chart.data.datasets[2].data = data.temp || [];
         chart.update();
+        requestAnimationFrame(function () {
+            chart.resize();
+        });
+    })
+    .catch(function (err) {
+        console.error('updateRealtimeChart:', err);
     });
 }
 
@@ -631,7 +682,7 @@ function initializeChart(deviceId, slot) {
     $container.data('chart-initialized', false)
 
     if ($container.is(':visible') && !$container.data('chart-initialized')) {
-        slotChart(deviceId, slot);
+        slotChart(deviceId, slot, mccTfGet());
         $container.data('chart-initialized', true);
     }
 
@@ -643,17 +694,22 @@ function setupTabEvents(slot, deviceId) {
     $('a[data-bs-toggle="tab"]').off('shown.bs.tab').on('shown.bs.tab', function (e) {
         let target = $(e.target).attr("href");
         let $realtimecontainer = $(`#slot_${slot}_realtimechart`);
-        $realtimecontainer.empty();
-        $realtimecontainer.data('chart-initialized', false)
+        $realtimecontainer.data('chart-initialized', false);
         console.log(target);
 
         let $container = $(`#slot_${slot}_chart`);
-        $container.empty();
-        $container.data('chart-initialized', false)
+        $container.data('chart-initialized', false);
 
         // Assuming $container is defined and accessible in this scope
         if (target === `#navpills-1_slot${slot}` && !$container.data('chart-initialized')) {
-            slotChart(deviceId, slot);
+            if (mccRealtimeCharts[slot]) {
+                mccRealtimeCharts[slot].destroy();
+                delete mccRealtimeCharts[slot];
+            }
+            clearInterval(updateIntervalID);
+            slotChart(deviceId, slot, mccTfGet());
+            var $sel = $(`.mcc-history-timeframe[data-mcc-context="slots"][data-slot="${slot}"]`);
+            if ($sel.length) $sel.val(mccTfGet());
             $container.data('chart-initialized', true);
         }
 
@@ -674,16 +730,21 @@ function setupTabEvents(slot, deviceId) {
 
 
 
-$('.expandBtn').click(function() {
+// Delegated + explicit data-* reads (jQuery .data('slot-number') is unreliable vs data-slot-number)
+$(document).on('click', '.expandBtn', function (e) {
+    e.preventDefault();
 
-
+    var $btn = $(this);
     var $allAccordions = $('.accordion-content');
 
-
-    var $triggerRow = $(this).closest('tr'); // The row where the button was clicked
-    var $nextRow = $triggerRow.next('.accordion-content'); // The next row, which might be the accordion content
-    var slotNumber = $(this).data('slot-number'); // Retrieve the slot number from the button's data attribute
-    let deviceId = $(this).data('device-id');
+    var $triggerRow = $btn.closest('tr');
+    var $nextRow = $triggerRow.next('.accordion-content');
+    var slotNumber = parseInt($btn.attr('data-slot-number'), 10);
+    var deviceId = parseInt($btn.attr('data-device-id'), 10);
+    if (isNaN(slotNumber) || isNaN(deviceId)) {
+        console.error('expandBtn: missing data-slot-number or data-device-id', $btn[0]);
+        return;
+    }
     clearInterval(updateIntervalID);
     // Hide and remove all other accordion contents except for the current one
     $allAccordions.not($nextRow).hide().remove();
@@ -707,21 +768,27 @@ $('.expandBtn').click(function() {
                 <td colspan="${colspan}">
                     <div class="mcc-chart-panel">
                         <h4 class="card-title mb-3">Slot ${slotNumber} — Voltage, current &amp; temperature</h4>
-                        <ul class="nav nav-pills mb-3 light">
-                            <li class="nav-item">
-                                <a href="#navpills-1_slot${slotNumber}" class="nav-link active" data-bs-toggle="tab">All history</a>
+                        <div class="d-flex flex-wrap align-items-center gap-2 mb-3 mcc-history-toolbar">
+                            <label class="small text-muted mb-0">History resolution</label>
+                            <select class="form-select form-select-sm mcc-history-timeframe" style="max-width: 15rem" data-mcc-context="slots" data-device-id="${deviceId}" data-slot="${slotNumber}" id="mcc_hist_tf_slot_${slotNumber}">
+                                ${window.MegaCNCChartTimeframe ? MegaCNCChartTimeframe.optionTags() : '<option value="5m" selected>5 min (default, fast)</option><option value="1m">1 min</option><option value="30s">30 sec</option><option value="10s">10 sec (dense)</option>'}
+                            </select>
+                        </div>
+                        <ul class="nav nav-pills mb-3 light" role="tablist">
+                            <li class="nav-item" role="presentation">
+                                <a href="#navpills-1_slot${slotNumber}" class="nav-link active" data-bs-toggle="tab" role="tab" aria-selected="true">All history</a>
                             </li>
-                            <li class="nav-item">
-                                <a href="#navpills-2_slot${slotNumber}" class="nav-link" data-bs-toggle="tab">Realtime</a>
+                            <li class="nav-item" role="presentation">
+                                <a href="#navpills-2_slot${slotNumber}" class="nav-link" data-bs-toggle="tab" role="tab" aria-selected="false">Realtime</a>
                             </li>
                         </ul>
                         <div class="tab-content">
-                            <div id="navpills-1_slot${slotNumber}" class="tab-pane active">
+                            <div id="navpills-1_slot${slotNumber}" class="tab-pane fade show active" role="tabpanel">
                                 <div class="mcc-chart-canvas-wrap">
                                     <canvas id="slot_${slotNumber}_chart"></canvas>
                                 </div>
                             </div>
-                            <div id="navpills-2_slot${slotNumber}" class="tab-pane">
+                            <div id="navpills-2_slot${slotNumber}" class="tab-pane fade" role="tabpanel">
                                 <div class="mcc-chart-canvas-wrap">
                                     <canvas id="slot_${slotNumber}_realtimechart"></canvas>
                                 </div>
@@ -733,20 +800,22 @@ $('.expandBtn').click(function() {
         `;
 
         // Inject the new row after the trigger row and make sure it's visible
-        $(accordionRow).insertAfter($triggerRow).show(); // Using .show() here is optional since new content should be visible by default
-        // After creating new content, set up the tab events
-        var slot = $(this).data('slot-number'); // Retrieve the slot number
-        let deviceId = $(this).data('device-id'); // Retrieve the device ID
-        setupTabEvents(slot, deviceId);
+        $(accordionRow).insertAfter($triggerRow).show();
+        setupTabEvents(slotNumber, deviceId);
     }
 
-
-    initializeChart( deviceId, slotNumber);
-
-
+    initializeChart(deviceId, slotNumber);
 });
 
-    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
-    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
-        return new bootstrap.Tooltip(tooltipTriggerEl)
-    })
+jQuery(function () {
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    if (typeof bootstrap !== 'undefined' && bootstrap.Tooltip) {
+        tooltipTriggerList.forEach(function (tooltipTriggerEl) {
+            try {
+                new bootstrap.Tooltip(tooltipTriggerEl);
+            } catch (err) {
+                console.warn('Tooltip init:', err);
+            }
+        });
+    }
+});
