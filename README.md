@@ -309,6 +309,9 @@ megacnc/
   manage.py           Django CLI
 ```
 
+## Download MegaCNC For windows:
+https://drive.google.com/file/d/1ySgzCN8s7j9hG0n7lGtwCUqwDCFu1M0m/view?usp=sharing
+
 ---
 
 ## Support and Donations
