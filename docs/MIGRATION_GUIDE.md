@@ -2,7 +2,7 @@
 
 ## Übersicht
 
-Das Script `migrate_sqlite_to_postgres.py` migriert automatisch Daten von einer alten SQLite-Datenbank zur neuen PostgreSQL-Datenbank.
+Das Script `scripts/migrate_sqlite_to_postgres.py` migriert automatisch Daten von einer alten SQLite-Datenbank zur neuen PostgreSQL-Datenbank.
 
 ## Voraussetzungen
 
@@ -26,7 +26,7 @@ SQLITE_DB_PATH = os.environ.get('SQLITE_DB_PATH', "/data/MegaCellMonitor.sqlite"
 
 **Im Docker-Container:**
 ```bash
-docker-compose exec web python migrate_sqlite_to_postgres.py
+docker-compose exec web python scripts/migrate_sqlite_to_postgres.py
 ```
 
 Das Script wird:

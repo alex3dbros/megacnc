@@ -18,7 +18,8 @@ import logging
 import uuid as uuid_lib
 
 # Django Models importieren (für PostgreSQL-Struktur)
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, _ROOT)
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'dashboard.settings')
 
 import django

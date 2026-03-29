@@ -48,6 +48,8 @@ dz_array = {
 						"settings": [
 							f"{folder_name}/vendor/jquery-smartwizard/dist/css/smart_wizard.min.css",
 						],
+						"manual": [
+						],
 						"employee": [
 							f"{folder_name}/vendor/swiper/css/swiper-bundle.min.css",
 							f"{folder_name}/vendor/datatables/css/jquery.dataTables.min.css",
@@ -525,6 +527,9 @@ dz_array = {
 
 
 
+						],
+						"manual": [
+							f"{folder_name}/js/manual.js",
 						],
 
 						"reports": [

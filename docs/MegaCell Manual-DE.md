@@ -8,12 +8,29 @@ Giga CN (Fork von MegaCell CNC) ist eine Webanwendung zur Verwaltung von Batteri
 
 ## 1. Dashboard (Home)
 
-Die Startseite zeigt:
-- **Total Cells**: Gesamtzahl aller getesteten Zellen
-- **Good Cells**: Zellen mit erfolgreichem Test
-- **Total Projects**: Anzahl der Projekte
-- **Projects-Tabelle**: Übersicht aller Projekte
-- **Devices-Tabelle**: Übersicht aller registrierten Testgeräte
+Die Startseite zeigt Kennzahlen, Projekt- und Geräteübersichten sowie (optional) eine Historie neuer Zellen.
+
+### Kennzahlen (Karten)
+
+| Karte | Bedeutung |
+|-------|-----------|
+| **Total Cells** | Anzahl aller in der Datenbank erfassten Zellen |
+| **Good Cells** | Zellen mit Kapazität **über 1000 mAh** (technischer Filter in der App) |
+| **Total Projects** | Anzahl der Projekte |
+| **Available Cells** | Zellen mit **Available = Yes** (für Battery Packs nutzbar freigegeben) |
+
+### Tabellen
+
+- **Projects**: Übersicht aller Projekte (Name verlinkt die **Projekt-Details**, siehe Abschnitt 2).
+- **Devices**: Übersicht aller registrierten Testgeräte (Name verlinkt die **Device Slots** des jeweiligen Geräts).
+
+### Neue Zellen (letzte 2 Monate)
+
+Bereich **„Neue Zellen (letzte 2 Monate)“** (ca. 62 Tage, nach **Einfügedatum** der Zelle):
+
+- Gruppierung nach **Kalendertag** und **Projekt** mit Anzahl der neu erfassten Zellen.
+- **Zeile anklicken**: Detailbereich klappt auf (nur eine Zeile gleichzeitig geöffnet). Es werden die zugehörigen Zellen wie in der Database-Ansicht gelistet; Link **Database** springt zum Projektfilter.
+- Wenn im Zeitraum keine Zellen angelegt wurden, erscheint ein Hinweistext.
 
 ---
 
@@ -27,6 +44,7 @@ Projekte organisieren Zellen nach Herkunft oder Verwendungszweck (z.B. "Samsung 
   - Project Name
   - Cell Type (18650, 21700, LifePo4, Other)
   - Notes
+- In der **linken Sidebar** gibt es zusätzlich den Button **New Project** (gleiche Funktion wie „Projekt anlegen“, je nach Theme).
 
 ### Anzeige
 | Spalte | Beschreibung |
@@ -37,6 +55,18 @@ Projekte organisieren Zellen nach Herkunft oder Verwendungszweck (z.B. "Samsung 
 | Notes | Notizen |
 | Status | Active/Inactive |
 | Total Cells | Anzahl getesteter Zellen |
+
+### Projekt-Details (alle Geräte eines Projekts)
+
+Über den **Projektnamen** in der Projects-Tabelle öffnet sich die Seite **Projekt-Details** (`project-details` mit `proj_id`).
+
+| Aspekt | Beschreibung |
+|--------|----------------|
+| **Zweck** | Zentrale Ansicht für **alle Slots aller dem Projekt zugewiesenen Geräte** (eine gemeinsame Tabelle). |
+| **Steuerung** | Gleiche Aktionen wie unter **Device Slots**: Charge, Discharge, Store, ESR, Dispose, Stop, Macro, Stop Macro, Print (siehe Abschnitt 4). |
+| **Auswahl** | Checkboxen pro Slot; die Werte enthalten **Gerät und Slot** – die Oberfläche gruppiert beim Senden automatisch nach **Device**. |
+
+**Mehrere Geräte parallel:** Wenn du Slots **auf verschiedenen Geräten** anwählst und z. B. **Charge** startest, sendet der Browser **pro Gerät einen eigenen Auftrag** an den Server. Die Befehle werden im Hintergrund (Celery) verarbeitet und können **parallel** ablaufen – jedes Gerät hat eine eigene IP. Details siehe Abschnitt 3.
 
 ---
 
@@ -74,6 +104,17 @@ Testgeräte (MegaCell CNC Hardware) verwalten.
 
 #### Delete Device (Papierkorb-Icon)
 Löscht das Gerät aus der Datenbank.
+
+### Mehrere Geräte gleichzeitig nutzen
+
+| Frage | Antwort |
+|-------|---------|
+| **Wie arbeite ich mit mehreren Geräten?** | Jedes Gerät erscheint in der **Devices**-Liste. Pro Gerät öffnest du **Device Slots** (Klick auf den Namen) – dort steuerst du **nur dieses eine** Gerät. |
+| **Wie starte ich Tests auf mehreren Geräten parallel?** | Am praktischsten über **Projekt-Details** (Abschnitt 2): dort alle gewünschten Slots über mehrere Geräte anhaken und die gewünschte Aktion wählen. Die App sendet **je Gerät einen Auftrag**; die Geräte arbeiten unabhängig parallel. |
+| **Ein Gerät, viele Slots** | Unter **Device Slots** ein Gerät wählen, mehrere Slots anhaken, **eine** Aktion – ein Auftrag enthält alle gewählten Slots; die Hardware verarbeitet die Slots gemäss Geräte-Firmware. |
+| **Garantierte Reihenfolge zwischen Geräten?** | Nein – es gibt keine zentrale „Start alles atomar“-Transaktion; Aufträge sind unabhängig voneinander. |
+
+**Hintergrund (Kurz):** Jeder Klick löst serverseitig u. a. eine Hintergrundaufgabe aus; mehrere Worker können gleichzeitig verschiedene Geräte ansprechen. Statusmeldungen erscheinen pro Gerät (z. B. Toasts mit Geräte-ID).
 
 ---
 
@@ -121,6 +162,8 @@ Zeigt erweiterte Testdaten und Verlaufsgrafik.
 
 ### Zelle speichern (Disketten-Icon)
 Speichert den abgeschlossenen Test in der Datenbank. Die Zelle erhält eine UUID und ist danach für Battery Packs verfügbar.
+
+> **Hinweis:** Aktionen auf **mehreren Geräten gleichzeitig** sind über **Projekt-Details** möglich (siehe Abschnitt 2 und 3), nicht über diese Einzelgeräte-Seite allein.
 
 ---
 
@@ -171,6 +214,27 @@ Mehrere Zellen gleichzeitig bearbeiten:
 | **Project** | Nur Zellen eines Projekts |
 | **Year** | Nach Testjahr filtern |
 | **Status** | Available/Not Available |
+
+### Seitengröße (Pagination)
+
+- Dropdown **„Zellen pro Seite“** (z. B. 50 / 100 / 250 / 500): steuert `per_page` und lädt per AJAX die nächste Seite, ohne die Filter zu verlieren.
+
+### Kopfzeile: Export-Icon
+
+- Neben den Filtern gibt es ein **Download-Icon** („Export Report“). In der aktuellen Anwendung ist dafür **kein Klick-Handler** im Frontend hinterlegt – der Button kann je nach Build ohne Funktion sein. Für eine tabellarische Auswertung kannst du die angezeigte Tabelle manuell kopieren oder auf einen späteren Export vertrauen.
+
+### Zellen löschen
+
+| Aktion | Beschreibung |
+|--------|----------------|
+| **Einzelzelle** | Papierkorb-Icon in der Zeile → Bestätigung → Zelle wird entfernt. |
+| **Mehrfachauswahl** | Checkboxen links aktivieren → Papierkorb in der Kopfzeile wird aktiv → Massen-Löschen mit Bestätigung. |
+
+⚠️ Gelöschte Zellen sind aus der Datenbank entfernt – Vorsicht bei Produktivdaten.
+
+### Verlaufsgrafik (+ / Details)
+
+- **+** in der Zeile öffnet erweiterte Messwerte und kann eine **Verlaufsgrafik** (Zeitreihe) laden (`/get-history/`), sofern Testdaten vorliegen.
 
 ### Spalten ein-/ausblenden
 
@@ -499,7 +563,7 @@ Bei grossen Packs (500+ Zellen) wird der Balancing-Fortschritt automatisch gesic
 
 ## 7. Settings
 
-Die Settings-Seite ist in Tabs organisiert:
+Die Settings-Seite ist in **zwei Tabs** organisiert: **Printer** und **Backup & Restore**. Weitere App-Einstellungen sind hier nicht zentral gebündelt.
 
 ### Tab: Printer
 
@@ -642,9 +706,11 @@ docker exec megacnc-web-1 python manage.py loaddata megacnc_backup_XXXXXX.json
 
 ```
 1. Projekt erstellen → "Samsung 30Q Batch 1"
-2. Device hinzufügen → Projekt zuweisen
+2. Device(s) hinzufügen → Projekt zuweisen (mehrere Geräte möglich)
 3. Zellen in Slots einlegen
-4. Macro starten → Charge → Discharge → Store
+4. Tests starten:
+   - nur ein Gerät: Device Slots → Macro / Charge …
+   - mehrere Geräte: Projects → Projektnamen klicken → Projekt-Details → Slots wählen → Aktion
 5. Nach Abschluss: Zellen speichern (Disketten-Icon)
 6. Labels drucken
 7. Batteries → Neues Pack erstellen (z.B. 4S2P)
@@ -666,6 +732,10 @@ docker exec megacnc-web-1 python manage.py loaddata megacnc_backup_XXXXXX.json
 - Separates Projekt pro Zell-Charge
 - Eindeutige Namen für Rückverfolgbarkeit
 
+### Mehrere Ladegeräte
+- **Projekt-Details** nutzen, wenn du dieselbe Aktion auf **mehreren IPs** gleichzeitig anstoßen willst (siehe Abschnitt 2 und 3).
+- Celery-Logs mit `check_all_devices` alle paar Sekunden sind normal (Statusabfrage der Geräte).
+
 ### Optimale Pack-Qualität
 1. Kapazitätsbereich eng wählen (z.B. 2400-2600 mAh)
 2. Auto Select für repräsentative Auswahl nutzen
@@ -686,7 +756,7 @@ docker exec megacnc-web-1 python manage.py loaddata megacnc_backup_XXXXXX.json
 
 ### Docker Images zu GitHub Container Registry pushen
 
-Das Script `deploy-ghcr.sh` automatisiert den Image-Push.
+Das Script `scripts/deploy-ghcr.sh` automatisiert den Image-Push.
 
 #### Voraussetzungen
 1. GitHub Personal Access Token erstellen:
@@ -702,10 +772,10 @@ export GHCR_TOKEN="ghp_xxxxxxxxxxxx"
 #### Verwendung
 ```bash
 # Mit automatischer Versionsnummer (Datum)
-./deploy-ghcr.sh
+./scripts/deploy-ghcr.sh
 
 # Mit spezifischer Version
-./deploy-ghcr.sh v1.0.0
+./scripts/deploy-ghcr.sh v1.0.0
 ```
 
 #### Was das Script macht

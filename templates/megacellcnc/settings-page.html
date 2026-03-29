@@ -485,6 +485,11 @@ input[type='radio'] {
 								</a>
 							</li>
 							<li class="nav-item">
+								<a class="nav-link" id="devices-tab" data-bs-toggle="tab" href="#devicesSettings" role="tab">
+									<i class="fa fa-microchip me-2"></i> Devices
+								</a>
+							</li>
+							<li class="nav-item">
 								<a class="nav-link" id="backup-tab" data-bs-toggle="tab" href="#backupSettings" role="tab">
 									<i class="fa fa-database me-2"></i> Backup & Restore
 								</a>
@@ -670,6 +675,38 @@ input[type='radio'] {
 								</div>
 							</div>
 
+							<!-- Devices / Celery Beat Tab -->
+							<div class="tab-pane fade" id="devicesSettings" role="tabpanel">
+								<h5 class="mb-2"><i class="fa fa-clock me-2"></i>Celery Beat – Geräte-Status</h5>
+								<p class="text-muted">
+									Hintergrundaufgabe <code>check_all_devices</code> prüft regelmässig, ob deine Testgeräte erreichbar sind (wie in den Celery-Logs).
+									Das Intervall gilt für den <strong>django-celery-beat</strong> Eintrag in der Datenbank (Scheduler: DatabaseScheduler).
+								</p>
+								<div class="row">
+									<div class="col-lg-8 col-xl-6">
+										<div class="mb-3">
+											<label class="form-label" for="beatIntervalSelect">Abfrage-Intervall</label>
+											<select id="beatIntervalSelect" class="form-select" style="max-width: 22rem;">
+												{% for sec in beat_interval_choices %}
+												<option value="{{ sec }}" {% if sec == check_devices_interval_seconds %}selected{% endif %}>
+													{{ sec }} Sekunden
+													{% if sec == 60 %}(1 Min.){% elif sec == 120 %}(2 Min.){% elif sec == 300 %}(5 Min.){% endif %}
+												</option>
+												{% endfor %}
+											</select>
+											<div class="form-text">Bereich 5–3600 Sekunden. Kleinere Werte = häufigere Logs und Netzlast.</div>
+										</div>
+										<button type="button" class="btn btn-primary" id="saveBeatDeviceSettingsBtn">
+											<i class="fa fa-save me-1"></i> Speichern
+										</button>
+										<div id="beatDeviceSettingsAlert" class="alert mt-3" style="display: none;" role="alert"></div>
+										<p class="text-muted small mt-3 mb-0">
+											Änderungen werden vom Beat-Prozess meist innerhalb weniger Sekunden übernommen. Falls nichts passiert: <code>docker-compose restart celerybeat</code> (oder den Celery-Beat-Container neu starten).
+										</p>
+									</div>
+								</div>
+							</div>
+
 							<!-- Backup & Restore Tab -->
 							<div class="tab-pane fade" id="backupSettings" role="tabpanel">
 								<h5 class="mb-4">Database Backup & Restore</h5>
@@ -847,6 +884,58 @@ docker exec megacnc-web-1 rm megacnc_backup_XXXXXX.json</code></pre>
 					btn.innerHTML = '<i class="fa fa-download"></i> Backup herunterladen';
 				});
 		}
+
+		function getCookie(name) {
+			var cookieValue = null;
+			if (document.cookie && document.cookie !== '') {
+				var cookies = document.cookie.split(';');
+				for (var i = 0; i < cookies.length; i++) {
+					var cookie = cookies[i].trim();
+					if (cookie.substring(0, name.length + 1) === (name + '=')) {
+						cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+						break;
+					}
+				}
+			}
+			return cookieValue;
+		}
+
+		document.getElementById('saveBeatDeviceSettingsBtn') && document.getElementById('saveBeatDeviceSettingsBtn').addEventListener('click', function() {
+			var sel = document.getElementById('beatIntervalSelect');
+			var alertEl = document.getElementById('beatDeviceSettingsAlert');
+			if (!sel || !alertEl) return;
+			var sec = parseInt(sel.value, 10);
+			var btn = this;
+			btn.disabled = true;
+			alertEl.style.display = 'none';
+			fetch('{% url "megacellcnc:save-beat-device-settings" %}', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+					'X-CSRFToken': getCookie('csrftoken')
+				},
+				body: JSON.stringify({ check_devices_interval_seconds: sec })
+			})
+			.then(function(r) { return r.json().then(function(data) { return { ok: r.ok, data: data }; }); })
+			.then(function(res) {
+				alertEl.style.display = 'block';
+				if (res.ok && res.data.success) {
+					alertEl.className = 'alert alert-success mt-3';
+					alertEl.textContent = res.data.message || 'Gespeichert.';
+				} else {
+					alertEl.className = 'alert alert-danger mt-3';
+					alertEl.textContent = (res.data && res.data.error) ? res.data.error : 'Speichern fehlgeschlagen.';
+				}
+			})
+			.catch(function(err) {
+				alertEl.style.display = 'block';
+				alertEl.className = 'alert alert-danger mt-3';
+				alertEl.textContent = 'Netzwerkfehler: ' + (err && err.message ? err.message : 'unbekannt');
+			})
+			.finally(function() {
+				btn.disabled = false;
+			});
+		});
 	</script>
 
 <script>var imagePath = '{% static "image_sample.png" %}';</script>

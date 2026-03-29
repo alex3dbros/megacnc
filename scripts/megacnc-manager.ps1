@@ -27,7 +27,7 @@ function Show-Menu {
 
 function Invoke-Update {
     Write-Host "[*] Updating MegaCNC..." -ForegroundColor Cyan
-    wsl --cd $ProjectPath bash -c "./update.sh"
+    wsl --cd $ProjectPath bash -c "./scripts/update.sh"
     Write-Host "[OK] Update complete!" -ForegroundColor Green
     Write-Host ""
     Pause

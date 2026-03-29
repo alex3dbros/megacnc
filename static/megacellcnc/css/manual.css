@@ -1,0 +1,152 @@
+/* Handbuch – Bildschirmansicht */
+
+.manual-docs-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.manual-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem 1rem;
+  padding: 0.75rem 1rem;
+  background: var(--bs-dark, #1a1a1e);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 0.5rem;
+}
+
+.manual-toolbar .form-control {
+  max-width: 22rem;
+  min-width: 12rem;
+}
+
+.manual-layout {
+  display: grid;
+  grid-template-columns: minmax(220px, 280px) 1fr;
+  gap: 1.5rem;
+  align-items: start;
+}
+
+@media (max-width: 991px) {
+  .manual-layout {
+    grid-template-columns: 1fr;
+  }
+  .manual-toc-sidebar {
+    position: relative !important;
+    max-height: none !important;
+  }
+}
+
+.manual-toc-sidebar {
+  position: sticky;
+  top: 1rem;
+  max-height: calc(100vh - 120px);
+  overflow: auto;
+  padding: 1rem;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.manual-toc-sidebar .toc {
+  margin: 0;
+  padding-left: 0;
+  list-style: none;
+}
+
+.manual-toc-sidebar .toc ul {
+  padding-left: 1rem;
+  margin-top: 0.25rem;
+}
+
+.manual-toc-sidebar .toc a {
+  color: var(--bs-info, #58c6ff);
+  text-decoration: none;
+}
+
+.manual-toc-sidebar .toc a:hover {
+  text-decoration: underline;
+}
+
+.manual-toc-sidebar .toc li.toc-hidden {
+  display: none;
+}
+
+.manual-toc-sidebar h2#table-of-contents,
+.manual-toc-sidebar h2#inhaltsverzeichnis {
+  font-size: 1rem;
+  margin-bottom: 0.75rem;
+}
+
+#manual-main {
+  min-width: 0;
+  padding: 0.5rem 0.25rem;
+}
+
+#manual-main .manual-section-hidden {
+  display: none !important;
+}
+
+#manual-main h1 {
+  font-size: 1.75rem;
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+#manual-main h2 {
+  font-size: 1.35rem;
+  margin-top: 1.75rem;
+  margin-bottom: 0.75rem;
+  scroll-margin-top: 1rem;
+}
+
+#manual-main h3 {
+  font-size: 1.1rem;
+  margin-top: 1.25rem;
+  margin-bottom: 0.5rem;
+}
+
+#manual-main table {
+  width: 100%;
+  margin: 1rem 0;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+#manual-main th,
+#manual-main td {
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  padding: 0.45rem 0.65rem;
+}
+
+#manual-main th {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+#manual-main pre {
+  background: rgba(0, 0, 0, 0.35);
+  border-radius: 0.35rem;
+  padding: 0.75rem 1rem;
+  overflow-x: auto;
+  font-size: 0.85rem;
+}
+
+#manual-main hr {
+  border-color: rgba(255, 255, 255, 0.12);
+  margin: 1.5rem 0;
+}
+
+#manual-main a.headerlink {
+  opacity: 0.5;
+  margin-left: 0.35rem;
+  text-decoration: none;
+}
+
+#manual-main mark.manual-search-hit {
+  background: rgba(255, 200, 0, 0.35);
+  border-radius: 2px;
+}

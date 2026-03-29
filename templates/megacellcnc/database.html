@@ -317,13 +317,22 @@
                                 <!-- Mitte: Pagination -->
                                 {% if cells.has_other_pages %}
                                 <div class="pagination-center">
-                                    <div class="d-flex align-items-center" style="gap: 10px;">
+                                    <div class="d-flex align-items-center flex-wrap" style="gap: 10px;">
+                                        {% if cells.number > 1 %}
+                                        <button type="button" class="btn btn-primary btn-sm ajax-page-link" data-page="1" title="Erste Seite">
+                                            <i class="fa fa-angle-double-left me-1"></i>First
+                                        </button>
+                                        {% else %}
+                                        <button type="button" class="btn btn-secondary btn-sm" disabled>
+                                            <i class="fa fa-angle-double-left me-1"></i>First
+                                        </button>
+                                        {% endif %}
                                         {% if cells.has_previous %}
-                                        <button class="btn btn-primary ajax-page-link" data-page="{{ cells.previous_page_number }}">
+                                        <button type="button" class="btn btn-primary ajax-page-link" data-page="{{ cells.previous_page_number }}">
                                             <i class="fa fa-chevron-left me-2"></i>Previous
                                         </button>
                                         {% else %}
-                                        <button class="btn btn-secondary" disabled>
+                                        <button type="button" class="btn btn-secondary" disabled>
                                             <i class="fa fa-chevron-left me-2"></i>Previous
                                         </button>
                                         {% endif %}
@@ -333,12 +342,21 @@
                                         </span>
                                         
                                         {% if cells.has_next %}
-                                        <button class="btn btn-primary ajax-page-link" data-page="{{ cells.next_page_number }}">
+                                        <button type="button" class="btn btn-primary ajax-page-link" data-page="{{ cells.next_page_number }}">
                                             Next<i class="fa fa-chevron-right ms-2"></i>
                                         </button>
                                         {% else %}
-                                        <button class="btn btn-secondary" disabled>
+                                        <button type="button" class="btn btn-secondary" disabled>
                                             Next<i class="fa fa-chevron-right ms-2"></i>
+                                        </button>
+                                        {% endif %}
+                                        {% if cells.number < cells.paginator.num_pages %}
+                                        <button type="button" class="btn btn-primary btn-sm ajax-page-link" data-page="{{ cells.paginator.num_pages }}" title="Letzte Seite">
+                                            Last<i class="fa fa-angle-double-right ms-1"></i>
+                                        </button>
+                                        {% else %}
+                                        <button type="button" class="btn btn-secondary btn-sm" disabled>
+                                            Last<i class="fa fa-angle-double-right ms-1"></i>
                                         </button>
                                         {% endif %}
                                     </div>
@@ -859,13 +877,24 @@ $(document).ready(function() {
         if (currentYearFilter) filters.push(`Year: ${currentYearFilter}`);
         if (currentStatusFilter) filters.push(currentStatusFilter === 'Yes' ? 'Available' : 'Not Available');
         
+        const onFirstPage = response.page <= 1;
+        const onLastPage = response.page >= response.num_pages;
+        const lastPage = response.num_pages;
         const paginationHtml = `
-            <div class="d-flex align-items-center" style="gap: 10px;">
+            <div class="d-flex align-items-center flex-wrap" style="gap: 10px;">
+                ${!onFirstPage ?
+                    `<button type="button" class="btn btn-primary btn-sm ajax-page-link" data-page="1" title="Erste Seite">
+                        <i class="fa fa-angle-double-left me-1"></i>First
+                    </button>` :
+                    `<button type="button" class="btn btn-secondary btn-sm" disabled>
+                        <i class="fa fa-angle-double-left me-1"></i>First
+                    </button>`
+                }
                 ${response.has_previous ? 
-                    `<button class="btn btn-primary ajax-page-link" data-page="${response.previous_page}">
+                    `<button type="button" class="btn btn-primary ajax-page-link" data-page="${response.previous_page}">
                         <i class="fa fa-chevron-left me-2"></i>Previous
                     </button>` :
-                    `<button class="btn btn-secondary" disabled>
+                    `<button type="button" class="btn btn-secondary" disabled>
                         <i class="fa fa-chevron-left me-2"></i>Previous
                     </button>`
                 }
@@ -875,11 +904,19 @@ $(document).ready(function() {
                 </span>
                 
                 ${response.has_next ?
-                    `<button class="btn btn-primary ajax-page-link" data-page="${response.next_page}">
+                    `<button type="button" class="btn btn-primary ajax-page-link" data-page="${response.next_page}">
                         Next<i class="fa fa-chevron-right ms-2"></i>
                     </button>` :
-                    `<button class="btn btn-secondary" disabled>
+                    `<button type="button" class="btn btn-secondary" disabled>
                         Next<i class="fa fa-chevron-right ms-2"></i>
+                    </button>`
+                }
+                ${!onLastPage ?
+                    `<button type="button" class="btn btn-primary btn-sm ajax-page-link" data-page="${lastPage}" title="Letzte Seite">
+                        Last<i class="fa fa-angle-double-right ms-1"></i>
+                    </button>` :
+                    `<button type="button" class="btn btn-secondary btn-sm" disabled>
+                        Last<i class="fa fa-angle-double-right ms-1"></i>
                     </button>`
                 }
             </div>

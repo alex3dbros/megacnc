@@ -97,15 +97,9 @@ CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = 'UTC'  # Adjust to your timezone
 CELERY_IMPORTS = ('megacellcnc.tasks',)
-DJANGO_CELERY_BEAT_TZ_AWARE=False
-from celery.schedules import crontab
-
-CELERY_BEAT_SCHEDULE = {
-    'check-devices-status-5s': {
-        'task': 'megacellcnc.tasks.check_all_devices',
-        'schedule': 5.0,  # Run every 5 seconds
-    },
-}
+DJANGO_CELERY_BEAT_TZ_AWARE = False
+# Periodische Tasks: nur noch über django-celery_beat (Datenbank), siehe Settings → Devices
+# und megacellcnc.beat_schedule / ensure_default_check_devices_periodic_task
 
 
 # Password validation

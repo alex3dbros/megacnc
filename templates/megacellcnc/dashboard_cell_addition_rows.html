@@ -1,0 +1,23 @@
+{% for cell in cells %}
+<tr>
+    <td class="col-id">{{ cell.id }}</td>
+    <td class="col-serial">{{ cell.UUID|slice:"12:"|default:"-" }}</td>
+    <td class="col-available"><div class="status-{{ cell.available|lower|add:'-cell' }}">{{ cell.available|capfirst }}</div></td>
+    <td class="col-condition">
+        <span class="badge condition-badge condition-{{ cell.condition|default:'good' }}">
+            {% if cell.condition == 'defective' %}Defekt{% elif cell.condition == 'reserved' %}Reserviert{% elif cell.condition == 'unknown' %}Unbekannt{% else %}Gut{% endif %}
+        </span>
+    </td>
+    <td class="col-project">{{ cell.project.Name }}</td>
+    <td class="col-type">{{ cell.cell_type }}</td>
+    <td class="col-chemistry">{{ cell.min_voltage }}, {{ cell.store_voltage }}, {{ cell.max_voltage }}</td>
+    <td class="col-capacity">{{ cell.capacity }}</td>
+    <td class="col-esr">{{ cell.esr }}</td>
+    <td class="col-testdate">{{ cell.removal_date|date:"d M Y" }}</td>
+    <td class="text-end">
+        <a href="{% url 'megacellcnc:database' %}?project={{ cell.project.id }}" class="btn btn-primary shadow btn-xs sharp">Database</a>
+    </td>
+</tr>
+{% empty %}
+<tr><td colspan="11" class="text-center">Keine Zellen.</td></tr>
+{% endfor %}

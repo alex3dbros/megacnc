@@ -1,6 +1,9 @@
 # Mega CNC
 Software for controlling megacell charger lithium cell testing devices
 
+- **docs/** – Handbuch (`MegaCell Manual-DE.md`), Migrations- und Update-Guides
+- **scripts/** – Deploy/Update-Shellskripte, Hilfsskripte (z. B. DB-Migration)
+
 # Deploying the App on Ubuntu with Docker Compose
 This guide walks you through deploying the app on an Ubuntu instance using Docker Compose, providing a straightforward way to get the app up and running.
 - I tested successfully the build and run process in Virtual Box VM and should work on any virtualized environment or barebone Server or PC

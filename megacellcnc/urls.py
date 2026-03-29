@@ -1,9 +1,14 @@
 from django.urls import path
+from megacellcnc import docs_views
 from megacellcnc import megacellcnc_views
 app_name='megacellcnc'
 urlpatterns = [
+    path('docs/', docs_views.manual, name='manual'),
+    path('docs/pdf/', docs_views.manual_pdf, name='manual-pdf'),
     path('',megacellcnc_views.index,name="index"),
     path('index/',megacellcnc_views.index,name="index"),
+    path('dashboard/cell-additions-detail/', megacellcnc_views.dashboard_cell_additions_detail,
+         name='dashboard-cell-additions-detail'),
     path('settings/',megacellcnc_views.settings,name="settings"),
     path('project/',megacellcnc_views.project,name="project"),
     path('project-details/',megacellcnc_views.project_details,name="project-details"),
@@ -32,6 +37,8 @@ urlpatterns = [
     path('save-device-settings/', megacellcnc_views.save_device_settings, name='save-device-settings'),
     path('save-printer-settings/', megacellcnc_views.save_printer_settings, name='save-printer-settings'),
     path('get-printer-settings/', megacellcnc_views.get_printer_settings, name='get-printer-settings'),
+    path('get-beat-device-settings/', megacellcnc_views.get_beat_device_settings, name='get-beat-device-settings'),
+    path('save-beat-device-settings/', megacellcnc_views.save_beat_device_settings, name='save-beat-device-settings'),
     path('download-backup/', megacellcnc_views.download_backup, name='download-backup'),
     path('log-cell-replacement/', megacellcnc_views.log_cell_replacement, name='log-cell-replacement'),
     path('replacement-history/<int:battery_id>/', megacellcnc_views.get_replacement_history, name='replacement-history'),

@@ -11,9 +11,10 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m'
 
-# Script-Verzeichnis ermitteln
+# Repo-Root (Skript liegt in scripts/)
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-cd "$SCRIPT_DIR"
+REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+cd "$REPO_ROOT"
 
 COMPOSE_FILE="docker-compose.yml"
 BACKUP_FILE="$1"

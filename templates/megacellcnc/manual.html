@@ -1,0 +1,38 @@
+{% extends 'megacellcnc/elements/layouts/admin.html' %}
+{% load static %}
+
+{% block additional_css %}
+<link rel="stylesheet" href="{% static 'megacellcnc/css/manual.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="content-body">
+	<div class="page-titles">
+		<ol class="breadcrumb">
+			<li><h5 class="bc-title">Handbuch</h5></li>
+			<li class="breadcrumb-item"><a href="{% url 'megacellcnc:index' %}">Home</a></li>
+			<li class="breadcrumb-item active">Docs</li>
+		</ol>
+	</div>
+	<div class="container-fluid manual-docs-wrap">
+		<div class="manual-toolbar">
+			<label class="mb-0 d-flex align-items-center gap-2 flex-grow-1" style="min-width: 200px;">
+				<i class="fa fa-search text-muted"></i>
+				<input type="search" id="manualSearchInput" class="form-control form-control-sm" placeholder="Suche im Handbuch…" autocomplete="off" aria-label="Suche">
+			</label>
+			<a href="{% url 'megacellcnc:manual-pdf' %}" class="btn btn-sm btn-outline-light" id="manualPdfBtn" target="_blank" rel="noopener">
+				<i class="fa fa-file-pdf me-1"></i> PDF exportieren
+			</a>
+		</div>
+
+		<div class="manual-layout">
+			<aside class="manual-toc-sidebar manual-toc" id="manualToc">
+				{{ manual_toc|safe }}
+			</aside>
+			<article id="manual-main" class="manual-markdown">
+				{{ manual_body|safe }}
+			</article>
+		</div>
+	</div>
+</div>
+{% endblock %}

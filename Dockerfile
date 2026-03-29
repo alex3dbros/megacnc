@@ -1,5 +1,12 @@
 # Use an official Python runtime as a parent image
-FROM python:3.11
+FROM python:3.11-bookworm
+
+# WeasyPrint (PDF): Systembibliotheken
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libcairo2 libpango-1.0-0 libpangocairo-1.0-0 libpangoft2-1.0-0 \
+    libgdk-pixbuf-2.0-0 libffi-dev libjpeg62-turbo libopenjp2-7 \
+    libharfbuzz0b fonts-dejavu-core shared-mime-info \
+    && rm -rf /var/lib/apt/lists/*
 
 # Set environment variables
 ENV PYTHONDONTWRITEBYTECODE=1

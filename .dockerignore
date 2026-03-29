@@ -1,0 +1,48 @@
+# Versionskontrolle (Build-Kontext klein halten)
+.git
+.gitignore
+.gitattributes
+
+# Python
+**/__pycache__/
+**/*.py[cod]
+*$py.class
+.venv
+venv/
+venv.bak/
+env/
+.env
+.env.*
+
+# IDE / Editor
+.idea/
+.vscode/
+.cursor/
+
+# Lokale Daten & große Artefakte (u. a. tmp/ mehrere GB)
+tmp/
+backups/
+megacnc_backup*
+*.sql.gz
+*.sqlite3
+db.sqlite3
+data/
+media/
+
+# Tests / Coverage
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+
+# Zertifikate (lokal; nicht ins Image)
+certificate/*.pem
+certificate/*.key
+
+# OS
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Handbuch: docs/MegaCell Manual-DE.md bleibt im Kontext (nicht mit *.md global ausschließen)

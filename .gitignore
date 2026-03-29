@@ -129,7 +129,29 @@ venv/
 ENV/
 env.bak/
 venv.bak/
-tmp/*
+tmp/
+
+# Lokale Arbeitsdaten / große Dumps (gesamter Ordner)
+# Root-Backups (optional versionieren; Standard: ignorieren)
+megacnc_backup*.json
+megacnc_backup*.json.gz
+*.sql.gz
+
+# OS
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# IDE / Editor (lokal; bei Team-Policy .idea committen und Zeile entfernen)
+.idea/
+.vscode/
+.cursor/
+
+# Zertifikate / Keys (nur Beispiele committen; echte Keys nicht)
+certificate/*.pem
+certificate/*.key
+certificate/*Key*.txt
+
 # Spyder project settings
 .spyderproject
 .spyproject

@@ -1,0 +1,98 @@
+/* Handbuch – PDF (WeasyPrint) */
+
+@page {
+  size: A4;
+  margin: 18mm 16mm 22mm 16mm;
+}
+
+@font-face {
+  font-family: "DejaVu Sans";
+  src: local("DejaVu Sans");
+}
+
+html {
+  font-family: "DejaVu Sans", "Liberation Sans", Helvetica, Arial, sans-serif;
+  font-size: 10pt;
+  line-height: 1.45;
+  color: #222;
+}
+
+body {
+  margin: 0;
+}
+
+h1 {
+  font-size: 18pt;
+  margin: 0 0 12pt 0;
+  padding-bottom: 6pt;
+  border-bottom: 1px solid #ccc;
+}
+
+h2 {
+  font-size: 13pt;
+  margin: 16pt 0 8pt 0;
+  page-break-after: avoid;
+}
+
+h3 {
+  font-size: 11pt;
+  margin: 12pt 0 6pt 0;
+  page-break-after: avoid;
+}
+
+p {
+  margin: 0 0 8pt 0;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 8pt 0;
+  font-size: 9pt;
+}
+
+th,
+td {
+  border: 1px solid #bbb;
+  padding: 4pt 6pt;
+  text-align: left;
+  vertical-align: top;
+}
+
+th {
+  background: #f0f0f0;
+}
+
+pre {
+  background: #f5f5f5;
+  border: 1px solid #ddd;
+  padding: 8pt;
+  font-size: 8pt;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+hr {
+  border: none;
+  border-top: 1px solid #ccc;
+  margin: 12pt 0;
+}
+
+a {
+  color: #0a58ca;
+  text-decoration: none;
+}
+
+ul,
+ol {
+  margin: 0 0 8pt 0;
+  padding-left: 0;
+}
+
+li {
+  margin-bottom: 4pt;
+}
+
+code {
+  font-size: 9pt;
+}

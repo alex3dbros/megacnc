@@ -13,6 +13,8 @@ import json
 from django.db import transaction
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import Count
+from django.db.models.functions import TruncDate
+from django.template.loader import render_to_string
 from django.shortcuts import render
 from django.views.decorators.http import require_http_methods
 
@@ -57,9 +59,33 @@ def index(request):
         # Count the total number of Cells across all Projects
         total_cells = Cells.objects.count()
         good_cells = Cells.objects.filter(capacity__gt=1000).count()
+        available_cells = Cells.objects.filter(available__iexact='Yes').count()
     except Exception:
         total_cells = 0
         good_cells = 0
+        available_cells = 0
+
+    cell_additions_summary = []
+    try:
+        two_months_ago = timezone.now() - timedelta(days=62)
+        raw_summary = (
+            Cells.objects.filter(insertion_date__gte=two_months_ago)
+            .annotate(day=TruncDate('insertion_date'))
+            .values('day', 'project_id', 'project__Name')
+            .annotate(count=Count('id'))
+            .order_by('-day', 'project__Name')
+        )
+        cell_additions_summary = [
+            {
+                'day': r['day'],
+                'project_id': r['project_id'],
+                'project_name': r['project__Name'] or '',
+                'count': r['count'],
+            }
+            for r in raw_summary
+        ]
+    except Exception:
+        cell_additions_summary = []
 
     context = {
         "page_title": "Devices",
@@ -68,10 +94,43 @@ def index(request):
         "projects": projects,
         "total_cells": total_cells,
         "good_cells": good_cells,
-        "total_projects": total_projects
+        "available_cells": available_cells,
+        "total_projects": total_projects,
+        "cell_additions_summary": cell_additions_summary,
     }
 
     return render(request, 'megacellcnc/index.html', context)
+
+
+def dashboard_cell_additions_detail(request):
+    """HTML fragment: cells added on a given calendar day for one project (dashboard expand)."""
+    if request.headers.get('X-Requested-With') != 'XMLHttpRequest':
+        return JsonResponse({'error': 'Invalid request'}, status=400)
+    day_str = request.GET.get('day')
+    project_id = request.GET.get('project_id')
+    if not day_str or not project_id:
+        return JsonResponse({'error': 'Missing parameters'}, status=400)
+    try:
+        day = datetime.datetime.strptime(day_str, '%Y-%m-%d').date()
+        project_id = int(project_id)
+    except (ValueError, TypeError):
+        return JsonResponse({'error': 'Invalid parameters'}, status=400)
+
+    cells = list(
+        Cells.objects.filter(project_id=project_id, insertion_date__date=day)
+        .select_related('project')
+        .order_by('id')
+    )
+    table_html = render_to_string(
+        'megacellcnc/dashboard_cell_addition_rows.html',
+        {'cells': cells},
+        request=request,
+    )
+    return JsonResponse({
+        'success': True,
+        'html': table_html,
+        'count': len(cells),
+    })
 
 def settings(request):
     try:
@@ -85,14 +144,76 @@ def settings(request):
     except Exception:
         devices = []
         devices_count = 0
+
+    check_devices_interval_seconds = 5
+    beat_interval_choices = [5, 10, 15, 30, 60, 120, 300]
+    try:
+        from megacellcnc.beat_schedule import (
+            ensure_default_check_devices_periodic_task,
+            get_beat_interval_choices,
+            get_check_devices_interval_seconds,
+        )
+
+        ensure_default_check_devices_periodic_task()
+        check_devices_interval_seconds = get_check_devices_interval_seconds()
+        beat_interval_choices = get_beat_interval_choices(check_devices_interval_seconds)
+    except Exception:
+        pass
+
     context = {
         "page_title": "Settings",
         "devices": devices,
         "devices_count": devices_count,
-        "projects": projects
+        "projects": projects,
+        "check_devices_interval_seconds": check_devices_interval_seconds,
+        "beat_interval_choices": beat_interval_choices,
     }
 
     return render(request, 'megacellcnc/settings-page.html', context)
+
+
+def get_beat_device_settings(request):
+    if request.method != 'GET':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+    try:
+        from megacellcnc.beat_schedule import (
+            ensure_default_check_devices_periodic_task,
+            get_check_devices_interval_seconds,
+        )
+
+        ensure_default_check_devices_periodic_task()
+        return JsonResponse({
+            'check_devices_interval_seconds': get_check_devices_interval_seconds(),
+        })
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+def save_beat_device_settings(request):
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+    try:
+        data = json.loads(request.body)
+        interval = int(data.get('check_devices_interval_seconds', 5))
+    except (json.JSONDecodeError, TypeError, ValueError):
+        return JsonResponse({'error': 'Ungültige Daten'}, status=400)
+    try:
+        from megacellcnc.beat_schedule import (
+            ensure_default_check_devices_periodic_task,
+            set_check_devices_interval_seconds,
+        )
+
+        ensure_default_check_devices_periodic_task()
+        set_check_devices_interval_seconds(interval)
+    except ValueError as e:
+        return JsonResponse({'error': str(e)}, status=400)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+    return JsonResponse({
+        'success': True,
+        'message': 'Intervall gespeichert. Celery Beat übernimmt die Änderung in der Regel innerhalb weniger Sekunden.',
+        'check_devices_interval_seconds': interval,
+    })
 
 
 def new_project(request):
