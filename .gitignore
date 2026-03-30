@@ -151,6 +151,9 @@ Desktop.ini
 certificate/*.pem
 certificate/*.key
 certificate/*Key*.txt
+# QZ Tray localhost-Bundle (bewusst im Repo für Docker)
+!certificate/qz-tray-public.pem
+!certificate/qz-tray-private.pem
 
 # Spyder project settings
 .spyderproject

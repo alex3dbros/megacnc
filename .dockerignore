@@ -36,9 +36,11 @@ htmlcov/
 .tox/
 .nox/
 
-# Zertifikate (lokal; nicht ins Image)
+# Zertifikate (lokal; nicht ins Image) – QZ localhost-Bundle explizit einbinden
 certificate/*.pem
 certificate/*.key
+!certificate/qz-tray-public.pem
+!certificate/qz-tray-private.pem
 
 # OS
 .DS_Store

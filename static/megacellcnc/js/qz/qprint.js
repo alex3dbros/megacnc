@@ -27,119 +27,45 @@ function displayMessage(message) {
 
 }
 
-/// Authentication setup ///
+/// QZ Tray: Zertifikat + Signatur vom Django-Server (localhost), kein Private Key im Browser ///
+function qzSigningBase() {
+    if (typeof window.MEGACELL_QZ_SIGNING_BASE === 'string') {
+        return window.MEGACELL_QZ_SIGNING_BASE.replace(/\/$/, '');
+    }
+    return '';
+}
+
 qz.security.setCertificatePromise(function(resolve, reject) {
-    //Preferred method - from server
-//        fetch("assets/signing/digital-certificate.txt", {cache: 'no-store', headers: {'Content-Type': 'text/plain'}})
-//          .then(function(data) { data.ok ? resolve(data.text()) : reject(data.text()); });
-
-    //Alternate method 1 - anonymous
-//        resolve();  // remove this line in live environment
-
-    //Alternate method 2 - direct
-            resolve("-----BEGIN CERTIFICATE-----\n" +
-"MIIFrTCCA5WgAwIBAgIUaqyQPkPRudHFPW9Wy1DQ79vnUgwwDQYJKoZIhvcNAQEN\n" +
-"BQAwZjELMAkGA1UEBhMCUk8xDzANBgNVBAgMBkdhbGF0aTEPMA0GA1UEBwwGR2Fs\n" +
-"YXRpMSEwHwYDVQQKDBhJbnRlcm5ldCBXaWRnaXRzIFB0eSBMdGQxEjAQBgNVBAMM\n" +
-"CWxvY2FsaG9zdDAeFw0yNDAyMjExNzMyMTZaFw0zNDAyMTgxNzMyMTZaMGYxCzAJ\n" +
-"BgNVBAYTAlJPMQ8wDQYDVQQIDAZHYWxhdGkxDzANBgNVBAcMBkdhbGF0aTEhMB8G\n" +
-"A1UECgwYSW50ZXJuZXQgV2lkZ2l0cyBQdHkgTHRkMRIwEAYDVQQDDAlsb2NhbGhv\n" +
-"c3QwggIiMA0GCSqGSIb3DQEBAQUAA4ICDwAwggIKAoICAQCzuySALd1qxDT0fAJF\n" +
-"CpfvHqK5N8RU/Kt216HhWK7shb0KYI7L3A67jFlXczIPIxHgzejoRY5x+RoskUoC\n" +
-"DiugqnkMIsoxiwum2jXP6EtLq/R4VM6Zp1rQzx+5NmZU/8cjbIP8jCSJWM2ud1Ml\n" +
-"/nzqziFgyGYXGcMnfWaDvxnMRCbzZo6ERnmwu9cymhBDGpJEJgj32LXhT+OT4nP3\n" +
-"qq8gpdnPCkqXNplxxJFNvWX8f0XTqHgR9amoTb1lVwSWJeRtQgWuDrwThHZHwu/Z\n" +
-"V6FyrP8xsNgTwHN3CA8ifKldRwwNFmn+dxKEMsw5l74w8nYoiK+TgcxIn/gacZ11\n" +
-"9Spipg8i5/VS0NPvxgmvfIqH5kpWi2Kf1SE+K6BqLIqwi1G9Ar89+OL3lgehEAXs\n" +
-"YzqJCBtoH33mVXOrluLkOvQfhGtS9/ifp7wN7ZbuuNieqiTtDr7b1kpN8qfEY8+k\n" +
-"tUP/PkWafdKANKKaKMKIIKobUAFNj2EhyfX3vSR25lOHKWu5wMo6TAEFC0S/4PTd\n" +
-"DkxAsMaU2Qa7Jqy+QoUl9VT6VgrvJdJkUN9lAqotYaJNyXkx5COQFOTVE7tCPek2\n" +
-"029taQXjDsg8ooDMaS+r8/mKFzzA3zZo52w40sJGTMj4jb5mbw7ALgVjNfXz36jQ\n" +
-"ACFv0ig6xcUkxtPEtHIEUxk3/QIDAQABo1MwUTAdBgNVHQ4EFgQU3Mt07oGKslvt\n" +
-"ON9Jpi/v9FEdS7kwHwYDVR0jBBgwFoAU3Mt07oGKslvtON9Jpi/v9FEdS7kwDwYD\n" +
-"VR0TAQH/BAUwAwEB/zANBgkqhkiG9w0BAQ0FAAOCAgEAhAZJ4CR31VEWv0ZbHGiF\n" +
-"KRXJPDUjy4DBU2sp3i34Akc2UJJemjNxDUf5KJPyNr8AqVdXpU2lUWcJ6G5bbBaZ\n" +
-"96E1/M1HzZ0gqPJI3ipnHuHHYoakZdVgIoZg9aIUBKanOvbJrttw/2cYv+sUYbdz\n" +
-"XVy1jEMutC/xdxAjjMBA8zKIlSg7b3yGHyTpe6T1XV/QQyWysbQQiHAWnkoX/cnR\n" +
-"WnT9su9kmkyF2M7NeOeCns+k8bUvom6KuuOkU1ruvor1OAGci9lhEGe+u6KK53+c\n" +
-"K9dS3NW1srgZXmn/SwnsQBvN90fovVxSKcLCsizngelJkvnY+yzlukAXSLLKFFsI\n" +
-"FgTL2/MBw/fLuIESrXTORSWXACdpUF6h7Za80H2tMFzxP2e+dOXPiLN5HLCPNQ0n\n" +
-"ZVd28BWFrRlOHFjEgN4ImuwV2XeWrWNV2+8BLMpCDmZ5q4XX4qC1EDi330VqdmfF\n" +
-"yvlBTCx5HH5ltWm9jRH7/ju4W9Go8Bu9AKOgrBp794+6O4lbTHCqhkwWgjG9oXwG\n" +
-"bN9uPFGrWxerOoTXgsxvpdJBLdtsUZLjD8ngtNArnHhy3dXoVhcGFSJohXvsYuco\n" +
-"qb1bn37dI6m8PJc0zTbqFNHdhS5e064mIzPEukbRCTf7PRqbkplGojhY2UAR9SLs\n" +
-"iIzXPoXirraSoTpkkftJL9g=\n" +
-"-----END CERTIFICATE-----\n");
+    fetch(qzSigningBase() + '/qz/certificate/', {
+        cache: 'no-store',
+        credentials: 'same-origin',
+    })
+        .then(function(r) {
+            if (!r.ok) return r.text().then(function(t) { return Promise.reject(t || r.status); });
+            return r.text();
+        })
+        .then(resolve)
+        .catch(reject);
 });
 
-var privateKey = "-----BEGIN PRIVATE KEY-----\n" +
-"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\n" +
-"mh0vyIYDgdTRxghAQwPNajRzkU96\n" +
-"-----END PRIVATE KEY-----\n";
-
-qz.security.setSignatureAlgorithm("SHA512"); // Since 2.1
+qz.security.setSignatureAlgorithm('SHA512');
 qz.security.setSignaturePromise(function(toSign) {
     return function(resolve, reject) {
-        try {
-            var pk = KEYUTIL.getKey(privateKey);
-            var sig = new KJUR.crypto.Signature({"alg": "SHA512withRSA"});  // Use "SHA1withRSA" for QZ Tray 2.0 and older
-            sig.init(pk);
-            sig.updateString(toSign);
-            var hex = sig.sign();
-            //console.log("DEBUG: \n\n" + stob64(hextorstr(hex)));
-            resolve(stob64(hextorstr(hex)));
-        } catch (err) {
-            console.error(err);
-            reject(err);
-        }
+        var params = new URLSearchParams();
+        params.set('request', toSign);
+        fetch(qzSigningBase() + '/qz/sign/', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: params,
+            credentials: 'same-origin',
+            cache: 'no-store',
+        })
+            .then(function(r) {
+                if (!r.ok) return r.text().then(function(t) { return Promise.reject(t || r.status); });
+                return r.text();
+            })
+            .then(resolve)
+            .catch(reject);
     };
 });
 

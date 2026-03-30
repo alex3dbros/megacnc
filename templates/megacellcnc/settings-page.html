@@ -479,20 +479,20 @@ input[type='radio'] {
 					<div class="card-body">
 						<!-- Main Settings Tabs -->
 						<ul class="nav nav-tabs" id="settingsTabs" role="tablist">
-							<li class="nav-item">
-								<a class="nav-link active" id="printer-tab" data-bs-toggle="tab" href="#printerSettings" role="tab">
+							<li class="nav-item" role="presentation">
+								<button type="button" class="nav-link active" id="printer-tab" data-bs-toggle="tab" data-bs-target="#printerSettings" role="tab" aria-controls="printerSettings" aria-selected="true">
 									<i class="fa fa-print me-2"></i> Printer
-								</a>
+								</button>
 							</li>
-							<li class="nav-item">
-								<a class="nav-link" id="devices-tab" data-bs-toggle="tab" href="#devicesSettings" role="tab">
+							<li class="nav-item" role="presentation">
+								<button type="button" class="nav-link" id="devices-tab" data-bs-toggle="tab" data-bs-target="#devicesSettings" role="tab" aria-controls="devicesSettings" aria-selected="false">
 									<i class="fa fa-microchip me-2"></i> Devices
-								</a>
+								</button>
 							</li>
-							<li class="nav-item">
-								<a class="nav-link" id="backup-tab" data-bs-toggle="tab" href="#backupSettings" role="tab">
+							<li class="nav-item" role="presentation">
+								<button type="button" class="nav-link" id="backup-tab" data-bs-toggle="tab" data-bs-target="#backupSettings" role="tab" aria-controls="backupSettings" aria-selected="false">
 									<i class="fa fa-database me-2"></i> Backup & Restore
-								</a>
+								</button>
 							</li>
 						</ul>
 
@@ -737,15 +737,15 @@ input[type='radio'] {
 
 											<!-- OS Tabs -->
 											<ul class="nav nav-tabs" role="tablist">
-												<li class="nav-item">
-													<a class="nav-link active" data-bs-toggle="tab" href="#restore-linux">
+												<li class="nav-item" role="presentation">
+													<button type="button" class="nav-link active" data-bs-toggle="tab" data-bs-target="#restore-linux" role="tab" aria-controls="restore-linux" aria-selected="true">
 														<i class="fab fa-linux"></i> Linux / macOS
-													</a>
+													</button>
 												</li>
-												<li class="nav-item">
-													<a class="nav-link" data-bs-toggle="tab" href="#restore-windows">
+												<li class="nav-item" role="presentation">
+													<button type="button" class="nav-link" data-bs-toggle="tab" data-bs-target="#restore-windows" role="tab" aria-controls="restore-windows" aria-selected="false">
 														<i class="fab fa-windows"></i> Windows
-													</a>
+													</button>
 												</li>
 											</ul>
 

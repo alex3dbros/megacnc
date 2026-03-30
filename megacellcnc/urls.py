@@ -1,8 +1,12 @@
 from django.urls import path
 from megacellcnc import docs_views
 from megacellcnc import megacellcnc_views
-app_name='megacellcnc'
+from megacellcnc import qz_signing_views
+
+app_name = 'megacellcnc'
 urlpatterns = [
+    path('qz/certificate/', qz_signing_views.qz_certificate, name='qz-certificate'),
+    path('qz/sign/', qz_signing_views.qz_sign, name='qz-sign'),
     path('docs/', docs_views.manual, name='manual'),
     path('docs/pdf/', docs_views.manual_pdf, name='manual-pdf'),
     path('',megacellcnc_views.index,name="index"),

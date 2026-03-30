@@ -63,4 +63,4 @@ win32-setctime==1.1.0
 zope.interface==6.2
 django-celery-beat
 markdown==3.7
-weasyprint==62.3
+weasyprint==65.1
