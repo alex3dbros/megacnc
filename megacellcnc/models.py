@@ -200,3 +200,32 @@ class CellReplacementLog(models.Model):
 
     class Meta:
         ordering = ['-replaced_at']
+
+
+class BackupJournal(models.Model):
+    """Protokoll für Backup/Restore-Aktionen (Settings)."""
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    action = models.CharField(max_length=64)
+    source = models.CharField(max_length=500, blank=True)
+    target = models.CharField(max_length=500, blank=True)
+    status = models.CharField(max_length=32)
+    detail = models.TextField(blank=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f'{self.created_at} {self.action} {self.status}'
+
+    @classmethod
+    def log_entry(cls, action, status, source='', target='', detail=''):
+        try:
+            cls.objects.create(
+                action=action[:64],
+                status=status[:32],
+                source=(source or '')[:500],
+                target=(target or '')[:500],
+                detail=(detail or '')[:4000],
+            )
+        except Exception:
+            pass

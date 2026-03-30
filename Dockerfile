@@ -23,4 +23,4 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . /app/
 
 # Command to run the application
-CMD ["gunicorn", "--bind", "0.0.0.0:8000", "dashboard.wsgi:application"]
+CMD ["gunicorn", "--bind", "0.0.0.0:8000", "--timeout", "600", "--graceful-timeout", "60", "dashboard.wsgi:application"]

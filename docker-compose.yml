@@ -31,7 +31,7 @@ services:
     command: >
       sh -c "
         python manage.py migrate --noinput &&
-        gunicorn dashboard.wsgi:application --bind 0.0.0.0:8000
+        gunicorn dashboard.wsgi:application --bind 0.0.0.0:8000 --timeout 600 --graceful-timeout 60
       "
     ports:
       - "8000:8000"
@@ -46,6 +46,7 @@ services:
     environment:
       - DATABASE_URL=postgres://postgres:MccAdmin@db:5432/mcccnc
       - REDIS_URL=redis://redis:6379/0
+      - BACKUP_ARCHIVE_DIR=/data/backups
 
   celeryworker:
     image: ghcr.io/heinz-leiser-ai/megacnc:latest

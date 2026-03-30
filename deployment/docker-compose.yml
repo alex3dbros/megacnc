@@ -13,7 +13,11 @@ services:
 
   web:
     image: ghcr.io/heinz-leiser-ai/megacnc:latest
-    command: gunicorn dashboard.wsgi:application --bind 0.0.0.0:8000
+    command: >
+      sh -c "
+        python manage.py migrate --noinput &&
+        gunicorn dashboard.wsgi:application --bind 0.0.0.0:8000 --timeout 600 --graceful-timeout 60
+      "
     ports:
       - "8000:8000"
     depends_on:

@@ -1,23 +1,23 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.db.models import Prefetch
-from .models import Projects, Device, Slot, Cells, CellTestData, PrinterSettings, Batteries, CellReplacementLog
+from .models import Projects, Device, Slot, Cells, CellTestData, PrinterSettings, Batteries, CellReplacementLog, BackupJournal
 from django.contrib import messages
-from django.http import JsonResponse, HttpResponseRedirect
+from django.http import JsonResponse, HttpResponseRedirect, FileResponse
 from django.views.decorators.http import require_POST
 from django.views.decorators.csrf import csrf_exempt
+import shutil
 from django.urls import reverse
 from .functions import scan_for_devices, add_new_cell, draw_dual_label, gather_label_data, draw_square_label, \
     draw_landscape_label, generate_uuid_for_cell, gather_label_cell_data, generate_battery_uuid
 from datetime import timedelta
 import json
-from django.db import transaction
+from django.db import connection, transaction
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import Count
 from django.db.models.functions import TruncDate
 from django.template.loader import render_to_string
 from django.shortcuts import render
-from django.views.decorators.http import require_http_methods
-
+from django.views.decorators.http import require_http_methods, require_GET
 
 from django.utils import timezone
 from django.db.models import F
@@ -48,7 +48,7 @@ def index(request):
         devices_count = 0
     
     try:
-        projects = Projects.objects.all()
+        projects = Projects.objects.annotate(cells_count=Count('cells'))
         # Count the total number of projects
         total_projects = Projects.objects.count()
     except Exception:
@@ -160,6 +160,8 @@ def settings(request):
     except Exception:
         pass
 
+    from django.conf import settings as dj_settings
+
     context = {
         "page_title": "Settings",
         "devices": devices,
@@ -167,6 +169,7 @@ def settings(request):
         "projects": projects,
         "check_devices_interval_seconds": check_devices_interval_seconds,
         "beat_interval_choices": beat_interval_choices,
+        "allow_ui_migrate": getattr(dj_settings, "ALLOW_UI_MIGRATE", False),
     }
 
     return render(request, 'megacellcnc/settings-page.html', context)
@@ -1121,15 +1124,15 @@ def get_printer_settings(request):
 
 
 def download_backup(request):
-    """Download a database backup as gzipped SQL file using Django's dumpdata"""
+    """Download a database backup as gzipped JSON; Kopie zusätzlich im Server-Archiv."""
     import gzip
     from io import BytesIO, StringIO
     from django.http import HttpResponse
     from datetime import datetime
     from django.core.management import call_command
-    
+    from .backup_utils import backup_archive_dir
+
     try:
-        # Use Django's dumpdata to export all data as JSON
         output = StringIO()
         call_command(
             'dumpdata',
@@ -1138,28 +1141,379 @@ def download_backup(request):
             '--exclude=contenttypes',
             '--exclude=auth.permission',
             '--indent=2',
-            stdout=output
+            stdout=output,
         )
-        
+
         dump_data = output.getvalue().encode('utf-8')
-        
-        # Compress with gzip
+
         buffer = BytesIO()
         with gzip.GzipFile(fileobj=buffer, mode='wb') as gz:
             gz.write(dump_data)
-        
-        # Create response
+
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
         filename = f'megacnc_backup_{timestamp}.json.gz'
-        
-        response = HttpResponse(buffer.getvalue(), content_type='application/gzip')
+        payload = buffer.getvalue()
+
+        try:
+            archive_dir = backup_archive_dir()
+            (archive_dir / filename).write_bytes(payload)
+        except OSError:
+            pass
+
+        BackupJournal.log_entry(
+            'backup_manual',
+            'success',
+            source='Datenbank',
+            target=f'Archiv + Browser-Download: {filename}',
+            detail='',
+        )
+
+        response = HttpResponse(payload, content_type='application/gzip')
         response['Content-Disposition'] = f'attachment; filename="{filename}"'
-        response['Content-Length'] = len(buffer.getvalue())
-        
+        response['Content-Length'] = len(payload)
+
         return response
-        
+
     except Exception as e:
+        BackupJournal.log_entry(
+            'backup_manual',
+            'error',
+            source='Datenbank',
+            target='Download',
+            detail=str(e)[:2000],
+        )
         return JsonResponse({'error': str(e)}, status=500)
+
+
+def _dumpdata_to_string():
+    """Same options as download_backup (keep in sync)."""
+    from io import StringIO
+    from django.core.management import call_command
+
+    output = StringIO()
+    call_command(
+        'dumpdata',
+        '--natural-foreign',
+        '--natural-primary',
+        '--exclude=contenttypes',
+        '--exclude=auth.permission',
+        '--indent=2',
+        stdout=output,
+    )
+    return output.getvalue()
+
+
+def _execute_restore_with_safety(user_fixture_path: str, *, journal_action: str, source_label: str):
+    """
+    Schreibt Sicherheits-Dump ins Archiv + temp gzip, dann flush + loaddata.
+    journal_action: restore_upload | restore_server
+    """
+    import gzip
+    import os
+    import tempfile
+    from datetime import datetime
+    from django.core.management import call_command
+    from .backup_utils import backup_archive_dir, gzip_write_file
+
+    dump_str = _dumpdata_to_string()
+    ts = datetime.now().strftime('%Y%m%d_%H%M%S')
+    archive_name = f'sicherheit_vor_restore_{ts}.json.gz'
+    archive_path = backup_archive_dir() / archive_name
+    gzip_write_file(archive_path, dump_str)
+
+    fd, safety_path = tempfile.mkstemp(suffix='.json.gz')
+    os.close(fd)
+    try:
+        with gzip.open(safety_path, 'wb') as gz:
+            gz.write(dump_str.encode('utf-8'))
+
+        call_command('flush', interactive=False, verbosity=0)
+        try:
+            call_command('loaddata', user_fixture_path, verbosity=0)
+        except Exception as e:
+            recovery_ok = False
+            try:
+                call_command('loaddata', safety_path, verbosity=0)
+                recovery_ok = True
+            except Exception:
+                pass
+            connection.close()
+            if recovery_ok:
+                BackupJournal.log_entry(
+                    journal_action,
+                    'rolled_back',
+                    source=source_label,
+                    target='Datenbank',
+                    detail=f'Sicherheit: {archive_name}; Fehler: {e}',
+                )
+                return JsonResponse(
+                    {
+                        'error': (
+                            f'Die gewählte Datei konnte nicht eingespielt werden: {e}. '
+                            'Der vorherige Datenstand wurde wiederhergestellt.'
+                        ),
+                        'recovered': True,
+                    },
+                    status=422,
+                )
+            BackupJournal.log_entry(
+                journal_action,
+                'error',
+                source=source_label,
+                target='Datenbank',
+                detail=f'Sicherheit: {archive_name}; Fehler: {e}; Rollback fehlgeschlagen',
+            )
+            return JsonResponse(
+                {
+                    'error': (
+                        f'Kritischer Fehler: {e}. '
+                        'Rückgängig machen ist fehlgeschlagen – die Datenbank kann leer oder inkonsistent sein.'
+                    ),
+                    'recovered': False,
+                },
+                status=500,
+            )
+
+        connection.close()
+        BackupJournal.log_entry(
+            journal_action,
+            'success',
+            source=source_label,
+            target='Datenbank (ersetzt)',
+            detail=f'Sicherheit angelegt: {archive_name}',
+        )
+        return JsonResponse({'success': True, 'message': 'Backup wurde eingespielt. Seite neu laden.'})
+    finally:
+        if os.path.isfile(safety_path):
+            os.unlink(safety_path)
+
+
+@require_POST
+def restore_backup(request):
+    """Upload JSON fixture; wie _execute_restore_with_safety (Archiv-Sicherheit dabei)."""
+    import gzip
+    import os
+    import tempfile
+
+    if not request.FILES.get('backup_file'):
+        return JsonResponse({'error': 'Keine Datei ausgewählt.'}, status=400)
+    if request.POST.get('confirm_restore') != '1':
+        return JsonResponse({'error': 'Bitte die Bestätigung aktivieren.'}, status=400)
+
+    uploaded = request.FILES['backup_file']
+    orig_name = (uploaded.name or '').lower()
+    if not (orig_name.endswith('.json') or orig_name.endswith('.json.gz')):
+        return JsonResponse({'error': 'Nur .json oder .json.gz erlaubt.'}, status=400)
+
+    tmp_dir = tempfile.mkdtemp(prefix='restore_')
+    try:
+        raw_path = os.path.join(tmp_dir, 'upload.bin')
+        with open(raw_path, 'wb') as out:
+            for chunk in uploaded.chunks():
+                out.write(chunk)
+
+        with open(raw_path, 'rb') as f:
+            raw = f.read()
+        if orig_name.endswith('.gz') or raw[:2] == b'\x1f\x8b':
+            try:
+                data = gzip.decompress(raw)
+            except OSError as e:
+                return JsonResponse({'error': f'gzip nicht lesbar: {e}'}, status=400)
+        else:
+            data = raw
+
+        try:
+            json.loads(data.decode('utf-8'))
+        except (json.JSONDecodeError, UnicodeDecodeError) as e:
+            return JsonResponse({'error': f'Ungültige JSON-Datei: {e}'}, status=400)
+
+        user_fixture_path = os.path.join(tmp_dir, 'uploaded.json')
+        with open(user_fixture_path, 'wb') as f:
+            f.write(data)
+
+        return _execute_restore_with_safety(
+            user_fixture_path,
+            journal_action='restore_upload',
+            source_label=f'Upload: {orig_name}',
+        )
+    finally:
+        shutil.rmtree(tmp_dir, ignore_errors=True)
+
+
+@require_GET
+def list_server_backups(request):
+    from .backup_utils import list_archive_entries
+
+    try:
+        return JsonResponse({'backups': list_archive_entries()})
+    except OSError as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+@require_POST
+def delete_server_backups(request):
+    from .backup_utils import resolve_backup_file
+
+    try:
+        data = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'Invalid JSON'}, status=400)
+    names = data.get('filenames')
+    if not isinstance(names, list) or not names:
+        return JsonResponse({'error': 'filenames (Liste) erforderlich'}, status=400)
+    deleted = []
+    errors = []
+    for name in names:
+        if not isinstance(name, str):
+            continue
+        p = resolve_backup_file(name)
+        if p is None:
+            errors.append(name)
+            continue
+        try:
+            p.unlink()
+            deleted.append(name)
+        except OSError as e:
+            errors.append(f'{name}: {e}')
+    status = 'success' if not errors else ('partial' if deleted else 'error')
+    BackupJournal.log_entry(
+        'delete_server',
+        status,
+        source='Server-Archiv',
+        target='—',
+        detail=f'Gelöscht: {", ".join(deleted)}' + (f'; Fehler: {errors}' if errors else ''),
+    )
+    return JsonResponse({'success': True, 'deleted': deleted, 'errors': errors})
+
+
+@require_GET
+def download_server_backup(request):
+    from .backup_utils import resolve_backup_file
+
+    name = request.GET.get('file')
+    if not name:
+        return JsonResponse({'error': 'Parameter file fehlt'}, status=400)
+    p = resolve_backup_file(name)
+    if not p:
+        return JsonResponse({'error': 'Datei nicht gefunden'}, status=404)
+    BackupJournal.log_entry(
+        'download_server',
+        'success',
+        source=f'Server-Archiv: {name}',
+        target='Browser-Download',
+        detail='',
+    )
+    return FileResponse(p.open('rb'), as_attachment=True, filename=p.name)
+
+
+@require_POST
+def restore_server_backup(request):
+    from .backup_utils import resolve_backup_file
+
+    try:
+        data = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'Invalid JSON'}, status=400)
+    if data.get('confirm_restore') != '1':
+        return JsonResponse({'error': 'Bestätigung fehlt.'}, status=400)
+    filename = data.get('filename')
+    if not filename or not isinstance(filename, str):
+        return JsonResponse({'error': 'filename fehlt.'}, status=400)
+    p = resolve_backup_file(filename)
+    if not p:
+        return JsonResponse({'error': 'Datei nicht gefunden oder ungültiger Name.'}, status=404)
+    return _execute_restore_with_safety(
+        str(p),
+        journal_action='restore_server',
+        source_label=f'Server-Archiv: {filename}',
+    )
+
+
+_ACTION_LABELS = {
+    'backup_manual': 'Backup (Download)',
+    'restore_upload': 'Restore (Upload)',
+    'restore_server': 'Restore (Server)',
+    'delete_server': 'Löschen (Archiv)',
+    'download_server': 'Download (Archiv)',
+}
+
+_STATUS_LABELS = {
+    'success': 'OK',
+    'error': 'Fehler',
+    'rolled_back': 'Zurückgesetzt',
+    'partial': 'Teilweise',
+}
+
+
+@require_GET
+def migration_status(request):
+    """Ausstehende Django-Migrationen (nur Anzeige)."""
+    from django.db import connection
+    from django.db.migrations.executor import MigrationExecutor
+
+    try:
+        executor = MigrationExecutor(connection)
+        plan = executor.migration_plan(executor.loader.graph.leaf_nodes())
+        pending = [f'{m.app_label}.{m.name}' for m, _ in plan]
+        return JsonResponse(
+            {
+                'ok': True,
+                'pending_count': len(pending),
+                'pending': pending[:100],
+            }
+        )
+    except Exception as e:
+        return JsonResponse({'ok': False, 'error': str(e)}, status=500)
+
+
+@require_POST
+def run_migrations_ui(request):
+    """Optional: Migration per UI (nur mit ALLOW_UI_MIGRATE=1)."""
+    from django.conf import settings as dj_settings
+    from django.core.management import call_command
+    from io import StringIO
+
+    if not getattr(dj_settings, 'ALLOW_UI_MIGRATE', False):
+        return JsonResponse(
+            {'error': 'Deaktiviert. Setze ALLOW_UI_MIGRATE=1 in der Umgebung (nur vertrauenswürdige Umgebung).'},
+            status=403,
+        )
+    out = StringIO()
+    err = StringIO()
+    try:
+        call_command('migrate', '--noinput', stdout=out, stderr=err)
+        combined = out.getvalue() + err.getvalue()
+        return JsonResponse({'success': True, 'output': combined[-8000:] or '(keine Ausgabe)'})
+    except Exception as e:
+        combined = out.getvalue() + err.getvalue()
+        return JsonResponse(
+            {'success': False, 'error': str(e), 'output': combined[-8000:]},
+            status=500,
+        )
+
+
+@require_GET
+def backup_journal_list(request):
+    try:
+        limit = min(int(request.GET.get('limit', 100)), 500)
+    except (TypeError, ValueError):
+        limit = 100
+    entries = []
+    for e in BackupJournal.objects.all()[:limit]:
+        entries.append(
+            {
+                'id': e.id,
+                'created_at': e.created_at.isoformat(),
+                'action': e.action,
+                'action_label': _ACTION_LABELS.get(e.action, e.action),
+                'source': e.source,
+                'target': e.target,
+                'status': e.status,
+                'status_label': _STATUS_LABELS.get(e.status, e.status),
+                'detail': e.detail,
+            }
+        )
+    return JsonResponse({'entries': entries})
 
 
 @require_POST
@@ -1537,8 +1891,8 @@ def project(request):
         return redirect('/project/')
 
     else:
-        projects = Projects.objects.all()
-        projects_count = Projects.objects.all().count()
+        projects = Projects.objects.annotate(cells_count=Count('cells'))
+        projects_count = projects.count()
         context = {
             "page_title":"Projects",
             "projects_count": projects_count,

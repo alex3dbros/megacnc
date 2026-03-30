@@ -11,7 +11,7 @@ https://docs.djangoproject.com/en/5.0/ref/settings/
 """
 
 # App Version
-APP_VERSION = "1.1.0"
+APP_VERSION = "1.4.0"
 
 from pathlib import Path
 import os
@@ -147,3 +147,15 @@ else:
 # https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# Settings → Backup wiederherstellen (JSON kann groß sein)
+DATA_UPLOAD_MAX_MEMORY_SIZE = 50 * 1024 * 1024
+FILE_UPLOAD_MAX_MEMORY_SIZE = 50 * 1024 * 1024
+
+# Server-Archiv: manuelle Downloads + Sicherheits-Backups vor Restore
+BACKUP_ARCHIVE_DIR = Path(
+    os.environ.get("BACKUP_ARCHIVE_DIR", str(BASE_DIR / "data" / "backups"))
+)
+
+# Nur wenn explizit 1: Button "Migration ausführen" in den Settings (Fallback, nicht für Produktion empfohlen)
+ALLOW_UI_MIGRATE = os.environ.get("ALLOW_UI_MIGRATE", "0") == "1"

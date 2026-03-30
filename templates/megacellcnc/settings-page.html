@@ -450,7 +450,18 @@ input[type='radio'] {
     color: #9F3535;
 }
 
-
+/* Backup-Tab: Tabellenköpfe lesbar (Dark-Theme setzt oft helle Schrift global → Kontrast zu table-light) */
+#backupSettings .backup-table-thead th {
+	background-color: #3a3d4a !important;
+	color: #f1f3f5 !important;
+	font-weight: 600;
+	border-color: #4e5260 !important;
+	padding-top: 0.65rem;
+	padding-bottom: 0.65rem;
+}
+#backupSettings .backup-table-thead th a {
+	color: #a8d4f0;
+}
 
 </style>
 
@@ -716,7 +727,7 @@ input[type='radio'] {
 										<div class="panel panel-default">
 											<h5><i class="fa fa-download text-success me-2"></i> Backup erstellen</h5>
 											<p class="text-muted">
-												Erstelle ein vollständiges Backup der Datenbank. Das Backup wird als komprimierte JSON-Datei (.json.gz) heruntergeladen.
+												Erstelle ein vollständiges Backup der Datenbank. Download als <code>.json.gz</code> – eine Kopie wird zusätzlich unter „Backups auf dem Server“ abgelegt.
 											</p>
 											
 											<button type="button" class="btn btn-success btn-lg mb-3" id="downloadBackupBtn" onclick="downloadBackup();">
@@ -730,33 +741,49 @@ input[type='radio'] {
 									<!-- Restore Section -->
 									<div class="col-lg-6">
 										<div class="panel panel-default">
-											<h5><i class="fa fa-upload text-info me-2"></i> Backup wiederherstellen</h5>
-											<p class="text-muted">
-												Wähle dein Betriebssystem für die passende Anleitung:
+											<h5><i class="fa fa-upload text-info me-2"></i> Backup wiederherstellen (Datei vom PC)</h5>
+											<p class="text-muted mb-2">
+												Datei von deinem Rechner wählen (<code>.json.gz</code> oder <code>.json</code>). Vor dem Einspielen wird ein Sicherheits-Backup erzeugt und in der Liste unten gespeichert (<code>sicherheit_vor_restore_…</code>).
 											</p>
 
-											<!-- OS Tabs -->
-											<ul class="nav nav-tabs" role="tablist">
-												<li class="nav-item" role="presentation">
-													<button type="button" class="nav-link active" data-bs-toggle="tab" data-bs-target="#restore-linux" role="tab" aria-controls="restore-linux" aria-selected="true">
-														<i class="fab fa-linux"></i> Linux / macOS
-													</button>
-												</li>
-												<li class="nav-item" role="presentation">
-													<button type="button" class="nav-link" data-bs-toggle="tab" data-bs-target="#restore-windows" role="tab" aria-controls="restore-windows" aria-selected="false">
-														<i class="fab fa-windows"></i> Windows
-													</button>
-												</li>
-											</ul>
+											<form id="restoreBackupForm" class="mb-2" onsubmit="return false;">
+												{% csrf_token %}
+												<div class="mb-2">
+													<input type="file" class="form-control form-control-sm" id="restoreBackupFile" accept=".json,.gz,application/gzip,application/json">
+												</div>
+												<div class="form-check mb-2">
+													<input class="form-check-input" type="checkbox" id="restoreConfirmCheck">
+													<label class="form-check-label small" for="restoreConfirmCheck">
+														Ich weiß: Alle aktuellen Daten werden gelöscht und durch die Datei ersetzt. Ich habe bei Bedarf vorher ein Backup erstellt.
+													</label>
+												</div>
+												<button type="button" class="btn btn-primary" id="restoreBackupBtn" disabled>
+													<i class="fa fa-upload"></i> Aus Datei wiederherstellen
+												</button>
+											</form>
+											<div id="restoreBackupProgress" class="mb-2" style="display: none;" aria-live="polite">
+												<p class="small text-muted mb-2">Upload und Einspielen laufen – bitte warten (bei großen Backups kann das einige Minuten dauern). Diese Seite nicht schließen.</p>
+												<div class="progress" style="height: 8px;">
+													<div class="progress-bar progress-bar-striped progress-bar-animated w-100" role="progressbar" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100"></div>
+												</div>
+											</div>
+											<div id="restoreBackupStatus" class="alert" style="display: none;"></div>
 
-											<div class="tab-content mt-3">
-												<!-- Linux/macOS -->
-												<div id="restore-linux" class="tab-pane fade show active">
-													<p class="text-muted small">Terminal öffnen und im Projektverzeichnis ausführen:</p>
-													<pre style="background: #1a1a2e; padding: 12px; border-radius: 6px; overflow-x: auto;"><code># Backup entpacken
+											<details class="mt-3">
+												<summary class="text-muted small" style="cursor: pointer;">Nur für Experten: Wiederherstellen per Docker/Terminal</summary>
+												<ul class="nav nav-tabs mt-2" role="tablist">
+													<li class="nav-item" role="presentation">
+														<button type="button" class="nav-link active" data-bs-toggle="tab" data-bs-target="#restore-linux" role="tab">Linux / macOS</button>
+													</li>
+													<li class="nav-item" role="presentation">
+														<button type="button" class="nav-link" data-bs-toggle="tab" data-bs-target="#restore-windows" role="tab">Windows</button>
+													</li>
+												</ul>
+												<div class="tab-content mt-2">
+													<div id="restore-linux" class="tab-pane fade show active">
+														<pre class="small mb-0" style="background: #1a1a2e; padding: 12px; border-radius: 6px; overflow-x: auto;"><code># Backup entpacken
 gunzip megacnc_backup_XXXXXX.json.gz
 
-# Backup wiederherstellen
 docker-compose exec web python manage.py loaddata \
   megacnc_backup_XXXXXX.json
 
@@ -764,30 +791,92 @@ docker-compose exec web python manage.py loaddata \
 docker cp megacnc_backup_XXXXXX.json megacnc-web-1:/app/
 docker exec megacnc-web-1 python manage.py loaddata \
   megacnc_backup_XXXXXX.json</code></pre>
-												</div>
-
-												<!-- Windows -->
-												<div id="restore-windows" class="tab-pane fade">
-													<p class="text-muted small">PowerShell öffnen:</p>
-													<pre style="background: #1a1a2e; padding: 12px; border-radius: 6px; overflow-x: auto;"><code># Mit 7-Zip entpacken
-7z e megacnc_backup_XXXXXX.json.gz
-
-# Datei in Container kopieren
+													</div>
+													<div id="restore-windows" class="tab-pane fade">
+														<pre class="small mb-0" style="background: #1a1a2e; padding: 12px; border-radius: 6px; overflow-x: auto;"><code>7z e megacnc_backup_XXXXXX.json.gz
 docker cp megacnc_backup_XXXXXX.json megacnc-web-1:/app/
-
-# Backup wiederherstellen
 docker exec megacnc-web-1 python manage.py loaddata `
   megacnc_backup_XXXXXX.json
-
-# Datei wieder löschen
 docker exec megacnc-web-1 rm megacnc_backup_XXXXXX.json</code></pre>
+													</div>
 												</div>
-											</div>
+											</details>
+										</div>
+									</div>
+								</div>
 
-											<div class="alert alert-warning mt-3">
-												<i class="fa fa-exclamation-triangle"></i>
-												<strong>Achtung:</strong> Ein Restore überschreibt alle aktuellen Daten!
-											</div>
+								<div class="row mt-4">
+									<div class="col-12">
+										<h5 class="mb-2"><i class="fa fa-folder-open text-secondary me-2"></i> Backups auf dem Server</h5>
+										<p class="text-muted small mb-2">Sicherheits-Backups vor jedem Restore, plus Kopien von „Backup herunterladen“. Speicherort im Container: <code>BACKUP_ARCHIVE_DIR</code> (z. B. <code>/data/backups</code>).</p>
+										<div class="table-responsive border rounded">
+											<table class="table table-sm table-hover mb-0" id="serverBackupsTable">
+												<thead class="backup-table-thead">
+													<tr>
+														<th style="width:2.5rem;">
+															<input type="checkbox" class="form-check-input" id="serverBackupSelectAll" title="Alle markieren">
+														</th>
+														<th>Datei</th>
+														<th>Typ</th>
+														<th>Größe</th>
+														<th>Datum (UTC)</th>
+														<th style="width:12rem;">Aktionen</th>
+													</tr>
+												</thead>
+												<tbody id="serverBackupsBody">
+													<tr><td colspan="6" class="text-muted small">Lade Liste…</td></tr>
+												</tbody>
+											</table>
+										</div>
+										<div class="d-flex flex-wrap gap-2 mt-2">
+											<button type="button" class="btn btn-outline-danger btn-sm" id="deleteSelectedBackupsBtn" disabled>
+												<i class="fa fa-trash"></i> Ausgewählte löschen
+											</button>
+											<button type="button" class="btn btn-outline-secondary btn-sm" id="refreshServerBackupsBtn">
+												<i class="fa fa-sync"></i> Liste aktualisieren
+											</button>
+										</div>
+										<div id="serverBackupsAlert" class="alert mt-2" style="display: none;" role="alert"></div>
+
+										<h5 class="mb-2 mt-4"><i class="fa fa-history text-secondary me-2"></i> Journal (Backup / Restore)</h5>
+										<p class="text-muted small mb-2">Letzte Aktionen: Quelle, Ziel, Status, Details.</p>
+										<div class="table-responsive border rounded">
+											<table class="table table-sm table-hover mb-0" id="backupJournalTable">
+												<thead class="backup-table-thead">
+													<tr>
+														<th>Zeit (UTC)</th>
+														<th>Aktion</th>
+														<th>Von / Quelle</th>
+														<th>Nach / Ziel</th>
+														<th>Status</th>
+														<th>Details</th>
+													</tr>
+												</thead>
+												<tbody id="backupJournalBody">
+													<tr><td colspan="6" class="text-muted small">Lade Journal…</td></tr>
+												</tbody>
+											</table>
+										</div>
+										<button type="button" class="btn btn-outline-secondary btn-sm mt-2" id="refreshBackupJournalBtn">
+											<i class="fa fa-sync"></i> Journal aktualisieren
+										</button>
+
+										<div class="mt-4 border-top pt-3">
+											<h5 class="mb-2"><i class="fa fa-database text-secondary me-2"></i> Datenbank-Schema (Migrationen)</h5>
+											<p class="text-muted small mb-2">
+												<strong>Empfohlen (Docker):</strong> Beim <strong>Start des Web-Containers</strong> wird <code>python manage.py migrate --noinput</code> automatisch ausgeführt, bevor Gunicorn startet. Neues Image ziehen und Container neu starten reicht – keine manuelle Migration nötig.
+											</p>
+											<p class="text-muted small mb-2">
+												<strong>Lokal ohne Docker:</strong> Virtuelle Umgebung aktivieren, <code>pip install -r requirements.txt</code>, dann <code>python manage.py migrate</code>. Der Fehler „No module named django“ bedeutet: Abhängigkeiten fehlen oder venv nicht aktiv.
+											</p>
+											<p class="small mb-2" id="migrationStatusLine"><span class="text-muted">Status wird geladen…</span></p>
+											{% if allow_ui_migrate %}
+											<button type="button" class="btn btn-warning btn-sm mb-2" id="migrationRunBtn">
+												<i class="fa fa-cog"></i> Migration jetzt ausführen (Fallback)
+											</button>
+											<p class="text-muted small mb-0">Nur aktiv, wenn <code>ALLOW_UI_MIGRATE=1</code> gesetzt ist – nicht parallel auf mehreren Instanzen klicken.</p>
+											<pre id="migrationOutput" class="small mt-2 bg-light p-2 rounded border" style="display: none; max-height: 200px; overflow: auto;"></pre>
+											{% endif %}
 										</div>
 									</div>
 								</div>
@@ -796,6 +885,40 @@ docker exec megacnc-web-1 rm megacnc_backup_XXXXXX.json</code></pre>
 						</div>
 					</div>
 				</div>
+			</div>
+		</div>
+	</div>
+</div>
+
+<!-- Modal: Restore von Server-Datei -->
+<div class="modal fade" id="restoreServerBackupModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false" aria-labelledby="restoreServerBackupModalLabel" aria-hidden="true">
+	<div class="modal-dialog modal-dialog-centered">
+		<div class="modal-content">
+			<div class="modal-header">
+				<h5 class="modal-title" id="restoreServerBackupModalLabel">Backup vom Server einspielen</h5>
+				<button type="button" class="btn-close" id="restoreServerModalCloseBtn" data-bs-dismiss="modal" aria-label="Schließen"></button>
+			</div>
+			<div class="modal-body">
+				<div id="restoreServerModalMainContent">
+					<p class="small text-break mb-2">Datei: <strong id="restoreServerBackupFilename"></strong></p>
+					<p class="text-muted small">Alle aktuellen Daten werden gelöscht und durch diese Datei ersetzt. Vorher wird ein neues Sicherheits-Backup erzeugt.</p>
+					<div class="form-check">
+						<input class="form-check-input" type="checkbox" id="restoreServerConfirmCheck">
+						<label class="form-check-label" for="restoreServerConfirmCheck">Ich bestätige die Wiederherstellung.</label>
+					</div>
+				</div>
+				<div id="restoreServerProgress" class="mt-3" style="display: none;" aria-live="polite">
+					<p class="small text-muted mb-2">Restore läuft – bitte warten (kann mehrere Minuten dauern). Dialog nicht schließen.</p>
+					<div class="progress" style="height: 8px;">
+						<div class="progress-bar progress-bar-striped progress-bar-animated w-100" role="progressbar"></div>
+					</div>
+				</div>
+			</div>
+			<div class="modal-footer">
+				<button type="button" class="btn btn-danger light" id="restoreServerCancelBtn" data-bs-dismiss="modal">Abbrechen</button>
+				<button type="button" class="btn btn-primary" id="restoreServerBackupSubmitBtn" disabled>
+					<i class="fa fa-upload"></i> Einspielen
+				</button>
 			</div>
 		</div>
 	</div>
@@ -829,9 +952,356 @@ docker exec megacnc-web-1 rm megacnc_backup_XXXXXX.json</code></pre>
 {% block additional_js %}
 	<script>
 		$(document).ready(function(){
-			// SmartWizard initialize
 			$('#smartwizard').smartWizard();
+			loadServerBackups();
+			loadBackupJournal();
+			loadMigrationStatus();
 		});
+
+		function loadMigrationStatus() {
+			var el = document.getElementById('migrationStatusLine');
+			if (!el) return;
+			fetch('{% url "megacellcnc:migration-status" %}')
+				.then(function (r) { return r.json(); })
+				.then(function (d) {
+					if (!d.ok) {
+						el.innerHTML = '<span class="text-danger">Konnte Status nicht lesen: ' + (d.error || '') + '</span>';
+						return;
+					}
+					var n = d.pending_count || 0;
+					if (n === 0) {
+						el.innerHTML = '<span class="text-success"><i class="fa fa-check"></i> Keine ausstehenden Migrationen.</span>';
+					} else {
+						el.innerHTML = '<span class="text-warning"><strong>' + n + '</strong> ausstehende Migration(en).</span> Nach dem nächsten Container-Neustart (mit migrate im Startbefehl) sollten sie angewendet werden.';
+					}
+				})
+				.catch(function () {
+					el.innerHTML = '<span class="text-danger">Status nicht erreichbar.</span>';
+				});
+		}
+		{% if allow_ui_migrate %}
+		(function () {
+			var btn = document.getElementById('migrationRunBtn');
+			var pre = document.getElementById('migrationOutput');
+			if (!btn) return;
+			btn.addEventListener('click', function () {
+				if (!confirm('Migration jetzt auf dem Server ausführen?')) return;
+				btn.disabled = true;
+				if (pre) { pre.style.display = 'block'; pre.textContent = 'Läuft…'; }
+				fetch('{% url "megacellcnc:migration-run" %}', {
+					method: 'POST',
+					headers: {
+						'Content-Type': 'application/json',
+						'X-CSRFToken': getCookie('csrftoken')
+					},
+					body: '{}'
+				})
+					.then(function (r) { return r.json().then(function (data) { return { ok: r.ok, data: data }; }); })
+					.then(function (res) {
+						if (pre) pre.textContent = (res.data.output || '') + (res.data.error ? '\n' + res.data.error : '');
+						loadMigrationStatus();
+					})
+					.catch(function (e) {
+						if (pre) pre.textContent = e.message || 'Fehler';
+					})
+					.finally(function () {
+						btn.disabled = false;
+					});
+			});
+		})();
+		{% endif %}
+
+		function loadBackupJournal() {
+			var tbody = document.getElementById('backupJournalBody');
+			if (!tbody) return;
+			tbody.innerHTML = '<tr><td colspan="6" class="text-muted small">Lade…</td></tr>';
+			fetch('{% url "megacellcnc:backup-journal" %}?limit=150')
+				.then(function (r) { return r.json(); })
+				.then(function (d) {
+					tbody.innerHTML = '';
+					var list = d.entries || [];
+					if (!list.length) {
+						var tr0 = document.createElement('tr');
+						var td0 = document.createElement('td');
+						td0.colSpan = 6;
+						td0.className = 'text-muted';
+						td0.textContent = 'Noch keine Einträge.';
+						tr0.appendChild(td0);
+						tbody.appendChild(tr0);
+						return;
+					}
+					list.forEach(function (e) {
+						var tr = document.createElement('tr');
+						function td(cls, text) {
+							var x = document.createElement('td');
+							x.className = 'small ' + (cls || '');
+							x.textContent = text || '';
+							tr.appendChild(x);
+						}
+						var t = e.created_at || '';
+						if (t.length > 19) t = t.slice(0, 19).replace('T', ' ');
+						td('', t + ' UTC');
+						td('', e.action_label || e.action);
+						td('text-break', e.source);
+						td('text-break', e.target);
+						var st = e.status_label || e.status;
+						var tdSt = document.createElement('td');
+						tdSt.className = 'small';
+						var badge = document.createElement('span');
+						badge.className = 'badge ' + (
+							e.status === 'success' ? 'bg-success' :
+							e.status === 'rolled_back' ? 'bg-warning text-dark' :
+							e.status === 'partial' ? 'bg-info text-dark' : 'bg-danger'
+						);
+						badge.textContent = st;
+						tdSt.appendChild(badge);
+						tr.appendChild(tdSt);
+						td('text-break', e.detail || '—');
+						tbody.appendChild(tr);
+					});
+				})
+				.catch(function () {
+					tbody.innerHTML = '<tr><td colspan="6" class="text-danger">Journal konnte nicht geladen werden.</td></tr>';
+				});
+		}
+
+		function serverBackupKindLabel(kind) {
+			if (kind === 'sicherheit') return 'Sicherheit (vor Restore)';
+			if (kind === 'manuell') return 'Manuell (Download)';
+			return 'Archiv';
+		}
+		function formatServerBytes(n) {
+			n = Number(n) || 0;
+			if (n < 1024) return n + ' B';
+			if (n < 1048576) return (n / 1024).toFixed(1) + ' KB';
+			return (n / 1048576).toFixed(1) + ' MB';
+		}
+		function updateServerBackupDeleteBtn() {
+			var btn = document.getElementById('deleteSelectedBackupsBtn');
+			if (!btn) return;
+			var n = document.querySelectorAll('#serverBackupsBody .server-backup-chk:checked').length;
+			btn.disabled = n === 0;
+		}
+		function loadServerBackups() {
+			var tbody = document.getElementById('serverBackupsBody');
+			if (!tbody) return;
+			tbody.innerHTML = '<tr><td colspan="6" class="text-muted small">Lade…</td></tr>';
+			fetch('{% url "megacellcnc:list-server-backups" %}')
+				.then(function (r) { return r.json(); })
+				.then(function (d) {
+					tbody.innerHTML = '';
+					if (d.error) {
+						var tr = document.createElement('tr');
+						var td = document.createElement('td');
+						td.colSpan = 6;
+						td.className = 'text-danger';
+						td.textContent = d.error;
+						tr.appendChild(td);
+						tbody.appendChild(tr);
+						return;
+					}
+					var list = d.backups || [];
+					if (!list.length) {
+						var tr0 = document.createElement('tr');
+						var td0 = document.createElement('td');
+						td0.colSpan = 6;
+						td0.className = 'text-muted';
+						td0.textContent = 'Keine Backups im Archiv.';
+						tr0.appendChild(td0);
+						tbody.appendChild(tr0);
+						return;
+					}
+					var dlBase = '{% url "megacellcnc:download-server-backup" %}';
+					list.forEach(function (b) {
+						var tr = document.createElement('tr');
+						var tdChk = document.createElement('td');
+						var chk = document.createElement('input');
+						chk.type = 'checkbox';
+						chk.className = 'form-check-input server-backup-chk';
+						chk.value = b.name;
+						chk.addEventListener('change', updateServerBackupDeleteBtn);
+						tdChk.appendChild(chk);
+						tr.appendChild(tdChk);
+						function tdText(cls, text) {
+							var td = document.createElement('td');
+							td.className = cls || 'small';
+							td.textContent = text;
+							tr.appendChild(td);
+						}
+						tdText('small text-break', b.name);
+						tdText('small', serverBackupKindLabel(b.kind));
+						tdText('small', formatServerBytes(b.size));
+						var dt = new Date((b.modified || 0) * 1000);
+						tdText('small', dt.toISOString().replace('T', ' ').slice(0, 19) + ' UTC');
+						var tdAct = document.createElement('td');
+						tdAct.className = 'small';
+						var a = document.createElement('a');
+						a.className = 'btn btn-link btn-sm p-0 me-2';
+						a.href = dlBase + '?file=' + encodeURIComponent(b.name);
+						a.textContent = 'Herunterladen';
+						tdAct.appendChild(a);
+						var rb = document.createElement('button');
+						rb.type = 'button';
+						rb.className = 'btn btn-link btn-sm p-0 restore-server-btn';
+						rb.textContent = 'Einspielen';
+						rb.setAttribute('data-filename', b.name);
+						tdAct.appendChild(rb);
+						tr.appendChild(tdAct);
+						tbody.appendChild(tr);
+					});
+					updateServerBackupDeleteBtn();
+				})
+				.catch(function () {
+					tbody.innerHTML = '<tr><td colspan="6" class="text-danger">Liste konnte nicht geladen werden.</td></tr>';
+				});
+		}
+		var pendingRestoreServerFilename = '';
+		function openRestoreServerModal(filename) {
+			pendingRestoreServerFilename = filename || '';
+			var fnEl = document.getElementById('restoreServerBackupFilename');
+			var chk = document.getElementById('restoreServerConfirmCheck');
+			var sub = document.getElementById('restoreServerBackupSubmitBtn');
+			var prog = document.getElementById('restoreServerProgress');
+			var main = document.getElementById('restoreServerModalMainContent');
+			if (fnEl) fnEl.textContent = pendingRestoreServerFilename;
+			if (chk) chk.checked = false;
+			if (sub) {
+				sub.disabled = true;
+				sub.innerHTML = '<i class="fa fa-upload"></i> Einspielen';
+			}
+			if (prog) prog.style.display = 'none';
+			if (main) main.style.display = 'block';
+			var el = document.getElementById('restoreServerBackupModal');
+			if (el && window.bootstrap && bootstrap.Modal) bootstrap.Modal.getOrCreateInstance(el).show();
+		}
+		function syncRestoreServerSubmitBtn() {
+			var chk = document.getElementById('restoreServerConfirmCheck');
+			var sub = document.getElementById('restoreServerBackupSubmitBtn');
+			if (sub && chk) sub.disabled = !chk.checked;
+		}
+		document.addEventListener('click', function (e) {
+			if (e.target && e.target.classList && e.target.classList.contains('restore-server-btn')) {
+				var fn = e.target.getAttribute('data-filename');
+				if (fn) openRestoreServerModal(fn);
+			}
+		});
+		document.addEventListener('change', function (e) {
+			if (e.target && e.target.id === 'restoreServerConfirmCheck') {
+				syncRestoreServerSubmitBtn();
+			}
+			if (e.target && e.target.id === 'serverBackupSelectAll') {
+				var on = e.target.checked;
+				document.querySelectorAll('#serverBackupsBody .server-backup-chk').forEach(function (c) { c.checked = on; });
+				updateServerBackupDeleteBtn();
+			}
+		});
+		(function () {
+			var delBtn = document.getElementById('deleteSelectedBackupsBtn');
+			var refBtn = document.getElementById('refreshServerBackupsBtn');
+			var subBtn = document.getElementById('restoreServerBackupSubmitBtn');
+			var alertEl = document.getElementById('serverBackupsAlert');
+			if (refBtn) refBtn.addEventListener('click', function () { loadServerBackups(); });
+			var jrefBtn = document.getElementById('refreshBackupJournalBtn');
+			if (jrefBtn) jrefBtn.addEventListener('click', function () { loadBackupJournal(); });
+			if (delBtn) delBtn.addEventListener('click', function () {
+				var names = [];
+				document.querySelectorAll('#serverBackupsBody .server-backup-chk:checked').forEach(function (c) { names.push(c.value); });
+				if (!names.length) return;
+				if (!confirm(names.length + ' Backup(s) wirklich löschen?')) return;
+				delBtn.disabled = true;
+				fetch('{% url "megacellcnc:delete-server-backups" %}', {
+					method: 'POST',
+					headers: {
+						'Content-Type': 'application/json',
+						'X-CSRFToken': getCookie('csrftoken')
+					},
+					body: JSON.stringify({ filenames: names })
+				})
+					.then(function (r) { return r.json(); })
+					.then(function (d) {
+						if (alertEl) {
+							alertEl.style.display = 'block';
+							if (d.success) {
+								alertEl.className = 'alert alert-success mt-2';
+								alertEl.textContent = 'Gelöscht: ' + (d.deleted || []).join(', ');
+							} else {
+								alertEl.className = 'alert alert-danger mt-2';
+								alertEl.textContent = (d.error || 'Fehler');
+							}
+						}
+						loadServerBackups();
+						loadBackupJournal();
+						var selAll = document.getElementById('serverBackupSelectAll');
+						if (selAll) selAll.checked = false;
+					})
+					.catch(function () {
+						if (alertEl) {
+							alertEl.style.display = 'block';
+							alertEl.className = 'alert alert-danger mt-2';
+							alertEl.textContent = 'Netzwerkfehler beim Löschen.';
+						}
+					})
+					.finally(function () { delBtn.disabled = false; updateServerBackupDeleteBtn(); });
+			});
+			if (subBtn) subBtn.addEventListener('click', function () {
+				if (!pendingRestoreServerFilename) return;
+				var prog = document.getElementById('restoreServerProgress');
+				var main = document.getElementById('restoreServerModalMainContent');
+				var cancelBtn = document.getElementById('restoreServerCancelBtn');
+				var closeBtn = document.getElementById('restoreServerModalCloseBtn');
+				var chk = document.getElementById('restoreServerConfirmCheck');
+				subBtn.disabled = true;
+				if (cancelBtn) cancelBtn.disabled = true;
+				if (closeBtn) closeBtn.style.pointerEvents = 'none';
+				if (chk) chk.disabled = true;
+				if (main) main.style.display = 'none';
+				if (prog) prog.style.display = 'block';
+				subBtn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Wird eingespielt…';
+				var serverRestoreWillReload = false;
+				fetch('{% url "megacellcnc:restore-server-backup" %}', {
+					method: 'POST',
+					headers: {
+						'Content-Type': 'application/json',
+						'X-CSRFToken': getCookie('csrftoken')
+					},
+					body: JSON.stringify({ filename: pendingRestoreServerFilename, confirm_restore: '1' })
+				})
+					.then(function (r) {
+						return r.json().then(function (data) { return { ok: r.ok, status: r.status, data: data }; });
+					})
+					.then(function (res) {
+						if (res.ok && res.data.success) {
+							serverRestoreWillReload = true;
+							var modalEl = document.getElementById('restoreServerBackupModal');
+							if (modalEl && window.bootstrap && bootstrap.Modal) bootstrap.Modal.getOrCreateInstance(modalEl).hide();
+							setTimeout(function () { location.reload(); }, 800);
+						} else if (alertEl) {
+							alertEl.style.display = 'block';
+							alertEl.className = 'alert alert-' + (res.status === 422 ? 'warning' : 'danger') + ' mt-2';
+							alertEl.textContent = (res.data && res.data.error) ? res.data.error : 'Fehler';
+							loadBackupJournal();
+						}
+					})
+					.catch(function () {
+						if (alertEl) {
+							alertEl.style.display = 'block';
+							alertEl.className = 'alert alert-danger mt-2';
+							alertEl.textContent = 'Netzwerkfehler.';
+						}
+						if (typeof loadBackupJournal === 'function') loadBackupJournal();
+					})
+					.finally(function () {
+						if (serverRestoreWillReload) return;
+						if (prog) prog.style.display = 'none';
+						if (main) main.style.display = 'block';
+						if (cancelBtn) cancelBtn.disabled = false;
+						if (closeBtn) closeBtn.style.pointerEvents = '';
+						if (chk) chk.disabled = false;
+						subBtn.innerHTML = '<i class="fa fa-upload"></i> Einspielen';
+						syncRestoreServerSubmitBtn();
+					});
+			});
+		})();
 
 		// Database Backup Download
 		function downloadBackup() {
@@ -882,8 +1352,83 @@ docker exec megacnc-web-1 rm megacnc_backup_XXXXXX.json</code></pre>
 				.finally(() => {
 					btn.disabled = false;
 					btn.innerHTML = '<i class="fa fa-download"></i> Backup herunterladen';
+					if (typeof loadServerBackups === 'function') loadServerBackups();
+					if (typeof loadBackupJournal === 'function') loadBackupJournal();
 				});
 		}
+
+		(function () {
+			var chk = document.getElementById('restoreConfirmCheck');
+			var btn = document.getElementById('restoreBackupBtn');
+			var fileInput = document.getElementById('restoreBackupFile');
+			var progressEl = document.getElementById('restoreBackupProgress');
+			if (!chk || !btn || !fileInput) return;
+			function syncRestoreBtn() {
+				btn.disabled = !chk.checked || !fileInput.files.length;
+			}
+			chk.addEventListener('change', syncRestoreBtn);
+			fileInput.addEventListener('change', syncRestoreBtn);
+			btn.addEventListener('click', function () {
+				var statusDiv = document.getElementById('restoreBackupStatus');
+				if (!fileInput.files.length) {
+					statusDiv.className = 'alert alert-warning';
+					statusDiv.textContent = 'Bitte eine Datei wählen.';
+					statusDiv.style.display = 'block';
+					return;
+				}
+				var fd = new FormData();
+				fd.append('backup_file', fileInput.files[0]);
+				fd.append('confirm_restore', '1');
+				btn.disabled = true;
+				chk.disabled = true;
+				fileInput.disabled = true;
+				btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Wird eingespielt…';
+				if (statusDiv) statusDiv.style.display = 'none';
+				if (progressEl) progressEl.style.display = 'block';
+				fetch('{% url "megacellcnc:restore-backup" %}', {
+					method: 'POST',
+					body: fd,
+					headers: { 'X-CSRFToken': getCookie('csrftoken') }
+				})
+					.then(function (r) {
+						return r.json().then(function (data) {
+							return { ok: r.ok, status: r.status, data: data };
+						});
+					})
+					.then(function (res) {
+						if (!statusDiv) return;
+						statusDiv.style.display = 'block';
+						if (res.ok && res.data.success) {
+							statusDiv.className = 'alert alert-success';
+							statusDiv.textContent = res.data.message || 'OK';
+							setTimeout(function () { location.reload(); }, 1200);
+						} else if (res.status === 422 && res.data.recovered) {
+							statusDiv.className = 'alert alert-warning';
+							statusDiv.textContent = res.data.error || 'Zurückgesetzt.';
+							if (typeof loadBackupJournal === 'function') loadBackupJournal();
+						} else {
+							statusDiv.className = 'alert alert-danger';
+							statusDiv.textContent = (res.data && res.data.error) ? res.data.error : 'Fehler';
+							if (typeof loadBackupJournal === 'function') loadBackupJournal();
+						}
+					})
+					.catch(function (e) {
+						if (statusDiv) {
+							statusDiv.style.display = 'block';
+							statusDiv.className = 'alert alert-danger';
+							statusDiv.textContent = e.message || 'Netzwerkfehler';
+						}
+						if (typeof loadBackupJournal === 'function') loadBackupJournal();
+					})
+					.finally(function () {
+						if (progressEl) progressEl.style.display = 'none';
+						chk.disabled = false;
+						fileInput.disabled = false;
+						btn.innerHTML = '<i class="fa fa-upload"></i> Aus Datei wiederherstellen';
+						syncRestoreBtn();
+					});
+			});
+		})();
 
 		function getCookie(name) {
 			var cookieValue = null;
