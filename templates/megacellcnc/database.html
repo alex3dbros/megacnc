@@ -205,6 +205,7 @@
                     <li><label class="dropdown-item"><input type="checkbox" class="column-toggle" data-column="col-available" checked> Available</label></li>
                     <li><label class="dropdown-item"><input type="checkbox" class="column-toggle" data-column="col-condition" checked> Condition</label></li>
                     <li><label class="dropdown-item"><input type="checkbox" class="column-toggle" data-column="col-project" checked> Project</label></li>
+                    <li><label class="dropdown-item"><input type="checkbox" class="column-toggle" data-column="col-battery" checked> Battery Pack</label></li>
                     <li><label class="dropdown-item"><input type="checkbox" class="column-toggle" data-column="col-type" checked> Type</label></li>
                     <li><label class="dropdown-item"><input type="checkbox" class="column-toggle" data-column="col-chemistry" checked> Chemistry</label></li>
                     <li><label class="dropdown-item"><input type="checkbox" class="column-toggle" data-column="col-capacity" checked> Capacity</label></li>
@@ -389,6 +390,7 @@
                                     <th class="col-available">Available</th>
                                     <th class="col-condition">Condition</th>
                                     <th class="col-project">Project</th>
+                                    <th class="col-battery">Battery Pack</th>
                                     <th class="col-type">Type</th>
                                     <th class="col-chemistry">Chemistry</th>
                                     <th class="col-capacity">Capacity</th>
@@ -421,6 +423,7 @@
                                         </span>
                                     </td>
                                     <td class="col-project">{{ cell.project.Name }}</td>
+                                    <td class="col-battery">{% if cell.battery %}{{ cell.battery.name }}{% else %}—{% endif %}</td>
                                     <td class="col-type">{{ cell.cell_type }}</td>
                                     <td class="col-chemistry">{{ cell.min_voltage }}, {{ cell.store_voltage }}, {{ cell.max_voltage }}</td>
                                     <td class="col-capacity">{{ cell.capacity }}</td>
@@ -471,7 +474,7 @@
                                 </tr>
 
                                 {% empty %}
-                                <tr><td colspan="13" style="text-align:center;">No cells found.</td></tr>
+                                <tr><td colspan="14" style="text-align:center;">No cells found.</td></tr>
                                 {% endfor %}
 
                                 </tbody>
@@ -830,7 +833,7 @@ $(document).ready(function() {
         const projectId = urlParams.get('project') || 'all';
         
         // Loading-Indikator
-        $('#database-tbl tbody').html('<tr><td colspan="13" class="text-center"><i class="fa fa-spinner fa-spin"></i> Searching...</td></tr>');
+        $('#database-tbl tbody').html('<tr><td colspan="14" class="text-center"><i class="fa fa-spinner fa-spin"></i> Searching...</td></tr>');
         
         // AJAX Request
         $.ajax({
@@ -865,7 +868,7 @@ $(document).ready(function() {
                 }
             },
             error: function(xhr, status, error) {
-                $('#database-tbl tbody').html('<tr><td colspan="13" class="text-center text-danger">Error loading data. Please try again.</td></tr>');
+                $('#database-tbl tbody').html('<tr><td colspan="14" class="text-center text-danger">Error loading data. Please try again.</td></tr>');
                 console.error('Search error:', error);
             }
         });

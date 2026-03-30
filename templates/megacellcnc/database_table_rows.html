@@ -17,6 +17,7 @@
         </span>
     </td>
     <td class="col-project">{{ cell.project.Name }}</td>
+    <td class="col-battery">{% if cell.battery %}{{ cell.battery.name }}{% else %}—{% endif %}</td>
     <td class="col-type">{{ cell.cell_type }}</td>
     <td class="col-chemistry">{{ cell.min_voltage }}, {{ cell.store_voltage }}, {{ cell.max_voltage }}</td>
     <td class="col-capacity">{{ cell.capacity }}</td>
@@ -61,5 +62,5 @@
     </td>
 </tr>
 {% empty %}
-<tr><td colspan="13" style="text-align:center;">No cells found.</td></tr>
+<tr><td colspan="14" style="text-align:center;">No cells found.</td></tr>
 {% endfor %}

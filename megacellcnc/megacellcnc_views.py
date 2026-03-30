@@ -521,12 +521,16 @@ def database(request):
     status_filter = request.GET.get('status', '')
     per_page = int(request.GET.get('per_page', 100))
 
-    # Base queryset
+    # Base queryset (project + battery für Anzeige ohne N+1)
     if project_id == 'all' or project_id is None:
-        cells_queryset = Cells.objects.all().order_by('id')
+        cells_queryset = Cells.objects.select_related('project', 'battery').all().order_by('id')
         selected_project_name = "All"
     else:
-        cells_queryset = Cells.objects.filter(project__id=project_id).order_by('id')
+        cells_queryset = (
+            Cells.objects.select_related('project', 'battery')
+            .filter(project__id=project_id)
+            .order_by('id')
+        )
         selected_project_name = Projects.objects.get(id=project_id).Name
 
     # Jahr-Filter (aus UUID extrahiert)
@@ -608,10 +612,14 @@ def database_search_ajax(request):
     
     # Base queryset
     if project_id == 'all' or project_id is None:
-        cells_queryset = Cells.objects.all().order_by('id')
+        cells_queryset = Cells.objects.select_related('project', 'battery').all().order_by('id')
     else:
-        cells_queryset = Cells.objects.filter(project__id=project_id).order_by('id')
-    
+        cells_queryset = (
+            Cells.objects.select_related('project', 'battery')
+            .filter(project__id=project_id)
+            .order_by('id')
+        )
+
     # Jahr-Filter
     if year_filter:
         cells_queryset = cells_queryset.filter(UUID__startswith=f'D{year_filter}')
