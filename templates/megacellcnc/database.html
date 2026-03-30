@@ -290,6 +290,20 @@
                                         </div>
                                     </div>
                                     
+                                    <!-- Battery Pack Filter -->
+                                    <div class="dropdown" style="position: relative; z-index: 20;">
+                                        <button type="button" class="btn btn-secondary dropdown-toggle" data-bs-toggle="dropdown" id="batteryFilterBtn">
+                                            <i class="fa fa-battery-half me-2"></i>{{ selected_battery_label }}
+                                        </button>
+                                        <div class="dropdown-menu" style="z-index: 1050;">
+                                            <a class="dropdown-item filter-battery" href="#" data-battery="">Alle Packs</a>
+                                            <a class="dropdown-item filter-battery" href="#" data-battery="none">Ohne Pack</a>
+                                            {% for b in batteries %}
+                                            <a class="dropdown-item filter-battery" href="#" data-battery="{{ b.id }}">{{ b.name }}</a>
+                                            {% endfor %}
+                                        </div>
+                                    </div>
+                                    
                                     <!-- Per Page Dropdown -->
                                     <div class="dropdown" style="position: relative; z-index: 20;">
                                         <button type="button" class="btn btn-secondary dropdown-toggle" data-bs-toggle="dropdown" id="perPageBtn">
@@ -815,6 +829,16 @@ $(document).ready(function() {
         performAjaxSearch(currentSearchValue, 1);
     });
     
+    // Battery Pack Filter
+    $('.filter-battery').on('click', function(e) {
+        e.preventDefault();
+        const bat = $(this).data('battery');
+        currentBatteryFilter = bat === undefined || bat === null ? '' : String(bat);
+        currentBatteryLabel = $(this).text().trim();
+        $('#batteryFilterBtn').html('<i class="fa fa-battery-half me-2"></i>' + currentBatteryLabel);
+        performAjaxSearch(currentSearchValue, 1);
+    });
+    
     // Per Page Filter
     $('.per-page-option').on('click', function(e) {
         e.preventDefault();
@@ -844,6 +868,7 @@ $(document).ready(function() {
                 project: projectId,
                 year: currentYearFilter,
                 status: currentStatusFilter,
+                battery: currentBatteryFilter,
                 page: page,
                 per_page: currentPerPage
             },
@@ -864,7 +889,7 @@ $(document).ready(function() {
                     }
                     
                     // Update URL ohne Reload
-                    updateURLParams(searchValue, page, projectId, currentYearFilter, currentStatusFilter, currentPerPage);
+                    updateURLParams(searchValue, page, projectId, currentYearFilter, currentStatusFilter, currentPerPage, currentBatteryFilter);
                 }
             },
             error: function(xhr, status, error) {
@@ -879,6 +904,7 @@ $(document).ready(function() {
         const filters = [];
         if (currentYearFilter) filters.push(`Year: ${currentYearFilter}`);
         if (currentStatusFilter) filters.push(currentStatusFilter === 'Yes' ? 'Available' : 'Not Available');
+        if (currentBatteryFilter) filters.push(`Battery: ${currentBatteryLabel}`);
         
         const onFirstPage = response.page <= 1;
         const onLastPage = response.page >= response.num_pages;
@@ -944,7 +970,7 @@ $(document).ready(function() {
     }
     
     // Update URL ohne Page Reload
-    function updateURLParams(searchValue, page, projectId, yearFilter, statusFilter, perPage) {
+    function updateURLParams(searchValue, page, projectId, yearFilter, statusFilter, perPage, batteryFilter) {
         const urlParams = new URLSearchParams();
         
         if (projectId && projectId !== 'all') {
@@ -957,6 +983,10 @@ $(document).ready(function() {
         
         if (statusFilter) {
             urlParams.set('status', statusFilter);
+        }
+        
+        if (batteryFilter) {
+            urlParams.set('battery', batteryFilter);
         }
         
         if (searchValue) {

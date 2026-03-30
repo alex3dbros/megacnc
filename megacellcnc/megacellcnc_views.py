@@ -515,11 +515,25 @@ def database(request):
     from django.db.models import Q
 
     projects = Projects.objects.all()
+    batteries_qs = Batteries.objects.order_by('name')
     project_id = request.GET.get('project')
     search_query = request.GET.get('search', '').strip()
     year_filter = request.GET.get('year', '')
     status_filter = request.GET.get('status', '')
+    battery_filter = request.GET.get('battery', '').strip()
     per_page = int(request.GET.get('per_page', 100))
+
+    selected_battery_label = 'Alle Packs'
+    if battery_filter == 'none':
+        selected_battery_label = 'Ohne Pack'
+    elif battery_filter.isdigit():
+        bobj = Batteries.objects.filter(pk=int(battery_filter)).first()
+        if bobj:
+            selected_battery_label = bobj.name
+        else:
+            battery_filter = ''
+    elif battery_filter:
+        battery_filter = ''
 
     # Base queryset (project + battery für Anzeige ohne N+1)
     if project_id == 'all' or project_id is None:
@@ -542,6 +556,16 @@ def database(request):
     # Status-Filter (Available)
     if status_filter:
         cells_queryset = cells_queryset.filter(available__iexact=status_filter)
+
+    # Battery-Pack-Filter
+    if battery_filter == 'none':
+        cells_queryset = cells_queryset.filter(battery__isnull=True)
+    elif battery_filter.isdigit():
+        bid = int(battery_filter)
+        if Batteries.objects.filter(pk=bid).exists():
+            cells_queryset = cells_queryset.filter(battery_id=bid)
+        else:
+            battery_filter = ''
 
     # Partial Match Suche nur in Seriennummer (ab 3 Zeichen)
     search_results = None
@@ -590,7 +614,10 @@ def database(request):
         'search_results': search_results,
         'available_years': available_years,
         'selected_year': year_filter,
-        'selected_status': status_filter
+        'selected_status': status_filter,
+        'batteries': batteries_qs,
+        'selected_battery': battery_filter,
+        'selected_battery_label': selected_battery_label,
     }
     return render(request, 'megacellcnc/database.html', context)
 
@@ -607,9 +634,14 @@ def database_search_ajax(request):
     search_query = request.GET.get('search', '').strip()
     year_filter = request.GET.get('year', '')
     status_filter = request.GET.get('status', '')
+    battery_filter = request.GET.get('battery', '').strip()
+    if battery_filter and battery_filter != 'none' and not battery_filter.isdigit():
+        battery_filter = ''
+    elif battery_filter.isdigit() and not Batteries.objects.filter(pk=int(battery_filter)).exists():
+        battery_filter = ''
     page = request.GET.get('page', 1)
     per_page = int(request.GET.get('per_page', 100))
-    
+
     # Base queryset
     if project_id == 'all' or project_id is None:
         cells_queryset = Cells.objects.select_related('project', 'battery').all().order_by('id')
@@ -627,6 +659,14 @@ def database_search_ajax(request):
     # Status-Filter
     if status_filter:
         cells_queryset = cells_queryset.filter(available__iexact=status_filter)
+
+    # Battery-Pack-Filter
+    if battery_filter == 'none':
+        cells_queryset = cells_queryset.filter(battery__isnull=True)
+    elif battery_filter.isdigit():
+        bid = int(battery_filter)
+        if Batteries.objects.filter(pk=bid).exists():
+            cells_queryset = cells_queryset.filter(battery_id=bid)
     
     # Partial Match Search nur in Seriennummer
     search_results = None
