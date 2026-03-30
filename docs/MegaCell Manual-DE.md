@@ -563,7 +563,7 @@ Bei grossen Packs (500+ Zellen) wird der Balancing-Fortschritt automatisch gesic
 
 ## 7. Settings
 
-Die Settings-Seite ist in **zwei Tabs** organisiert: **Printer** und **Backup & Restore**. Weitere App-Einstellungen sind hier nicht zentral gebündelt.
+Die Settings-Seite ist in **drei Tabs** organisiert: **Printer**, **Devices** (u. a. Beat-Intervall) und **Backup & Restore**. Weitere App-Einstellungen sind hier nicht zentral gebündelt.
 
 ### Tab: Printer
 
@@ -662,14 +662,85 @@ sudo /tmp/qz-tray.run
 
 ### Tab: Backup & Restore
 
+Hier verwaltest du **Datenbank-Backups** (JSON-Fixture, gzip) und siehst **Protokolle** sowie optional den **Migrations-Status**.
+
+---
+
 #### Backup erstellen
-- Klick auf **"Backup herunterladen"**
-- Erstellt eine komprimierte JSON-Datei (`.json.gz`)
-- Enthält alle Projekte, Zellen, Batterien, Einstellungen
 
-#### Backup wiederherstellen
+- Klick auf **„Backup herunterladen“**.
+- Es wird eine komprimierte Datei **`.json.gz`** im Browser heruntergeladen (Inhalt: Projekte, Zellen, Batterien, Geräte, Drucker-Einstellungen u. a. – entspricht `dumpdata`).
+- **Zusätzlich** legt die App eine **Kopie mit gleichem Dateinamen** im **Server-Archiv** ab (siehe unten), damit Backups auch ohne erneuten Download auf dem Server verfügbar sind.
 
-⚠️ **Wichtig:** Vor dem Restore müssen die Datenbank-Tabellen existieren!
+---
+
+#### Backup wiederherstellen (Datei vom eigenen Rechner)
+
+Für ein Restore **ohne** Terminal:
+
+1. Unter **„Backup wiederherstellen (Datei vom PC)“** eine Datei wählen: **`.json.gz`** (wie vom Download) oder entpacktes **`.json`**.
+2. Checkbox bestätigen (Hinweis: **alle aktuellen Daten** werden durch die Datei ersetzt).
+3. **„Aus Datei wiederherstellen“** klicken.
+
+**Ablauf im Hintergrund:**
+
+- Vor dem Einspielen wird ein **Sicherheits-Backup des aktuellen Stands** erzeugt und im Server-Archiv gespeichert, Dateiname z. B.  
+  `sicherheit_vor_restore_YYYYMMDD_HHMMSS.json.gz`
+- Anschließend wird die Datenbank geleert und die gewählte Datei eingespielt (`loaddata`).
+- Bei Fehlern beim Einspielen versucht die App, den **vorherigen Stand** aus dem temporären Sicherheits-Dump wiederherzustellen.
+
+**Hinweise:**
+
+- Der Vorgang kann bei großen Datenmengen **mehrere Minuten** dauern; eine **Fortschrittsanzeige** erscheint währenddessen.
+- Die Seite währenddessen **nicht schließen**.
+
+⚠️ **Achtung:** Ein erfolgreicher Restore **ersetzt** die komplette Datenbank durch den Inhalt der Datei.
+
+---
+
+#### Backups auf dem Server
+
+Die Tabelle listet alle **im Archiv liegenden** Dateien (nicht nur der Browser-Download).
+
+| Aspekt | Beschreibung |
+|--------|--------------|
+| **Speicherort** | Konfigurierbar über Umgebungsvariable **`BACKUP_ARCHIVE_DIR`** (Standard unter dem Projekt `data/backups`; in Docker oft z. B. **`/data/backups`** auf dem Volume). |
+| **Typ** | **Sicherheit (vor Restore)** – automatisch vor jedem Restore; **Manuell (Download)** – Kopie von „Backup herunterladen“. |
+| **Aktionen** | **Herunterladen** (nochmal als Datei), **Einspielen** (Restore **direkt** aus dieser Server-Datei), **Checkboxen** zum Markieren. |
+| **Ausgewählte löschen** | Entfernt markierte Dateien **nur** aus dem Archiv (nicht die laufende Datenbank). |
+
+**Restore aus der Liste („Einspielen“):** Es öffnet sich ein Dialog mit Bestätigung; Ablauf wie oben inkl. neuem Sicherheits-Backup und Fortschrittsanzeige.
+
+---
+
+#### Journal (Backup / Restore)
+
+Unterhalb der Archiv-Tabelle zeigt das **Journal** die letzten Ereignisse mit **Zeit (UTC)**, **Aktion**, **Von/Quelle**, **Nach/Ziel**, **Status** und **Details**.
+
+Typische Einträge u. a.:
+
+- manueller Backup-Download (Datenbank → Archiv + Browser),
+- Restore von **Upload** oder **Server-Archiv** (inkl. Hinweis auf die erzeugte Sicherheitsdatei),
+- Löschen von Archiv-Dateien,
+- Download einer Archiv-Datei zum PC.
+
+**„Journal aktualisieren“** lädt die Liste neu.
+
+---
+
+#### Datenbank-Schema (Migrationen)
+
+- **Docker (empfohlen):** Beim **Start des Web-Containers** wird in der Regel automatisch **`python manage.py migrate --noinput`** ausgeführt, **bevor** der Webserver startet. Nach einem **Image-Update** und **Neustart** der Container werden neue Migrationen so angewendet – oft ist kein manuelles `migrate` nötig.
+- Die Anzeige **„Keine ausstehenden Migrationen“** / Anzahl ausstehender Migrationen bezieht sich auf den aktuellen Datenbankstand.
+- Optional (nur wenn der Administrator **`ALLOW_UI_MIGRATE=1`** setzt): Button **„Migration jetzt ausführen“** als **Fallback** – nicht parallel auf mehreren Instanzen unkontrolliert klicken.
+
+**Ohne Docker** (lokale Entwicklung): virtuelle Umgebung, `pip install -r requirements.txt`, dann `python3 manage.py migrate` (unter Linux heißt der Befehl oft `python3`, nicht `python`).
+
+---
+
+#### Experten: Restore nur per Terminal (Docker)
+
+Wenn du **keine** Weboberfläche nutzen willst, geht der Restore wie bisher mit `loaddata` im Container. **Wichtig:** Zuerst Migrationen / leere DB wie bei Neuinstallation.
 
 **Linux / macOS:**
 ```bash
@@ -696,7 +767,7 @@ docker cp megacnc_backup_XXXXXX.json megacnc-web-1:/app/
 docker exec megacnc-web-1 python manage.py loaddata megacnc_backup_XXXXXX.json
 ```
 
-⚠️ **Achtung:** Ein Restore überschreibt alle aktuellen Daten!
+⚠️ **Achtung:** Ein Restore überschreibt alle aktuellen Daten in der Datenbank!
 
 ---
 
@@ -802,6 +873,9 @@ docker-compose up -d
 
 ### Datenbank migrieren (Dev → Prod)
 
-1. **Backup auf Dev erstellen** (Settings → Backup & Restore)
-2. **Backup-Datei auf Prod kopieren**
-3. **Restore auf Prod ausführen** (siehe Backup & Restore Anleitung)
+1. **Backup auf Dev erstellen** (Settings → Backup & Restore → „Backup herunterladen“; optional die Archiv-Kopie auf dem Server prüfen).
+2. **Auf Prod wiederherstellen**, z. B.:
+   - **Datei auf den Admin-PC kopieren** und unter **Backup wiederherstellen (Datei vom PC)** einspielen, **oder**
+   - Datei ins **Server-Archiv** legen (gleicher Pfad wie `BACKUP_ARCHIVE_DIR`) und in der Tabelle **„Einspielen“** wählen, **oder**
+   - klassisch per **Terminal** (`loaddata`, siehe Abschnitt „Experten“).
+3. Nach Image-Update auf Prod: Container neu starten, damit **`migrate`** beim Start läuft (Schema passt zum Backup-Inhalt).
