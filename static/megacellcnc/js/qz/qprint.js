@@ -44,7 +44,7 @@ qz.security.setCertificatePromise(function(resolve, reject) {
             if (!r.ok) return r.text().then(function(t) { return Promise.reject(t || r.status); });
             return r.text();
         })
-        .then(resolve)
+        .then(function(pem) { resolve(typeof pem === 'string' ? pem.trim() : pem); })
         .catch(reject);
 });
 
@@ -64,7 +64,7 @@ qz.security.setSignaturePromise(function(toSign) {
                 if (!r.ok) return r.text().then(function(t) { return Promise.reject(t || r.status); });
                 return r.text();
             })
-            .then(resolve)
+            .then(function(sig) { resolve(typeof sig === 'string' ? sig.trim() : sig); })
             .catch(reject);
     };
 });

@@ -466,7 +466,8 @@ $('#batteries-tbl').on('click', '.expandBtn', function() {
                                 <button class="btn btn-info btn-sm" id="chart-btn" title="Grafik anzeigen"><i class="fa fa-line-chart"></i></button>
                                 <button class="btn btn-secondary btn-sm" id="history-btn" title="Ersetzungs-Historie"><i class="fa fa-history"></i></button>
                                 <button class="btn btn-secondary btn-sm" id="print-pack-btn" title="Labels drucken"><i class="fa fa-print"></i></button>
-                                <button class="btn btn-secondary btn-sm" id="export-pack-btn" title="Zellenliste exportieren"><i class="fa fa-download"></i></button>
+                                <button class="btn btn-secondary btn-sm" id="export-pack-btn" title="Zellenliste als CSV"><i class="fa fa-download"></i></button>
+                                <button class="btn btn-secondary btn-sm" id="export-pack-xlsx-btn" title="Zellenliste als Excel (ein Blatt pro Serie/Paket)"><i class="fa-solid fa-file-excel"></i></button>
                                 <button class="btn btn-danger btn-sm" id="dissolve-btn" title="Pack auflösen"><i class="fa fa-trash"></i></button>
                             </div>
                         </div>
@@ -760,9 +761,12 @@ $('#batteries-tbl').on('click', '.expandBtn', function() {
         printPackLabels();
     });
 
-    // Export Pack Button
+    // Export Pack Button (CSV / Excel)
     document.getElementById('export-pack-btn').addEventListener('click', function() {
         exportPackCells(batteryName);
+    });
+    document.getElementById('export-pack-xlsx-btn').addEventListener('click', function() {
+        exportPackCellsExcel(batteryName);
     });
 
     // Pack auflösen Button
@@ -1347,6 +1351,15 @@ function getPackCells() {
     return cells;
 }
 
+/** Reihenfolge wie im CSV-Export: Position (S,P), dann Cell-ID */
+function sortPackCellsInPlace(cells) {
+    cells.sort((a, b) => {
+        if (a.series !== b.series) return a.series - b.series;
+        if (a.parallel !== b.parallel) return a.parallel - b.parallel;
+        return a.cellId.localeCompare(b.cellId);
+    });
+}
+
 async function printPackLabels() {
     const cells = getPackCells();
     
@@ -1419,21 +1432,19 @@ function exportPackCells(packName) {
         return;
     }
     
-    // Sort by Cell-ID
-    cells.sort((a, b) => a.cellId.localeCompare(b.cellId));
+    sortPackCellsInPlace(cells);
     
     // Sanitize pack name for filename
     const safePackName = packName.replace(/[^a-zA-Z0-9_-]/g, '_');
     
-    // Create CSV content
-    const headers = ['Cell-ID', 'UUID', 'Position', 'Capacity (mAh)', 'ESR (mΩ)', 'Voltage (V)'];
+    // Create CSV content (Capacity:0, ESR:3, Voltage:2 Nachkomastellen)
+    const headers = ['Cell-ID', 'Position', 'Capacity (mAh)', 'ESR (mΩ)', 'Voltage (V)'];
     const rows = cells.map(c => [
         c.cellId,
-        c.uuid,
         `S${c.series}-P${c.parallel}`,
-        c.capacity,
-        c.esr,
-        c.voltage
+        c.capacity.toFixed(0),
+        c.esr.toFixed(3),
+        c.voltage.toFixed(2)
     ]);
     
     let csvContent = headers.join(';') + '\n';
@@ -1445,8 +1456,8 @@ function exportPackCells(packName) {
     csvContent += '\n';
     csvContent += `Total Cells;${cells.length}\n`;
     csvContent += `Total Capacity;${cells.reduce((sum, c) => sum + c.capacity, 0).toFixed(0)} mAh\n`;
-    csvContent += `Avg Capacity;${(cells.reduce((sum, c) => sum + c.capacity, 0) / cells.length).toFixed(1)} mAh\n`;
-    csvContent += `Avg ESR;${(cells.reduce((sum, c) => sum + c.esr, 0) / cells.length).toFixed(2)} mΩ\n`;
+    csvContent += `Avg Capacity;${(cells.reduce((sum, c) => sum + c.capacity, 0) / cells.length).toFixed(0)} mAh\n`;
+    csvContent += `Avg ESR;${(cells.reduce((sum, c) => sum + c.esr, 0) / cells.length).toFixed(3)} mΩ\n`;
     
     // Download
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -1458,6 +1469,82 @@ function exportPackCells(packName) {
     URL.revokeObjectURL(url);
     
     toastr.success(`${cells.length} Zellen exportiert`, 'Export');
+}
+
+function sanitizeExcelSheetName(name) {
+    let s = String(name).replace(/[:\\\/\?\*\[\]]/g, '_').trim();
+    if (s.length > 31) s = s.slice(0, 31);
+    return s || 'Sheet';
+}
+
+/** Zahlenformate Capacity:0 / ESR:3 / Voltage:2 (ab Zeile firstDataRow, Spalten C–E) */
+function applyPackExportNumericFormats(ws, firstDataRow) {
+    if (!ws || !ws['!ref']) return;
+    const range = XLSX.utils.decode_range(ws['!ref']);
+    const zCols = ['0', '0.000', '0.00'];
+    for (let R = firstDataRow; R <= range.e.r; R++) {
+        for (let i = 0; i < 3; i++) {
+            const C = 2 + i;
+            const addr = XLSX.utils.encode_cell({ r: R, c: C });
+            const cell = ws[addr];
+            if (cell && cell.t === 'n') cell.z = zCols[i];
+        }
+    }
+}
+
+function exportPackCellsExcel(packName) {
+    if (typeof XLSX === 'undefined') {
+        toastr.error('Excel-Bibliothek nicht geladen', 'Fehler');
+        return;
+    }
+    const cells = getPackCells();
+    if (cells.length === 0) {
+        toastr.error('Keine Zellen im Pack', 'Fehler');
+        return;
+    }
+    sortPackCellsInPlace(cells);
+
+    const safePackName = packName.replace(/[^a-zA-Z0-9_-]/g, '_');
+    const wb = XLSX.utils.book_new();
+
+    const headers = ['Cell-ID', 'Position', 'Capacity (mAh)', 'ESR (mΩ)', 'Voltage (V)'];
+
+    // Zusammenfassung zuerst (linker Tab)
+    const totalCap = cells.reduce((sum, c) => sum + c.capacity, 0);
+    const summaryAoa = [
+        ['Pack', packName],
+        [],
+        ['Zellen gesamt', cells.length],
+        ['Total Capacity (mAh)', Math.round(totalCap)],
+        ['Avg Capacity (mAh)', Math.round(totalCap / cells.length)],
+        ['Avg ESR (mΩ)', Number((cells.reduce((s, c) => s + c.esr, 0) / cells.length).toFixed(3))],
+        [],
+        ['Hinweis', 'Pro Serie (S) ein eigenes Blatt „Paket“ mit allen Parallelschaltungen.']
+    ];
+    const wsSum = XLSX.utils.aoa_to_sheet(summaryAoa);
+    XLSX.utils.book_append_sheet(wb, wsSum, sanitizeExcelSheetName('Zusammenfassung'));
+
+    const seriesList = [...new Set(cells.map(c => c.series))].sort((a, b) => a - b);
+    for (const s of seriesList) {
+        const pkgCells = cells.filter(c => c.series === s);
+        const aoa = [headers];
+        pkgCells.forEach(c => {
+            aoa.push([
+                c.cellId,
+                `S${c.series}-P${c.parallel}`,
+                Math.round(c.capacity),
+                Number(c.esr.toFixed(3)),
+                Number(c.voltage.toFixed(2))
+            ]);
+        });
+        const ws = XLSX.utils.aoa_to_sheet(aoa);
+        applyPackExportNumericFormats(ws, 1);
+        const sheetName = sanitizeExcelSheetName(`Paket_S${s}`);
+        XLSX.utils.book_append_sheet(wb, ws, sheetName);
+    }
+
+    XLSX.writeFile(wb, `${safePackName}_cells.xlsx`);
+    toastr.success(`${cells.length} Zellen · ${seriesList.length} Paket(e)`, 'Excel');
 }
 
 function buildSeriesSelector(seriesCount) {
