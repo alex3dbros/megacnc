@@ -1,12 +1,31 @@
-# megacnc-manager.ps1
-# MegaCNC Management Script
+# megacnc-manager.ps1 — MegaCNC Manager (z. B. auf Desktop kopieren)
+# Zeile 10: Windows-Pfad zum Ordner "megacnc" eintragen (Repo-Root, nicht der scripts-Ordner).
 
 param(
-    [Parameter(Position=0)]
+    [Parameter(Position = 0)]
     [string]$Action = "menu"
 )
 
-$ProjectPath = "/mnt/c/Users/Elitedesk/Documents/megacnc"
+# <<< EINMAL ANPASSEN: voller Windows-Pfad zum MegaCNC-Projektordner >>>
+$MegaCncRoot = "C:\Users\Elitedesk\Documents\megacnc"
+
+function ConvertTo-WslPath {
+    param([string]$WindowsPath)
+    $p = $WindowsPath -replace '\\', '/'
+    if ($p -match '^([A-Za-z]):(/.*)$') {
+        return "/mnt/$($matches[1].ToLower())$($matches[2])"
+    }
+    return $WindowsPath
+}
+
+if (-not (Test-Path -LiteralPath $MegaCncRoot)) {
+    Write-Host "[FEHLER] Ordner nicht gefunden: $MegaCncRoot" -ForegroundColor Red
+    Write-Host "         Pfad in Zeile 10 anpassen." -ForegroundColor Yellow
+    exit 1
+}
+
+$ProjectPath = ConvertTo-WslPath $MegaCncRoot
+$Dc = "docker compose -f docker-compose.yml"
 
 function Show-Menu {
     Clear-Host
@@ -15,103 +34,91 @@ function Show-Menu {
     Write-Host "================================" -ForegroundColor Cyan
     Write-Host ""
     Write-Host "1. Update (pull & restart)" -ForegroundColor Yellow
-    Write-Host "2. Status (show running containers)" -ForegroundColor Yellow
-    Write-Host "3. Logs (show container logs)" -ForegroundColor Yellow
-    Write-Host "4. Shell (open WSL in project)" -ForegroundColor Yellow
-    Write-Host "5. Restart (restart all services)" -ForegroundColor Yellow
-    Write-Host "6. Stop (stop all services)" -ForegroundColor Yellow
-    Write-Host "7. Start (start all services)" -ForegroundColor Green
+    Write-Host "2. Status" -ForegroundColor Yellow
+    Write-Host "3. Logs" -ForegroundColor Yellow
+    Write-Host "4. Shell (WSL im Projekt)" -ForegroundColor Yellow
+    Write-Host "5. Restart" -ForegroundColor Yellow
+    Write-Host "6. Stop" -ForegroundColor Yellow
+    Write-Host "7. Start" -ForegroundColor Green
+    Write-Host "8. Repair (nur git pull)" -ForegroundColor Magenta
     Write-Host "Q. Quit" -ForegroundColor Yellow
     Write-Host ""
 }
 
+function OkOrErr {
+    param([int]$Code)
+    if ($Code -ne 0) { Write-Host "[FEHLER] Exit $Code" -ForegroundColor Red; return $false }
+    return $true
+}
+
 function Invoke-Update {
-    Write-Host "[*] Updating MegaCNC..." -ForegroundColor Cyan
-    wsl --cd $ProjectPath bash -c "./scripts/update.sh"
-    Write-Host "[OK] Update complete!" -ForegroundColor Green
-    Write-Host ""
+    Write-Host "[*] Update..." -ForegroundColor Cyan
+    wsl --cd "$ProjectPath" bash -c "./update.sh"
+    if (OkOrErr $LASTEXITCODE) { Write-Host "[OK] Fertig." -ForegroundColor Green }
     Pause
 }
 
 function Show-Status {
-    Write-Host "[*] Container Status:" -ForegroundColor Cyan
-    wsl --cd $ProjectPath bash -c "docker compose -f docker-compose.yml ps"
-    Write-Host ""
+    Write-Host "[*] Status..." -ForegroundColor Cyan
+    wsl --cd "$ProjectPath" bash -c "$Dc ps"
+    OkOrErr $LASTEXITCODE | Out-Null
     Pause
 }
 
 function Show-Logs {
-    Write-Host "[*] Container Logs (Ctrl+C to exit):" -ForegroundColor Cyan
-    wsl --cd $ProjectPath bash -c "docker compose -f docker-compose.yml logs -f"
+    Write-Host "[*] Logs (Strg+C Ende)..." -ForegroundColor Cyan
+    wsl --cd "$ProjectPath" bash -c "$Dc logs -f"
 }
 
 function Open-Shell {
-    Write-Host "[*] Opening WSL shell..." -ForegroundColor Cyan
-    wsl --cd $ProjectPath
+    wsl --cd "$ProjectPath"
 }
 
 function Invoke-Restart {
-    Write-Host "[*] Restarting services..." -ForegroundColor Cyan
-    wsl --cd $ProjectPath bash -c "docker compose -f docker-compose.yml restart"
-    Write-Host "[OK] Restart complete!" -ForegroundColor Green
-    Write-Host ""
+    Write-Host "[*] Restart..." -ForegroundColor Cyan
+    wsl --cd "$ProjectPath" bash -c "$Dc restart"
+    if (OkOrErr $LASTEXITCODE) { Write-Host "[OK] Fertig." -ForegroundColor Green }
     Pause
 }
 
 function Invoke-Stop {
-    Write-Host "[*] Stopping services..." -ForegroundColor Cyan
-    wsl --cd $ProjectPath bash -c "docker compose -f docker-compose.yml down"
-    Write-Host "[OK] Services stopped!" -ForegroundColor Green
-    Write-Host ""
+    Write-Host "[*] Stop..." -ForegroundColor Cyan
+    wsl --cd "$ProjectPath" bash -c "$Dc down"
+    if (OkOrErr $LASTEXITCODE) { Write-Host "[OK] Fertig." -ForegroundColor Green }
     Pause
 }
 
 function Invoke-Start {
-    Write-Host "[*] Starting services..." -ForegroundColor Cyan
-    wsl --cd $ProjectPath bash -c "docker compose -f docker-compose.yml up -d"
-    Write-Host "[OK] Services started!" -ForegroundColor Green
-    Write-Host ""
+    Write-Host "[*] Start..." -ForegroundColor Cyan
+    wsl --cd "$ProjectPath" bash -c "$Dc up -d"
+    if (OkOrErr $LASTEXITCODE) { Write-Host "[OK] Fertig." -ForegroundColor Green }
     Pause
 }
 
-# Handle command line arguments
-switch ($Action.ToLower()) {
-    "update" {
-        Invoke-Update
-        exit
+function Invoke-Repair {
+    Write-Host "[*] Repair = git pull..." -ForegroundColor Cyan
+    wsl --cd "$ProjectPath" bash -c "git pull"
+    if (OkOrErr $LASTEXITCODE) {
+        Write-Host "[OK] Jetzt Menue 1 (Update) ausfuehren." -ForegroundColor Green
     }
-    "status" {
-        Show-Status
-        exit
-    }
-    "logs" {
-        Show-Logs
-        exit
-    }
-    "shell" {
-        Open-Shell
-        exit
-    }
-    "restart" {
-        Invoke-Restart
-        exit
-    }
-    "stop" {
-        Invoke-Stop
-        exit
-    }
-    "start" {
-        Invoke-Start
-        exit
-    }
+    Pause
 }
 
-# Interactive menu
+switch ($Action.ToLower()) {
+    "update" { Invoke-Update; exit }
+    "status" { Show-Status; exit }
+    "logs" { Show-Logs; exit }
+    "shell" { Open-Shell; exit }
+    "restart" { Invoke-Restart; exit }
+    "stop" { Invoke-Stop; exit }
+    "start" { Invoke-Start; exit }
+    "repair" { Invoke-Repair; exit }
+}
+
 do {
     Show-Menu
-    $choice = Read-Host "Select option"
-    
-    switch ($choice) {
+    $c = Read-Host "Auswahl"
+    switch ($c) {
         '1' { Invoke-Update }
         '2' { Show-Status }
         '3' { Show-Logs }
@@ -119,6 +126,7 @@ do {
         '5' { Invoke-Restart }
         '6' { Invoke-Stop }
         '7' { Invoke-Start }
+        '8' { Invoke-Repair }
         'Q' { exit }
     }
-} while ($choice -ne 'Q')
+} while ($c -ne 'Q')
