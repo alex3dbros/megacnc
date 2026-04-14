@@ -490,7 +490,7 @@ dz_array = {
 							f"{folder_name}/js/plugins-init/datatables.init.js",
 							f"{folder_name}/vendor/tagify/dist/tagify.js",
 							f"{folder_name}/js/batteries.js",
-							f"{folder_name}/js/xlsx.full.min.js",
+							f"{folder_name}/js/xlsx-js-style.bundle.min.js",
 
 
 						],

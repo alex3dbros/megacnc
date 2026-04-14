@@ -1477,17 +1477,26 @@ function sanitizeExcelSheetName(name) {
     return s || 'Sheet';
 }
 
-/** Zahlenformate Capacity:0 / ESR:3 / Voltage:2 (ab Zeile firstDataRow, Spalten C–E) */
-function applyPackExportNumericFormats(ws, firstDataRow) {
-    if (!ws || !ws['!ref']) return;
-    const range = XLSX.utils.decode_range(ws['!ref']);
-    const zCols = ['0', '0.000', '0.00'];
-    for (let R = firstDataRow; R <= range.e.r; R++) {
-        for (let i = 0; i < 3; i++) {
-            const C = 2 + i;
-            const addr = XLSX.utils.encode_cell({ r: R, c: C });
+const COLS_PER_SERIES = 5;
+const GAP_COLS = 1;
+const SERIES_PER_ROW = 3;
+const STRIPE_INTERVAL = 10;
+const STRIPE_FILL = { fgColor: { rgb: 'DDDDDD' } };
+const HEADER_FILL = { fgColor: { rgb: '4ECCA3' } };
+const HEADER_FONT = { bold: true, color: { rgb: 'FFFFFF' } };
+const TITLE_FONT  = { bold: true, sz: 13 };
+const NUM_FMTS = ['0', '0.000', '0.00'];
+
+function applyNumFmtsAndStripes(ws, startRow, dataCount, colOffset) {
+    for (let r = 0; r < dataCount; r++) {
+        const R = startRow + r;
+        const isStripe = (r + 1) % STRIPE_INTERVAL === 0;
+        for (let i = 0; i < COLS_PER_SERIES; i++) {
+            const addr = XLSX.utils.encode_cell({ r: R, c: colOffset + i });
             const cell = ws[addr];
-            if (cell && cell.t === 'n') cell.z = zCols[i];
+            if (!cell) continue;
+            if (i >= 2 && cell.t === 'n') cell.z = NUM_FMTS[i - 2];
+            if (isStripe) cell.s = { ...(cell.s || {}), fill: STRIPE_FILL };
         }
     }
 }
@@ -1506,10 +1515,9 @@ function exportPackCellsExcel(packName) {
 
     const safePackName = packName.replace(/[^a-zA-Z0-9_-]/g, '_');
     const wb = XLSX.utils.book_new();
-
     const headers = ['Cell-ID', 'Position', 'Capacity (mAh)', 'ESR (mΩ)', 'Voltage (V)'];
 
-    // Zusammenfassung zuerst (linker Tab)
+    // --- Blatt 1: Zusammenfassung ---
     const totalCap = cells.reduce((sum, c) => sum + c.capacity, 0);
     const summaryAoa = [
         ['Pack', packName],
@@ -1518,33 +1526,104 @@ function exportPackCellsExcel(packName) {
         ['Total Capacity (mAh)', Math.round(totalCap)],
         ['Avg Capacity (mAh)', Math.round(totalCap / cells.length)],
         ['Avg ESR (mΩ)', Number((cells.reduce((s, c) => s + c.esr, 0) / cells.length).toFixed(3))],
-        [],
-        ['Hinweis', 'Pro Serie (S) ein eigenes Blatt „Paket“ mit allen Parallelschaltungen.']
     ];
     const wsSum = XLSX.utils.aoa_to_sheet(summaryAoa);
     XLSX.utils.book_append_sheet(wb, wsSum, sanitizeExcelSheetName('Zusammenfassung'));
 
+    // --- Blatt 2: Pakete (alle Serien nebeneinander, je 3) ---
     const seriesList = [...new Set(cells.map(c => c.series))].sort((a, b) => a - b);
-    for (const s of seriesList) {
+    const ws = {};
+    let maxRow = 0;
+    const blockWidth = COLS_PER_SERIES + GAP_COLS;
+    const rowBreaks = [];
+
+    const blockStartRows = [];
+    const numBlocks = Math.ceil(seriesList.length / SERIES_PER_ROW);
+    let curRow = 0;
+    for (let b = 0; b < numBlocks; b++) {
+        blockStartRows.push(curRow);
+        let maxInBlock = 0;
+        for (let j = b * SERIES_PER_ROW; j < Math.min((b + 1) * SERIES_PER_ROW, seriesList.length); j++) {
+            const cnt = cells.filter(c => c.series === seriesList[j]).length;
+            if (cnt > maxInBlock) maxInBlock = cnt;
+        }
+        curRow += 2 + maxInBlock + 2;
+        if (b < numBlocks - 1) rowBreaks.push(curRow - 1);
+    }
+
+    const autoFilterRanges = [];
+
+    for (let idx = 0; idx < seriesList.length; idx++) {
+        const s = seriesList[idx];
+        const colGroup = idx % SERIES_PER_ROW;
+        const col = colGroup * blockWidth;
+        const blockIndex = Math.floor(idx / SERIES_PER_ROW);
+        const blockStart = blockStartRows[blockIndex];
+
+        const titleRow = blockStart;
+        const headerRow = blockStart + 1;
+        const dataStartRow = blockStart + 2;
+
+        const titleAddr = XLSX.utils.encode_cell({ r: titleRow, c: col });
+        ws[titleAddr] = { v: `Serie S${s}`, t: 's', s: { font: TITLE_FONT } };
+
+        headers.forEach((h, i) => {
+            const addr = XLSX.utils.encode_cell({ r: headerRow, c: col + i });
+            ws[addr] = { v: h, t: 's', s: { fill: HEADER_FILL, font: HEADER_FONT } };
+        });
+
         const pkgCells = cells.filter(c => c.series === s);
-        const aoa = [headers];
-        pkgCells.forEach(c => {
-            aoa.push([
+        pkgCells.sort((a, b) => a.cellId.localeCompare(b.cellId, undefined, { numeric: true }));
+
+        pkgCells.forEach((c, r) => {
+            const R = dataStartRow + r;
+            const row = [
                 c.cellId,
                 `S${c.series}-P${c.parallel}`,
                 Math.round(c.capacity),
                 Number(c.esr.toFixed(3)),
                 Number(c.voltage.toFixed(2))
-            ]);
+            ];
+            row.forEach((val, i) => {
+                const addr = XLSX.utils.encode_cell({ r: R, c: col + i });
+                const t = typeof val === 'number' ? 'n' : 's';
+                ws[addr] = { v: val, t };
+            });
+            if (R > maxRow) maxRow = R;
         });
-        const ws = XLSX.utils.aoa_to_sheet(aoa);
-        applyPackExportNumericFormats(ws, 1);
-        const sheetName = sanitizeExcelSheetName(`Paket_S${s}`);
-        XLSX.utils.book_append_sheet(wb, ws, sheetName);
+
+        applyNumFmtsAndStripes(ws, dataStartRow, pkgCells.length, col);
+
+        const lastDataRow = dataStartRow + pkgCells.length - 1;
+        const ref = XLSX.utils.encode_range(
+            { r: headerRow, c: col },
+            { r: lastDataRow, c: col + COLS_PER_SERIES - 1 }
+        );
+        autoFilterRanges.push(ref);
     }
 
+    const maxCol = Math.min(seriesList.length, SERIES_PER_ROW) * blockWidth - GAP_COLS - 1;
+    ws['!ref'] = XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: maxRow, c: maxCol } });
+
+    if (autoFilterRanges.length > 0) {
+        ws['!autofilter'] = { ref: autoFilterRanges[0] };
+    }
+
+    const colWidths = [];
+    const widths = [10, 10, 14, 12, 12];
+    for (let g = 0; g < Math.min(seriesList.length, SERIES_PER_ROW); g++) {
+        widths.forEach(w => colWidths.push({ wch: w }));
+        if (g < SERIES_PER_ROW - 1) colWidths.push({ wch: 3 });
+    }
+    ws['!cols'] = colWidths;
+
+    ws['!pageSetup'] = { orientation: 'landscape', paperSize: 9 };
+    if (rowBreaks.length > 0) ws['!rowBreaks'] = rowBreaks;
+
+    XLSX.utils.book_append_sheet(wb, ws, sanitizeExcelSheetName('Pakete'));
+
     XLSX.writeFile(wb, `${safePackName}_cells.xlsx`);
-    toastr.success(`${cells.length} Zellen · ${seriesList.length} Paket(e)`, 'Excel');
+    toastr.success(`${cells.length} Zellen · ${seriesList.length} Serie(n)`, 'Excel');
 }
 
 function buildSeriesSelector(seriesCount) {
