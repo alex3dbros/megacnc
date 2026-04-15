@@ -778,6 +778,8 @@ $(document).ready(function() {
     let currentYearFilter = '{{ selected_year|default:"" }}';
     let currentStatusFilter = '{{ selected_status|default:"" }}';
     let currentPerPage = {{ request.GET.per_page|default:'100' }};
+    let currentBatteryFilter = '{{ selected_battery|default:"" }}';
+    let currentBatteryLabel = '{{ selected_battery_label|default:"All Packs" }}';
     
     // Input event - Debounce (1000ms)
     $('#serialSearch').on('input', function() {
