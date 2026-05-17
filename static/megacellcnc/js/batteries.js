@@ -3008,7 +3008,7 @@ function findReplacementCell(defectiveCellElement) {
 }
 
 // Replace a defective cell in a slot with the best match from reserve
-function replaceDefectiveCell(slotId) {
+async function replaceDefectiveCell(slotId) {
     const slot = document.getElementById(slotId);
     if (!slot) {
         toastr.error('Slot nicht gefunden', 'Fehler');
@@ -3022,58 +3022,62 @@ function replaceDefectiveCell(slotId) {
     }
 
     const replacement = findReplacementCell(defectiveCell);
-    if (replacement) {
-        // Parse slot position from ID (format: cell-S-P)
-        const slotMatch = slotId.match(/cell-(\d+)-(\d+)/);
-        const slotSeries = slotMatch ? parseInt(slotMatch[1]) : 0;
-        const slotParallel = slotMatch ? parseInt(slotMatch[2]) : 0;
-        
-        // Extract Cell-IDs for display
-        const oldCellId = extractCellId(defectiveCell.dataset.itemId);
-        const newCellId = extractCellId(replacement.dataset.itemId);
-        
-        // Log replacement to server
-        if (currentBatteryId) {
-            fetch('/log-cell-replacement/', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    battery_id: currentBatteryId,
-                    old_cell_uuid: defectiveCell.dataset.itemId,
-                    new_cell_uuid: replacement.dataset.itemId,
-                    slot_series: slotSeries,
-                    slot_parallel: slotParallel,
-                    old_capacity: parseFloat(defectiveCell.dataset.capacity),
-                    new_capacity: parseFloat(replacement.dataset.capacity),
-                    old_esr: parseFloat(defectiveCell.dataset.esr) || null,
-                    new_esr: parseFloat(replacement.dataset.esr) || null,
-                    reason: 'defective'
-                })
-            }).then(r => r.json()).then(data => {
-                if (data.success) {
-                    console.log('Replacement logged:', data.message);
-                }
-            }).catch(err => console.error('Log failed:', err));
+    if (!replacement) {
+        return;
+    }
+
+    if (!currentBatteryId) {
+        toastr.error('Kein Battery-Pack geladen', 'Fehler');
+        return;
+    }
+
+    const slotMatch = slotId.match(/cell-(\d+)-(\d+)/);
+    const slotSeries = slotMatch ? parseInt(slotMatch[1]) : 0;
+    const slotParallel = slotMatch ? parseInt(slotMatch[2]) : 0;
+
+    const oldCellId = extractCellId(defectiveCell.dataset.itemId);
+    const newCellId = extractCellId(replacement.dataset.itemId);
+
+    try {
+        const r = await fetch('/log-cell-replacement/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({
+                battery_id: currentBatteryId,
+                old_cell_uuid: defectiveCell.dataset.itemId,
+                new_cell_uuid: replacement.dataset.itemId,
+                slot_series: slotSeries,
+                slot_parallel: slotParallel,
+                old_capacity: parseFloat(defectiveCell.dataset.capacity),
+                new_capacity: parseFloat(replacement.dataset.capacity),
+                old_esr: parseFloat(defectiveCell.dataset.esr) || null,
+                new_esr: parseFloat(replacement.dataset.esr) || null,
+                reason: 'defective'
+            })
+        });
+        const data = await r.json();
+        if (!r.ok || !data.success) {
+            toastr.error(data.error || 'Ersetzung konnte nicht gespeichert werden', 'Fehler');
+            return;
         }
-        
-        // Move defective cell to middle-list (or mark as defective)
+
         const middleList = document.getElementById('middle-list');
         defectiveCell.classList.add('defective');
         defectiveCell.style.backgroundColor = '#ffcccc';
         middleList.appendChild(defectiveCell);
 
-        // Move replacement to slot and highlight
         slot.appendChild(replacement);
         slot.classList.add('cell-replaced');
         replacement.classList.add('replacement-highlight');
-        
-        // Remove highlight after animation
+
         setTimeout(() => {
             slot.classList.remove('cell-replaced');
             replacement.classList.remove('replacement-highlight');
         }, 3000);
 
-        // Clear, detailed success message
         toastr.success(
             `<div style="line-height: 1.6">
                 <strong>Position:</strong> S${slotSeries}-P${slotParallel}<br>
@@ -3085,6 +3089,9 @@ function replaceDefectiveCell(slotId) {
         );
 
         updateAllCapacities();
+    } catch (err) {
+        console.error('Replacement failed:', err);
+        toastr.error('Netzwerkfehler beim Speichern der Ersetzung', 'Fehler');
     }
 }
 

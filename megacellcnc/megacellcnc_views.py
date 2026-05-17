@@ -757,44 +757,52 @@ def save_battery_configuration(request):
 
         battery = Batteries.objects.get(id=battery_id)
 
-        if len(cells_data) == 0:
-            # Dissolve pack: release all cells in one bulk update
-            battery.battery_cells.all().update(
-                battery=None,
-                bat_position="",
-                available="Yes"
-            )
-            battery.status = "created"
-            battery.capacity = 0
-        else:
-            # Build a mapping of UUID -> (slot_id, capacity)
-            uuid_to_data = {}
-            total_capacity = 0.0
-            for cell_data in cells_data:
-                cell_uuid = cell_data['cellId']
-                slot_id = cell_data['slotId']
-                capacity = float(cell_data.get('capacity', 0))
-                total_capacity += capacity
-                uuid_to_data[cell_uuid] = (slot_id, capacity)
+        with transaction.atomic():
+            if len(cells_data) == 0:
+                # Dissolve pack: release all cells in one bulk update
+                battery.battery_cells.all().update(
+                    battery=None,
+                    bat_position="",
+                    available="Yes"
+                )
+                battery.status = "created"
+                battery.capacity = 0
+            else:
+                # Full sync: alle bisherigen Pack-Zellen lösen, dann nur cells_data zuweisen
+                Cells.objects.filter(battery_id=battery.id).update(
+                    battery=None,
+                    bat_position='',
+                    available='Yes'
+                )
 
-            # Fetch all cells in one query
-            uuids = list(uuid_to_data.keys())
-            cells_to_update = list(Cells.objects.filter(UUID__in=uuids))
+                # Build a mapping of UUID -> (slot_id, capacity)
+                uuid_to_data = {}
+                total_capacity = 0.0
+                for cell_data in cells_data:
+                    cell_uuid = cell_data['cellId']
+                    slot_id = cell_data['slotId']
+                    capacity = float(cell_data.get('capacity', 0))
+                    total_capacity += capacity
+                    uuid_to_data[cell_uuid] = (slot_id, capacity)
 
-            # Update fields in memory
-            for cell in cells_to_update:
-                slot_id, _ = uuid_to_data[cell.UUID]
-                cell.battery = battery
-                cell.bat_position = slot_id
-                cell.available = "No"
+                # Fetch all cells in one query
+                uuids = list(uuid_to_data.keys())
+                cells_to_update = list(Cells.objects.filter(UUID__in=uuids))
 
-            # Bulk update in one DB operation
-            Cells.objects.bulk_update(cells_to_update, ['battery', 'bat_position', 'available'], batch_size=500)
+                # Update fields in memory
+                for cell in cells_to_update:
+                    slot_id, _ = uuid_to_data[cell.UUID]
+                    cell.battery = battery
+                    cell.bat_position = slot_id
+                    cell.available = "No"
 
-            battery.status = "ready"
-            battery.capacity = round(total_capacity, 2)
+                # Bulk update in one DB operation
+                Cells.objects.bulk_update(cells_to_update, ['battery', 'bat_position', 'available'], batch_size=500)
 
-        battery.save()
+                battery.status = "ready"
+                battery.capacity = round(total_capacity, 2)
+
+            battery.save()
 
         return JsonResponse({
             'status': 'success',
@@ -1567,10 +1575,10 @@ def backup_journal_list(request):
 @require_POST
 @csrf_exempt
 def log_cell_replacement(request):
-    """Log a cell replacement in a battery pack"""
+    """Log a cell replacement and persist pack assignments (battery, bat_position, available)."""
     try:
         data = json.loads(request.body)
-        
+
         battery_id = data.get('battery_id')
         old_cell_uuid = data.get('old_cell_uuid')
         new_cell_uuid = data.get('new_cell_uuid')
@@ -1581,38 +1589,71 @@ def log_cell_replacement(request):
         old_esr = data.get('old_esr')
         new_esr = data.get('new_esr')
         reason = data.get('reason', 'defective')
-        
+
+        if not battery_id or not old_cell_uuid or not new_cell_uuid:
+            return JsonResponse({'success': False, 'error': 'battery_id, old_cell_uuid und new_cell_uuid sind erforderlich'}, status=400)
+        if slot_series is None or slot_parallel is None:
+            return JsonResponse({'success': False, 'error': 'slot_series und slot_parallel sind erforderlich'}, status=400)
+
         battery = get_object_or_404(Batteries, id=battery_id)
-        
-        log_entry = CellReplacementLog.objects.create(
-            battery=battery,
-            old_cell_uuid=old_cell_uuid,
-            new_cell_uuid=new_cell_uuid,
-            slot_series=slot_series,
-            slot_parallel=slot_parallel,
-            old_capacity=old_capacity,
-            new_capacity=new_capacity,
-            old_esr=old_esr,
-            new_esr=new_esr,
-            reason=reason
-        )
-        
-        # Mark old cell as defective
-        try:
-            old_cell = Cells.objects.get(UUID=old_cell_uuid)
-            old_cell.condition = 'defective'
-            old_cell.save()
-        except Cells.DoesNotExist:
-            pass  # Cell might not exist in DB
-        
+        slot_position = f"cell-{int(slot_series)}-{int(slot_parallel)}"
+
+        with transaction.atomic():
+            try:
+                new_cell = Cells.objects.get(UUID=new_cell_uuid)
+            except Cells.DoesNotExist:
+                return JsonResponse({'success': False, 'error': 'Neue Zelle nicht in der Datenbank gefunden'}, status=404)
+
+            if new_cell.battery_id is not None and new_cell.battery_id != battery.id:
+                return JsonResponse({
+                    'success': False,
+                    'error': 'Neue Zelle ist bereits einem anderen Pack zugewiesen'
+                }, status=400)
+
+            log_entry = CellReplacementLog.objects.create(
+                battery=battery,
+                old_cell_uuid=old_cell_uuid,
+                new_cell_uuid=new_cell_uuid,
+                slot_series=slot_series,
+                slot_parallel=slot_parallel,
+                old_capacity=old_capacity,
+                new_capacity=new_capacity,
+                old_esr=old_esr,
+                new_esr=new_esr,
+                reason=reason
+            )
+
+            try:
+                old_cell = Cells.objects.get(UUID=old_cell_uuid)
+                if old_cell.battery_id == battery.id:
+                    old_cell.battery = None
+                    old_cell.bat_position = ''
+                old_cell.condition = 'defective'
+                old_cell.available = 'No'
+                old_cell.save(update_fields=['battery', 'bat_position', 'available', 'condition'])
+            except Cells.DoesNotExist:
+                pass
+
+            new_cell.battery = battery
+            new_cell.bat_position = slot_position
+            new_cell.available = 'No'
+            new_cell.save(update_fields=['battery', 'bat_position', 'available'])
+
+            total_cap = sum(
+                float(c.capacity) for c in Cells.objects.filter(battery_id=battery.id).only('capacity')
+            )
+            battery.capacity = round(float(total_cap), 2)
+            battery.save(update_fields=['capacity'])
+
         return JsonResponse({
             'success': True,
             'log_id': log_entry.id,
-            'message': f'Ersetzung protokolliert: {old_cell_uuid} → {new_cell_uuid}'
+            'message': f'Ersetzung gespeichert: {old_cell_uuid} → {new_cell_uuid}',
+            'battery_capacity': battery.capacity,
         })
-        
+
     except Exception as e:
-        return JsonResponse({'error': str(e)}, status=500)
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
 
 @csrf_exempt
