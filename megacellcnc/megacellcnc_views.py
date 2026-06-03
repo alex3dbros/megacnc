@@ -8,7 +8,8 @@ from django.views.decorators.csrf import csrf_exempt
 import shutil
 from django.urls import reverse
 from .functions import scan_for_devices, add_new_cell, draw_dual_label, gather_label_data, draw_square_label, \
-    draw_landscape_label, generate_uuid_for_cell, gather_label_cell_data, generate_battery_uuid
+    draw_landscape_label, generate_uuid_for_cell, gather_label_cell_data, generate_battery_uuid, \
+    normalize_mccpro_chemistry_payload, build_mccpro_edit_device_data
 from datetime import timedelta
 import json
 from django.db import connection, transaction
@@ -23,7 +24,6 @@ from django.utils import timezone
 from django.db.models import F
 from mccprolib.api import MegacellCharger
 from megacellcnc.tasks import dispatch_command, get_device_config, save_device_config
-import msgpack
 import re
 import pandas as pd
 import datetime
@@ -1040,59 +1040,32 @@ def edit_device(request):
         except Exception as e:
             return JsonResponse({'error': f'Failed to get device config: {str(e)}'}, status=500)
 
-        if not task_result:
+        if task_result is None or task_result == {} or task_result == b'':
             return JsonResponse({'error': 'Device not responding or offline'}, status=503)
 
-        # Use the task result in your response or further processing
+        if not chems:
+            chems = '[]'
 
-        if task_result and device.type == "MCC":
-            data = {"dev_type": device.type, "max_charge_volt": round(task_result["MaV"], 2),
-                    "store_volt": round(task_result["StV"], 2),
-                    "discharge_volt": round(task_result["MiV"], 2), "max_temp": round(task_result["MaT"], 2),
-                    "discharge_cycles": task_result["DiC"], "firmware": task_result["FwV"],
-                    "discharge_current": int(task_result["DiR"]), "charging_current": 1000,
-                    "charging_timeout": task_result["McH"], "device_name": device.name, "slots_count": slots_count,
-                    "chems": chems, "max_capacity": 5000, "pre_charge_current": 0,
-                    "term_charging_current": 0, "discharge_resistance": 0,
-                    "discharge_mode": 0, "max_low_volt_recovery_time": 120}
-
-        elif task_result and device.type == "MCCPro":
-            print(f"DEBUG task_result type: {type(task_result)}, value: {task_result[:100] if isinstance(task_result, bytes) else task_result}")
-            unpacker = msgpack.Unpacker(raw=False, strict_map_key=False)
-            unpacker.feed(task_result)
-            dev_data = list(unpacker)
-            print(f"DEBUG unpacked data: {dev_data}")
-            dev_data = dev_data[-1] if len(dev_data) > 1 else dev_data[0]
-
-            data = {"dev_type": device.type, "max_charge_volt": round(dev_data[2] / 1000, 2),
-                    "store_volt": round(dev_data[4] / 1000, 2),
-                    "discharge_volt": round(dev_data[3] / 1000, 2), "max_temp": round(dev_data[12], 2),
-                    "discharge_cycles": dev_data[15], "firmware": firmware_version,
-                    "discharge_current": int(dev_data[9]), "charging_current": dev_data[6],
-                    "charging_timeout": dev_data[14], "device_name": device.name, "slots_count": slots_count,
-                    "chems": chems, "max_capacity": dev_data[5], "pre_charge_current": dev_data[7],
-                    "term_charging_current": dev_data[8], "discharge_resistance": dev_data[10],
-                    "discharge_mode": dev_data[11], "max_low_volt_recovery_time": dev_data[13]}
-            print(data)
-
-        elif task_result and device.type == "MCCReg":
-            unpacker = msgpack.Unpacker(raw=False, strict_map_key=False)
-            unpacker.feed(task_result)
-            dev_data = next(unpacker)
-
-            data = {"dev_type": device.type, "max_charge_volt": round(dev_data[2] / 1000, 2),
-                    "store_volt": round(dev_data[4] / 1000, 2),
-                    "discharge_volt": round(dev_data[3] / 1000, 2), "max_temp": round(dev_data[12], 2),
-                    "discharge_cycles": dev_data[15], "firmware": firmware_version,
-                    "discharge_current": int(dev_data[9]), "charging_current": dev_data[6],
-                    "charging_timeout": dev_data[14], "device_name": device.name, "slots_count": slots_count,
-                    "chems": chems, "max_capacity": dev_data[5], "pre_charge_current": dev_data[7],
-                    "term_charging_current": dev_data[8], "discharge_resistance": dev_data[10],
-                    "discharge_mode": dev_data[11], "max_low_volt_recovery_time": dev_data[13]}
-            print(data)
-
-        else:
-            return JsonResponse({'error': f'Unknown device type: {device.type}'}, status=400)
+        try:
+            if device.type == "MCC" and isinstance(task_result, dict):
+                data = {"dev_type": device.type, "max_charge_volt": round(task_result["MaV"], 2),
+                        "store_volt": round(task_result["StV"], 2),
+                        "discharge_volt": round(task_result["MiV"], 2), "max_temp": round(task_result["MaT"], 2),
+                        "discharge_cycles": task_result["DiC"], "firmware": task_result.get("FwV", firmware_version),
+                        "discharge_current": int(task_result["DiR"]), "charging_current": 1000,
+                        "charging_timeout": task_result["McH"], "device_name": device.name, "slots_count": slots_count,
+                        "chems": chems, "max_capacity": 5000, "pre_charge_current": 0,
+                        "term_charging_current": 0, "discharge_resistance": 0,
+                        "discharge_mode": 0, "max_low_volt_recovery_time": 120}
+            elif device.type in ("MCCPro", "MCCReg"):
+                dev_data = normalize_mccpro_chemistry_payload(task_result)
+                if dev_data is None:
+                    return JsonResponse({'error': 'Chemistry-Daten vom Gerät konnten nicht gelesen werden'}, status=502)
+                data = build_mccpro_edit_device_data(dev_data, device, slots_count, chems, firmware_version)
+            else:
+                return JsonResponse({'error': f'Unknown device type: {device.type}'}, status=400)
+        except (ValueError, KeyError, IndexError, TypeError) as e:
+            return JsonResponse({'error': f'Config parse failed: {str(e)}'}, status=500)
 
         return JsonResponse(data, safe=False)
 
@@ -1102,11 +1075,22 @@ def save_device_settings(request):
         try:
             data = json.loads(request.body)
             device_id = int(data.get('device_id'))
-        except json.JSONDecodeError:
-            return JsonResponse({'error': 'Invalid JSON'}, status=400)
+        except (json.JSONDecodeError, TypeError, ValueError):
+            return JsonResponse({'error': 'Invalid JSON or device_id'}, status=400)
 
-        save_device_config.delay(device_id, data)
-        return JsonResponse({'message': f'Successfully saved device info.'})
+        get_object_or_404(Device, id=device_id)
+
+        try:
+            ok = save_device_config.apply(args=[device_id, data]).get(timeout=90)
+        except Exception as e:
+            return JsonResponse({'error': f'Speichern fehlgeschlagen: {str(e)}'}, status=500)
+
+        if not ok:
+            return JsonResponse(
+                {'error': 'Gerät nicht erreichbar oder Speichern auf dem Charger fehlgeschlagen'},
+                status=503,
+            )
+        return JsonResponse({'message': 'Geräteeinstellungen gespeichert.'})
 
 
 def save_printer_settings(request):

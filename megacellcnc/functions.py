@@ -16,6 +16,8 @@ import qrcode
 import base64
 from io import BytesIO
 import ipaddress
+import json
+import msgpack
 
 def extract_segment(host):
     # Define a regex pattern to capture the segment between the first hyphen and the first dot
@@ -212,6 +214,113 @@ def add_new_cell(device, slot):
     slot.saved = True
     slot.active_cell = new_cell
     slot.save()
+
+
+def _chem_field(chem, *keys, default=0):
+    """Read chemistry field from dict (supports API key variants)."""
+    if not isinstance(chem, dict):
+        return default
+    for key in keys:
+        if key in chem and chem[key] is not None:
+            return chem[key]
+    return default
+
+
+def normalize_mccpro_chemistry_payload(raw):
+    """
+    Decode MCCPro/MCCReg get_chemistry response (msgpack bytes, list, or dict).
+    Returns a dict with Chem fields or a legacy numeric list.
+    """
+    if raw is None:
+        return None
+    if isinstance(raw, dict):
+        return raw.get('Chem', raw)
+    if isinstance(raw, (list, tuple)):
+        if len(raw) == 0:
+            return None
+        item = raw[-1] if len(raw) > 1 else raw[0]
+        if isinstance(item, dict):
+            return item.get('Chem', item)
+        return item
+    if isinstance(raw, bytes):
+        try:
+            unpacker = msgpack.Unpacker(raw=False, strict_map_key=False)
+            unpacker.feed(raw)
+            items = list(unpacker)
+            if items:
+                return normalize_mccpro_chemistry_payload(
+                    items[-1] if len(items) > 1 else items[0]
+                )
+        except Exception:
+            pass
+        try:
+            unpacked = msgpack.unpackb(raw, raw=False, strict_map_key=False)
+            return normalize_mccpro_chemistry_payload(unpacked)
+        except Exception:
+            pass
+        try:
+            text = raw.decode('utf-8').strip()
+            if text:
+                return normalize_mccpro_chemistry_payload(json.loads(text))
+        except Exception:
+            pass
+    return None
+
+
+def build_mccpro_edit_device_data(dev_data, device, slots_count, chems, firmware_version):
+    """Map live MCCPro chemistry to edit_device JSON (dict or legacy array)."""
+    if isinstance(dev_data, dict):
+        c = dev_data.get('Chem', dev_data)
+        return {
+            "dev_type": device.type,
+            "max_charge_volt": round(float(_chem_field(c, 'maxVolt', 'max_voltage')) / 1000, 2),
+            "store_volt": round(float(_chem_field(c, 'sVolt', 'store_Voltage', 'store_volt')) / 1000, 2),
+            "discharge_volt": round(float(_chem_field(c, 'minVolt', 'min_voltage')) / 1000, 2),
+            "max_temp": round(float(_chem_field(c, 'maxTemp', 'max_temp')), 2),
+            "discharge_cycles": int(_chem_field(c, 'DiC', 'discharge_cycles')),
+            "firmware": firmware_version,
+            "discharge_current": int(_chem_field(c, 'dchgCur', 'discharge_current')),
+            "charging_current": int(_chem_field(c, 'chgCur', 'chg_current')),
+            "charging_timeout": int(_chem_field(c, 'McH', 'max_charge_duration')),
+            "device_name": device.name,
+            "slots_count": slots_count,
+            "chems": chems,
+            "max_capacity": int(_chem_field(c, 'maxCap', 'max_capacity')),
+            "pre_charge_current": int(_chem_field(c, 'pChgCur', 'pre_chg_current')),
+            "term_charging_current": int(_chem_field(c, 'terChgCur', 'ter_chg_current')),
+            "discharge_resistance": float(_chem_field(c, 'dchgRes', 'discharge_resistance')),
+            "discharge_mode": int(_chem_field(c, 'dchgMod', 'discharge_mod')),
+            "max_low_volt_recovery_time": int(_chem_field(c, 'LmR', 'low_volt_max_time')),
+            "chemistry_id": int(_chem_field(c, 'id', default=5)),
+            "cells_to_group": device.cell_to_group,
+            "cells_per_group": device.cell_per_group,
+        }
+    if isinstance(dev_data, (list, tuple)) and len(dev_data) >= 16:
+        return {
+            "dev_type": device.type,
+            "max_charge_volt": round(dev_data[2] / 1000, 2),
+            "store_volt": round(dev_data[4] / 1000, 2),
+            "discharge_volt": round(dev_data[3] / 1000, 2),
+            "max_temp": round(dev_data[12], 2),
+            "discharge_cycles": dev_data[15],
+            "firmware": firmware_version,
+            "discharge_current": int(dev_data[9]),
+            "charging_current": dev_data[6],
+            "charging_timeout": dev_data[14],
+            "device_name": device.name,
+            "slots_count": slots_count,
+            "chems": chems,
+            "max_capacity": dev_data[5],
+            "pre_charge_current": dev_data[7],
+            "term_charging_current": dev_data[8],
+            "discharge_resistance": dev_data[10],
+            "discharge_mode": dev_data[11],
+            "max_low_volt_recovery_time": dev_data[13],
+            "chemistry_id": int(dev_data[0]) if len(dev_data) > 0 else 5,
+            "cells_to_group": device.cell_to_group,
+            "cells_per_group": device.cell_per_group,
+        }
+    raise ValueError(f'Unbekanntes Chemistry-Format: {type(dev_data).__name__}')
 
 
 def format_cap(capacity):

@@ -331,8 +331,21 @@ function editDevice(deviceId) {
         },
         body: JSON.stringify({ 'device_id': deviceId })  // Note that we're sending an array with a single ID
     })
-    .then(response => response.json())
-    .then(data => {
+    .then(async response => {
+            let data;
+            try {
+                data = await response.json();
+            } catch (e) {
+                $('#loadingSpinner').hide();
+                toastr.error('Ungültige Server-Antwort beim Laden der Geräteeinstellungen', 'Fehler');
+                return;
+            }
+            if (!response.ok) {
+                $('#loadingSpinner').hide();
+                toastr.error(data.error || 'Geräteeinstellungen konnten nicht geladen werden', 'Fehler');
+                return;
+            }
+
             // Populate modal form fields with device data
 
             let labelForChargingCurrent = document.querySelector('label[for="chargingCurrent"]');
@@ -383,8 +396,9 @@ function editDevice(deviceId) {
 
                 document.getElementById('slotsNumber').textContent = data["slots_count"];
 
-                document.getElementById('cellsToGroup').value = 16;
-                document.getElementById('cellsPerGroup').value = 1;
+                document.getElementById('cellsToGroup').value = data["cells_to_group"] ?? 16;
+                document.getElementById('cellsPerGroup').value = data["cells_per_group"] ?? 1;
+                window._deviceChemistryId = data["chemistry_id"] ?? 5;
 
                 document.getElementById('applyToSlot').value = 1;
 
@@ -507,12 +521,10 @@ document.querySelectorAll('.editDeviceBtn').forEach(btn => {
 
 
 function saveDeviceSettings() {
-    var formData = new FormData(document.getElementById('deviceSettingsForm'));
-    // Add AJAX call to submit formData to your Django backend
-    // Handle success and error responses accordingly
-    console.log("This is device id saving");
-    console.log(current_device_id);
-    $('#deviceSettingsModal').modal('hide'); // Close the modal
+    if (!current_device_id) {
+        toastr.error('Kein Gerät ausgewählt', 'Fehler');
+        return;
+    }
 
     let deviceName = document.getElementById('deviceName').value;
     let minVoltage = document.getElementById('minVoltage').value;
@@ -538,25 +550,51 @@ function saveDeviceSettings() {
     let applyToAllSlotsCheckbox = document.getElementById('applyToAllSlots');
     let applyToAllSlots = applyToAllSlotsCheckbox.checked;
 
+    const saveBtn = document.querySelector('#deviceSettingsModal .btn-primary');
+    if (saveBtn) {
+        saveBtn.disabled = true;
+    }
+
     fetch("/save-device-settings/", {
         method: 'POST',
         headers: {
             'X-CSRFToken': getCookie('csrftoken'),
             'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ 'device_id': current_device_id, deviceName, minVoltage, storeVoltage, maxVoltage,
-        chargingCurrent, dischargingCurrent, maxTemp, dischargeCycles, chargingTimeout, prechargeCurrent,
-            termChargingCurrent, dischargeResistance, dischargeMode, maxLowVoltTime, maxCapacity, cellsToGroup,
-            cellsPerGroup, applyToSlot, applyToAllSlots, tempSource})
+        body: JSON.stringify({
+            device_id: current_device_id,
+            chemistry_id: window._deviceChemistryId ?? 5,
+            deviceName, minVoltage, storeVoltage, maxVoltage,
+            chargingCurrent, dischargingCurrent, maxTemp, dischargeCycles, chargingTimeout,
+            prechargeCurrent, termChargingCurrent, dischargeResistance, dischargeMode,
+            maxLowVoltTime, maxCapacity, cellsToGroup, cellsPerGroup, applyToSlot,
+            applyToAllSlots, tempSource,
+        })
     })
-    .then(response => response.json())
-    .then(data => {
-        //location.reload();  // Optionally reload the page to update the device list
-
-        toastr.success(data.message, "Success");
-
+    .then(async response => {
+        let data;
+        try {
+            data = await response.json();
+        } catch (e) {
+            toastr.error('Ungültige Server-Antwort beim Speichern', 'Fehler');
+            return;
+        }
+        if (!response.ok) {
+            toastr.error(data.error || 'Speichern fehlgeschlagen', 'Fehler');
+            return;
+        }
+        $('#deviceSettingsModal').modal('hide');
+        toastr.success(data.message, 'Erfolg');
     })
-    .catch(error => console.error('Error:', error));
+    .catch(error => {
+        console.error('Error:', error);
+        toastr.error('Netzwerkfehler beim Speichern', 'Fehler');
+    })
+    .finally(() => {
+        if (saveBtn) {
+            saveBtn.disabled = false;
+        }
+    });
 
 }
 

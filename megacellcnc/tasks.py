@@ -273,25 +273,79 @@ def get_device_config(device_id):
             device_conf = tester.get_config()
 
             return device_conf, mcc_chemistries_json, tester.device_type["McC"]
-    else:
-        return {}, {}
+
+    return None, '[]', ''
+
+
+def _mccpro_chemistry_payload(data, chem_id, slot_index):
+    maxVolt = constrain_value(3.5, 4.24, float(data["maxVoltage"]))
+    minVolt = constrain_value(1.0, 4.0, float(data["minVoltage"]))
+    sVolt = constrain_value(2.5, 4.24, float(data["storeVoltage"]))
+    maxCap = constrain_value(100, 999999, int(data["maxCapacity"]))
+    chgCur = constrain_value(500, 4500, int(data["chargingCurrent"]))
+    pChgCur = constrain_value(128, 2048, int(data["prechargeCurrent"]))
+    terChgCur = constrain_value(128, 2048, int(data["termChargingCurrent"]))
+    dchgRes = constrain_value(1, 10, float(data["dischargeResistance"]))
+    dchgMod = constrain_value(0, 2, int(data["dischargeMode"]))
+    maxTemp = constrain_value(0, 55, int(data["maxTemp"]))
+    LmR = constrain_value(5, 999999, int(data["maxLowVoltTime"]))
+    McH = constrain_value(5, 999999, int(data["chargingTimeout"]))
+    DiC = constrain_value(1, 999999, int(data["dischargeCycles"]))
+    chem_id = constrain_value(1, 16, int(chem_id))
+    return {
+        "Chem": {
+            "id": chem_id,
+            "name": "MegaCNC",
+            "maxVolt": maxVolt * 1000,
+            "minVolt": minVolt * 1000,
+            "sVolt": sVolt * 1000,
+            "maxCap": maxCap,
+            "chgCur": chgCur,
+            "pChgCur": pChgCur,
+            "terChgCur": terChgCur,
+            "dchgCur": constrain_value(100, 3000, int(data["dischargingCurrent"])),
+            "dchgRes": dchgRes,
+            "dchgMod": dchgMod,
+            "maxTemp": maxTemp,
+            "LmR": LmR,
+            "McH": McH,
+            "DiC": DiC,
+        },
+        "CiD": slot_index,
+    }
 
 
 @shared_task
 def save_device_config(device_id, data):
 
-    device = Device.objects.get(pk=device_id)
+    required = (
+        "deviceName", "maxVoltage", "minVoltage", "storeVoltage", "chargingCurrent",
+        "dischargingCurrent", "maxTemp", "dischargeCycles", "chargingTimeout",
+    )
+    for key in required:
+        if key not in data or data[key] in (None, ""):
+            logger.warning("save_device_config: missing field %s", key)
+            return False
+
+    try:
+        device = Device.objects.get(pk=device_id)
+    except Device.DoesNotExist:
+        return False
 
     res_dict = {}
     try:
         portscan(80, device.ip, res_dict)
         print(res_dict)
-    except:
+    except Exception:
         pass
 
-    if device.ip in res_dict:
-        tester = MegacellCharger(device.ip)
+    if device.ip not in res_dict:
+        return False
 
+    try:
+        tester = MegacellCharger(device.ip)
+        if not tester.device_type:
+            return False
 
         maxVolt = constrain_value(3.5, 4.24, float(data["maxVoltage"]))
         minVolt = constrain_value(1.0, 4.0, float(data["minVoltage"]))
@@ -307,8 +361,6 @@ def save_device_config(device_id, data):
         McH = constrain_value(5, 999999, int(data["chargingTimeout"]))
         DiC = constrain_value(1, 999999, int(data["dischargeCycles"]))
 
-        applyToSlot = constrain_value(1, 16, int(data["applyToSlot"]))
-
         cellsToGroup = constrain_value(1, 16, int(data["cellsToGroup"]))
         cellsPerGroup = constrain_value(1, 16, int(data["cellsPerGroup"]))
         tempSource = constrain_value(0, 1, int(data["tempSource"]))
@@ -323,72 +375,31 @@ def save_device_config(device_id, data):
         device.save()
 
         if tester.device_type and "ChT" in tester.device_type:
+            mccpro_required = (
+                "prechargeCurrent", "termChargingCurrent", "dischargeResistance", "dischargeMode",
+                "maxLowVoltTime", "maxCapacity", "cellsToGroup", "cellsPerGroup", "applyToSlot", "tempSource",
+            )
+            for key in mccpro_required:
+                if key not in data or data[key] in (None, ""):
+                    logger.warning("save_device_config MCCPro: missing field %s", key)
+                    return False
 
-            if data["applyToAllSlots"] or tester.device_type["ChT"] == "MCCReg":
-                print("I am applying chemistry to all slots")
+            chem_id = int(data.get("chemistry_id", 5))
+            apply_all = bool(data.get("applyToAllSlots", False))
+
+            if apply_all or tester.device_type["ChT"] == "MCCReg":
                 for slot in range(16):
-
-                    chemistry = {
-                        "Chem":
-                            {
-                                "id": 5,  # id's 1 to 4 are the ones shown on mcc menu, those cannot be modified
-                                "name": "MegaCNC",
-                                "maxVolt": maxVolt * 1000,
-                                "minVolt": minVolt * 1000,
-                                "sVolt": sVolt * 1000,
-                                "maxCap": maxCap,
-                                "chgCur": chgCur,
-                                "pChgCur": pChgCur,
-                                "terChgCur": terChgCur,
-                                "dchgCur": constrain_value(100, 3000, int(data["dischargingCurrent"])),
-                                "dchgRes": dchgRes,
-                                "dchgMod": dchgMod,
-                                "maxTemp": maxTemp,
-                                "LmR": LmR,  # Low Voltage Recover Max Runtime in minutes
-                                "McH": McH,  # Max charge duration in minutes
-                                "DiC": DiC,  # Discharge cycles
-                            },
-                        "CiD": slot
-                    }
-
-                    tester.set_cell_chemistry(chemistry)
-
-
+                    tester.set_cell_chemistry(_mccpro_chemistry_payload(data, chem_id, slot))
             else:
+                apply_to_slot = constrain_value(1, 16, int(data["applyToSlot"]))
+                tester.set_cell_chemistry(
+                    _mccpro_chemistry_payload(data, chem_id, apply_to_slot - 1)
+                )
 
-                chemistry = {
-                    "Chem":
-                        {
-                            "id": 5,  # id's 1 to 4 are the ones shown on mcc menu, those cannot be modified
-                            "name": "MegaCNC",
-                            "maxVolt": maxVolt * 1000,
-                            "minVolt": minVolt * 1000,
-                            "sVolt": sVolt * 1000,
-                            "maxCap": maxCap,
-                            "chgCur": chgCur,
-                            "pChgCur": pChgCur,
-                            "terChgCur": terChgCur,
-                            "dchgCur": constrain_value(100, 3000, int(data["dischargingCurrent"])),
-                            "dchgRes": dchgRes,
-                            "dchgMod": dchgMod,
-                            "maxTemp": maxTemp,
-                            "LmR": LmR,  # Low Voltage Recover Max Runtime in minutes
-                            "McH": McH,  # Max charge duration in minutes
-                            "DiC": DiC,  # Discharge cycles
-
-                        },
-                    "CiD": applyToSlot - 1
-                }
-                tester.set_cell_chemistry(chemistry)
-                print("I am applying chemistry to one slot %s" % (int(data["applyToSlot"]) - 1))
-
-            # Setting the hardware config
             tester.set_hardware_config(tempSource, cellsToGroup, cellsPerGroup, 0)
-            print("This is data from task")
-            print(data)
             return True
 
-        elif tester.device_type and 'McC' in tester.device_type:
+        if tester.device_type and 'McC' in tester.device_type:
             config = {
                 "ChC": True,
                 "MaV": maxVolt,
@@ -398,18 +409,19 @@ def save_device_config(device_id, data):
                 "DiC": DiC,
                 "LmV": 0.3,
                 "LcV": 3.6,
-                "LmD": 1.1, # Limit volt drop
+                "LmD": 1.1,
                 "LmR": 500,
                 "McH": int(data["chargingTimeout"]),
                 "LcR": 200,
                 "MsR": 2000,
                 "DiR": constrain_value(100, 990, int(data["dischargingCurrent"])),
                 "CcO": 1,
-                "DcO": 1
-                    }
-
+                "DcO": 1,
+            }
             tester.set_config(config)
-
             return True
-    else:
+
+        return False
+    except (KeyError, TypeError, ValueError) as e:
+        logger.exception("save_device_config failed: %s", e)
         return False

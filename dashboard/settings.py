@@ -11,7 +11,7 @@ https://docs.djangoproject.com/en/5.0/ref/settings/
 """
 
 # App Version
-APP_VERSION = "1.4.6"
+APP_VERSION = "1.4.8"
 
 from pathlib import Path
 import os
