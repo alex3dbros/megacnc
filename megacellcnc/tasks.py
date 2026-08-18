@@ -3,6 +3,7 @@ from megacellcnc.models import Device, Slot, Chemistry, CellTestData
 from celery.exceptions import SoftTimeLimitExceeded
 from mccprolib.api import MegacellCharger
 from megacellcnc.functions import portscan, add_new_cell
+import base64
 import logging
 from django.db import transaction
 from django.core import serializers
@@ -244,37 +245,54 @@ def get_device_config(device_id):
     res_dict = {}
     try:
         portscan(80, device.ip, res_dict)
-        print(res_dict)
-    except:
+    except Exception:
         pass
 
-    if device.ip in res_dict:
+    if device.ip not in res_dict:
+        return {}, {}, ""
+
+    try:
         tester = MegacellCharger(device.ip)
-        if tester.device_type and "ChT" in tester.device_type:
+    except Exception as e:
+        logger.warning("get_device_config: connect failed for %s: %s", device.ip, e)
+        return {}, {}, ""
 
-            if tester.device_type["ChT"] == "MCCPro":
-                chems = Chemistry.objects.filter(device_type="MCCPro")
-                mccpro_chemistries_json = serializers.serialize('json', chems)
-                data = {"CiD": 0}
-                device_conf = tester.get_cell_chemistry(data)
-                return device_conf, mccpro_chemistries_json, tester.device_type["FwV"]
+    if tester.device_type and "ChT" in tester.device_type:
 
-            elif tester.device_type["ChT"] == "MCCReg":
-                chems = Chemistry.objects.filter(device_type="MCC")
-                mcc_chemistries_json = serializers.serialize('json', chems)
-                data = {"CiD": 0}
-                device_conf = tester.get_cell_chemistry(data)
+        if tester.device_type["ChT"] == "MCCPro":
+            chems = Chemistry.objects.filter(device_type="MCCPro")
+            mccpro_chemistries_json = serializers.serialize('json', chems)
+            data = {"CiD": 0}
+            device_conf = tester.get_cell_chemistry(data)
+            # Celery JSON result backend cannot carry raw bytes cleanly — use base64.
+            if isinstance(device_conf, (bytes, bytearray)):
+                device_conf = base64.b64encode(bytes(device_conf)).decode("ascii")
+            return device_conf, mccpro_chemistries_json, tester.device_type["FwV"]
 
-                return device_conf, mcc_chemistries_json, tester.device_type["FwV"]
-
-        elif tester.device_type and 'McC' in tester.device_type:
+        elif tester.device_type["ChT"] == "MCCReg":
             chems = Chemistry.objects.filter(device_type="MCC")
             mcc_chemistries_json = serializers.serialize('json', chems)
+            data = {"CiD": 0}
+            device_conf = tester.get_cell_chemistry(data)
+            if isinstance(device_conf, (bytes, bytearray)):
+                device_conf = base64.b64encode(bytes(device_conf)).decode("ascii")
+            return device_conf, mcc_chemistries_json, tester.device_type["FwV"]
+
+        # Classic MCC sometimes reports ChT == "MCC" (not Pro/Reg) — use JSON config path.
+        elif tester.device_type.get("ChT") == "MCC":
+            chems = Chemistry.objects.filter(device_type="MCC")
+            mcc_chemistries_json = serializers.serialize("json", chems)
             device_conf = tester.get_config()
+            fw = tester.device_type.get("FwV") or tester.device_type.get("McC", "")
+            return device_conf, mcc_chemistries_json, fw
 
-            return device_conf, mcc_chemistries_json, tester.device_type["McC"]
+    elif tester.device_type and 'McC' in tester.device_type:
+        chems = Chemistry.objects.filter(device_type="MCC")
+        mcc_chemistries_json = serializers.serialize('json', chems)
+        device_conf = tester.get_config()
+        return device_conf, mcc_chemistries_json, tester.device_type["McC"]
 
-    return None, '[]', ''
+    return {}, {}, ""
 
 
 def _mccpro_chemistry_payload(data, chem_id, slot_index):

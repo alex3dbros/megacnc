@@ -17,7 +17,10 @@ import base64
 from io import BytesIO
 import ipaddress
 import json
+import logging
 import msgpack
+
+logger = logging.getLogger(__name__)
 
 def extract_segment(host):
     # Define a regex pattern to capture the segment between the first hyphen and the first dot
@@ -30,9 +33,14 @@ def extract_segment(host):
     return match.group(1) if match else None
 
 
-def portscan(port, host, res_dict):
+SCAN_PORT_TIMEOUT = 2
+SCAN_HTTP_TIMEOUT = 8
+SCAN_BATCH_SIZE = 48
+
+
+def portscan(port, host, res_dict, timeout=1):
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    sock.settimeout(1)  # Timeout for the socket operation
+    sock.settimeout(timeout)
     result = sock.connect_ex((host, port))
     if result == 0:
         res_dict[host] = result
@@ -40,23 +48,66 @@ def portscan(port, host, res_dict):
 
 
 def scan_ip_range(startIP, endIP):
+    """Find hosts with port 80 open (batched portscan, then HTTP only for hits)."""
     results = {}
-    threads = list()
-    iprange = netaddr.ip.IPRange(startIP, endIP)
+    hosts = [str(ip) for ip in netaddr.ip.IPRange(startIP, endIP)]
 
-    for ip in iprange:
-        host = str(ip)
-        t = Thread(target=portscan, args=(80, host, results))
-        threads.append(t)
-        t.start()
-
-    for t in threads:
-        t.join()
-
-    # for k in results:
-    #     print("This is IP: %s, this is Hostname: %s" % (k, results[k]))
+    for i in range(0, len(hosts), SCAN_BATCH_SIZE):
+        threads = []
+        for host in hosts[i:i + SCAN_BATCH_SIZE]:
+            t = Thread(target=portscan, args=(80, host, results, SCAN_PORT_TIMEOUT))
+            threads.append(t)
+            t.start()
+        for t in threads:
+            t.join()
 
     return results
+
+
+def _read_charger_identity(ip, timeout=SCAN_HTTP_TIMEOUT):
+    info = MegacellCharger.probe_device(ip, timeout=timeout)
+    if info:
+        return info
+    try:
+        tester = MegacellCharger(ip)
+        if tester.device_type and tester.device_type != "Unknown":
+            return tester.device_type
+    except Exception:
+        pass
+    return None
+
+
+def _device_entry_from_identity(tester_info, ip, dev_id):
+    if not tester_info or not isinstance(tester_info, dict):
+        return None
+
+    if 'ChT' in tester_info:
+        tester_type = tester_info["ChT"]
+        mac_address = tester_info.get("McA", "")
+        slot_count = tester_info.get("CeC", 0)
+        firmware_v = tester_info.get("FwV", "")
+    elif 'McC' in tester_info:
+        tester_type = "MCC"
+        mac_address = tester_info.get("McA", "")
+        slot_count = tester_info.get("ByC", 0)
+        firmware_v = tester_info["McC"]
+    else:
+        return None
+
+    if not mac_address:
+        return None
+
+    last_three_parts = mac_address.split(":")[-3:]
+    device_name = tester_type + "-" + "".join(last_three_parts)
+    return {
+        'id': dev_id,
+        'name': device_name,
+        'ip': ip,
+        'type': tester_type,
+        'mac': mac_address,
+        'slot_count': slot_count,
+        'firmware_version': firmware_v,
+    }
 
 
 def is_valid_ip(manual_ip):
@@ -69,83 +120,22 @@ def is_valid_ip(manual_ip):
 
 def scan_for_devices(from_ip, to_ip, manual_ip):
 
-    devices = scan_ip_range(from_ip, to_ip)
+    open_hosts = scan_ip_range(from_ip, to_ip)
     devices_list = []
     dev_id = 0
-    for ip, hostname in devices.items():
-        print(ip, hostname)
+    seen_ips = set()
 
-        tester_info = {}
-        tester_type = ""
-        mac_address = ""
-        slot_count = 0
-        firmware_v = ""
-        try:
-            tester = MegacellCharger(ip)
-            tester_info = tester.get_device_type()
-            print(tester_info)
-        except:
-            continue
+    for ip in sorted(open_hosts.keys()):
+        entry = _device_entry_from_identity(_read_charger_identity(ip), ip, dev_id)
+        if entry:
+            devices_list.append(entry)
+            seen_ips.add(ip)
+            dev_id += 1
 
-        if 'ChT' in tester_info:
-            tester_type = tester_info["ChT"]
-            mac_address = tester_info["McA"]
-            slot_count = tester_info["CeC"]
-            firmware_v = tester_info["FwV"]
-        elif 'McC' in tester_info:
-            tester_type = "MCC"
-            mac_address = tester_info["McA"]
-            slot_count = tester_info["ByC"]
-            firmware_v = tester_info["McC"]
-        else:
-            tester_type = "Unknown"
-
-        last_three_parts = mac_address.split(":")[-3:]
-        device_name = tester_type + "-" + "".join(last_three_parts)
-
-        devices_list.append({'id': dev_id, 'name': device_name, 'ip': ip, 'type': tester_type, 'mac': mac_address, 'slot_count': slot_count,
-                             'firmware_version': firmware_v})
-        dev_id += 1
-
-    if manual_ip != "" and is_valid_ip(manual_ip):
-        tester_info = {}
-        tester_type = ""
-        mac_address = ""
-        slot_count = 0
-        firmware_v = ""
-
-
-        try:
-            tester = MegacellCharger(manual_ip)
-            tester_info = tester.get_device_type()
-            print(tester_info)
-
-            if 'ChT' in tester_info:
-                tester_type = tester_info["ChT"]
-                mac_address = tester_info["McA"]
-                slot_count = tester_info["CeC"]
-                firmware_v = tester_info["FwV"]
-            elif 'McC' in tester_info:
-                tester_type = "MCC"
-                mac_address = tester_info["McA"]
-                slot_count = tester_info["ByC"]
-                firmware_v = tester_info["McC"]
-            else:
-                tester_type = "Unknown"
-
-            # Check if the new IP address is already in the list of dictionaries
-            if any(d['ip'] == manual_ip for d in devices_list):
-                pass
-            else:
-
-                last_three_parts = mac_address.split(":")[-3:]
-                device_name = tester_type + "-" + "".join(last_three_parts)
-
-                devices_list.append({'id': dev_id, 'name': device_name, 'ip': manual_ip, 'type': tester_type, 'mac': mac_address, 'slot_count': slot_count,
-                                     'firmware_version': firmware_v})
-
-        except:
-            print("Could not connect to manual ip device")
+    if manual_ip and is_valid_ip(manual_ip) and manual_ip not in seen_ips:
+        entry = _device_entry_from_identity(_read_charger_identity(manual_ip), manual_ip, dev_id)
+        if entry:
+            devices_list.append(entry)
 
     return devices_list
 
@@ -233,8 +223,31 @@ def normalize_mccpro_chemistry_payload(raw):
     """
     if raw is None:
         return None
+    if isinstance(raw, str):
+        try:
+            return normalize_mccpro_chemistry_payload(json.loads(raw))
+        except Exception:
+            pass
+        try:
+            return normalize_mccpro_chemistry_payload(raw.encode('latin-1'))
+        except Exception:
+            pass
+        logger.warning("normalize_mccpro_chemistry_payload: unparseable str len=%s", len(raw))
+        return None
     if isinstance(raw, dict):
-        return raw.get('Chem', raw)
+        if 'kombu.bytes' in raw:
+            try:
+                return normalize_mccpro_chemistry_payload(base64.b64decode(raw['kombu.bytes']))
+            except Exception:
+                pass
+        chem = raw.get('Chem')
+        if isinstance(chem, dict):
+            return chem
+        if chem is not None:
+            return normalize_mccpro_chemistry_payload(chem)
+        if any(k in raw for k in ('maxVolt', 'minVolt', 'maxCap', 'chgCur')):
+            return raw
+        return raw.get('Chem', raw) if 'Chem' in raw else None
     if isinstance(raw, (list, tuple)):
         if len(raw) == 0:
             return None
@@ -321,6 +334,119 @@ def build_mccpro_edit_device_data(dev_data, device, slots_count, chems, firmware
             "cells_per_group": device.cell_per_group,
         }
     raise ValueError(f'Unbekanntes Chemistry-Format: {type(dev_data).__name__}')
+
+
+def is_charger_api_error(raw):
+    if raw is None:
+        return True
+    if isinstance(raw, bytes):
+        text = raw.decode('utf-8', errors='replace').strip().lower()
+        if not text:
+            return True
+        return 'not found' in text or 'file not found' in text or text.startswith('error')
+    if isinstance(raw, str):
+        text = raw.strip().lower()
+        return 'not found' in text or text.startswith('error')
+    return False
+
+
+def _volt_to_mv(value, default=0):
+    if value is None:
+        return default
+    v = float(value)
+    return int(round(v * 1000)) if v < 10 else int(round(v))
+
+
+def _device_discharge_mode(device):
+    if not device or not device.discharge_mode:
+        return 0
+    try:
+        return int(device.discharge_mode)
+    except (TypeError, ValueError):
+        return 0
+
+
+def chemistry_dict_from_cell(cell, device=None):
+    dchg = device.discharge_current if device and device.discharge_current else None
+    return {
+        "id": 5,
+        "maxVolt": _volt_to_mv(cell.get("MaV"), 4200),
+        "minVolt": _volt_to_mv(cell.get("MiV"), 2800),
+        "sVolt": _volt_to_mv(cell.get("StV"), 3700),
+        "DiC": int(cell.get("DiC") or 1),
+        "maxTemp": int(cell.get("TmP") or cell.get("MaT") or 35),
+        "dchgCur": int(dchg or cell.get("DiR") or cell.get("dchgCur") or 500),
+        "chgCur": int(cell.get("ChgC") or cell.get("chgCur") or 2000),
+        "pChgCur": int(cell.get("pChgCur") or 128),
+        "terChgCur": int(cell.get("terChgCur") or 128),
+        "dchgRes": float(cell.get("dchgRes") or 1),
+        "dchgMod": _device_discharge_mode(device) or int(cell.get("dchgMod") or 0),
+        "maxCap": int(cell.get("maxCap") or cell.get("CaP") or 4500),
+        "McH": int(cell.get("McH") or 300),
+        "LmR": int(cell.get("LmR") or 120),
+    }
+
+
+def chemistry_dict_from_db(device, slot=None):
+    from megacellcnc.models import Chemistry
+
+    if slot and slot.max_volt:
+        return chemistry_dict_from_cell({
+            "MaV": slot.max_volt,
+            "MiV": slot.min_volt,
+            "StV": slot.store_volt,
+            "DiC": slot.discharge_cycles_set or 1,
+        }, device)
+
+    preset = device.global_chemistry or Chemistry.objects.filter(device_type="MCCPro").first()
+    if preset:
+        return {
+            "id": 5,
+            "maxVolt": _volt_to_mv(preset.max_voltage),
+            "minVolt": _volt_to_mv(preset.min_voltage),
+            "sVolt": _volt_to_mv(preset.store_Voltage),
+            "DiC": int(preset.discharge_cycles),
+            "maxTemp": int(preset.max_temp),
+            "dchgCur": int(device.discharge_current or preset.discharge_current),
+            "chgCur": int(preset.chg_current),
+            "pChgCur": int(preset.pre_chg_current),
+            "terChgCur": int(preset.ter_chg_current),
+            "dchgRes": float(preset.discharge_resistance),
+            "dchgMod": _device_discharge_mode(device) or int(preset.discharge_mod),
+            "maxCap": int(preset.max_capacity),
+            "McH": int(preset.max_charge_duration),
+            "LmR": int(preset.low_volt_max_time),
+        }
+    return chemistry_dict_from_cell({}, device)
+
+
+def fetch_mccpro_chemistry(tester, device, cid=0):
+    """
+    Read MCCPro chemistry from device API; fall back to live cells, cached slots, or DB.
+    Returns (chem_dict, source) where source is device|cells|slots|database.
+    """
+    raw = tester.get_cell_chemistry({"CiD": cid})
+    if raw is not None and not is_charger_api_error(raw):
+        parsed = normalize_mccpro_chemistry_payload(raw)
+        if parsed is not None:
+            if isinstance(parsed, dict) and 'Chem' in parsed:
+                parsed = parsed['Chem']
+            return parsed, "device"
+
+    slot_num = cid + 1
+    try:
+        info = tester.get_data({"start": slot_num, "end": slot_num}, "api/get_cells_info")
+        cells = info.get("cells") or []
+        if cells:
+            return chemistry_dict_from_cell(cells[0], device), "cells"
+    except Exception as e:
+        logger.warning("get_cells_info fallback failed for %s: %s", device.ip, e)
+
+    slot = device.slots.filter(slot_number=slot_num).first()
+    if slot and slot.max_volt:
+        return chemistry_dict_from_db(device, slot), "slots"
+
+    return chemistry_dict_from_db(device), "database"
 
 
 def format_cap(capacity):

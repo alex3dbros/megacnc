@@ -12,6 +12,8 @@ from .functions import scan_for_devices, add_new_cell, draw_dual_label, gather_l
     normalize_mccpro_chemistry_payload, build_mccpro_edit_device_data
 from datetime import timedelta
 import json
+import msgpack
+import base64
 from django.db import connection, transaction
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import Count
@@ -1021,34 +1023,63 @@ def new_device(request):
         return render(request,'megacellcnc/forms/new-device.html',context)
 
 
+def _unpack_mccpro_config(task_result):
+    """Decode MCCPro/MCCReg chemistry: base64 MessagePack (Alex) or JSON dict."""
+    raw = task_result
+    if isinstance(task_result, str):
+        try:
+            raw = base64.b64decode(task_result)
+        except Exception:
+            raw = task_result
+    if isinstance(raw, (bytes, bytearray)):
+        raw_bytes = bytes(raw)
+        try:
+            return msgpack.unpackb(raw_bytes, raw=False, strict_map_key=False)
+        except Exception:
+            pass
+        try:
+            text = raw_bytes.decode('utf-8').strip()
+            if text and text[0] in '{[':
+                return json.loads(text)
+        except Exception:
+            pass
+        return normalize_mccpro_chemistry_payload(raw_bytes)
+    if isinstance(raw, (dict, list, tuple)):
+        return raw
+    return normalize_mccpro_chemistry_payload(raw)
+
+
 def edit_device(request):
     if request.method == "POST":
         try:
-            req_data = json.loads(request.body)
-            device_id = int(req_data.get('device_id'))
-        except json.JSONDecodeError:
+            payload = json.loads(request.body)
+            device_id = int(payload.get('device_id'))
+        except (json.JSONDecodeError, TypeError, ValueError):
             return JsonResponse({'error': 'Invalid JSON'}, status=400)
 
         device = get_object_or_404(Device, id=device_id)
-        slots = device.slots.all().order_by('slot_number')
-        slots_count = device.slots.all().count()
-
-        # Get device chemistry settings depending on device type
-        try:
-            result_async = get_device_config.delay(device_id)
-            task_result, chems, firmware_version = result_async.get(timeout=30)
-        except Exception as e:
-            return JsonResponse({'error': f'Failed to get device config: {str(e)}'}, status=500)
-
-        if task_result is None or task_result == {} or task_result == b'':
-            return JsonResponse({'error': 'Device not responding or offline'}, status=503)
-
-        if not chems:
-            chems = '[]'
+        slots_count = device.slots.count()
+        dev_type = (device.type or "").strip()
 
         try:
-            if device.type == "MCC" and isinstance(task_result, dict):
-                data = {"dev_type": device.type, "max_charge_volt": round(task_result["MaV"], 2),
+            raw = get_device_config(device_id)
+        except Exception as exc:
+            return JsonResponse({'error': f'Could not reach device: {exc}'}, status=502)
+
+        if raw is None or not isinstance(raw, (tuple, list)) or len(raw) != 3:
+            return JsonResponse({'error': 'Invalid response from device config service'}, status=502)
+
+        task_result, chems, firmware_version = raw
+
+        if not task_result:
+            return JsonResponse({'error': 'Device is offline or unreachable'}, status=503)
+
+        body = None
+
+        try:
+            # Older MCC boards: JSON from api/get_config_info
+            if dev_type == "MCC" and isinstance(task_result, dict):
+                body = {"dev_type": dev_type, "max_charge_volt": round(task_result["MaV"], 2),
                         "store_volt": round(task_result["StV"], 2),
                         "discharge_volt": round(task_result["MiV"], 2), "max_temp": round(task_result["MaT"], 2),
                         "discharge_cycles": task_result["DiC"], "firmware": task_result.get("FwV", firmware_version),
@@ -1057,17 +1088,36 @@ def edit_device(request):
                         "chems": chems, "max_capacity": 5000, "pre_charge_current": 0,
                         "term_charging_current": 0, "discharge_resistance": 0,
                         "discharge_mode": 0, "max_low_volt_recovery_time": 120}
-            elif device.type in ("MCCPro", "MCCReg"):
-                dev_data = normalize_mccpro_chemistry_payload(task_result)
+
+            elif dev_type in ("MCCPro", "MCCReg") and task_result is not None:
+                dev_data = _unpack_mccpro_config(task_result)
+                is_numeric_array = (
+                    isinstance(dev_data, (list, tuple))
+                    and len(dev_data) >= 16
+                    and not isinstance(dev_data[0], dict)
+                )
+                if not is_numeric_array:
+                    normalized = normalize_mccpro_chemistry_payload(dev_data)
+                    if normalized is not None:
+                        dev_data = normalized
                 if dev_data is None:
                     return JsonResponse({'error': 'Chemistry-Daten vom Gerät konnten nicht gelesen werden'}, status=502)
-                data = build_mccpro_edit_device_data(dev_data, device, slots_count, chems, firmware_version)
-            else:
-                return JsonResponse({'error': f'Unknown device type: {device.type}'}, status=400)
-        except (ValueError, KeyError, IndexError, TypeError) as e:
-            return JsonResponse({'error': f'Config parse failed: {str(e)}'}, status=500)
+                body = build_mccpro_edit_device_data(dev_data, device, slots_count, chems, firmware_version)
+        except Exception as exc:
+            return JsonResponse({'error': f'Failed to parse device configuration: {exc}'}, status=502)
 
-        return JsonResponse(data, safe=False)
+        if body is None:
+            return JsonResponse({
+                'error': f'Unsupported device type "{dev_type}" or config format does not match (MCC / MCCPro / MCCReg).'
+            }, status=422)
+
+        _c = body.get("chems")
+        if _c is None or (isinstance(_c, str) and not _c.strip()):
+            body["chems"] = "[]"
+        elif not isinstance(_c, str):
+            body["chems"] = json.dumps(_c) if _c is not None else "[]"
+
+        return JsonResponse(body, safe=False)
 
 
 def save_device_settings(request):

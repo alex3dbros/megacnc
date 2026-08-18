@@ -3,6 +3,8 @@ import json
 
 
 class MegacellCharger:
+    REQUEST_TIMEOUT = 8
+
     def __init__(self, ip):
         self.ip = ip
         self.headers = {'content-type': 'application/json'}
@@ -85,8 +87,12 @@ class MegacellCharger:
         return result
 
     def get_cell_chemistry(self, data):
-        result = self.set_data(data, "api/get_chemistry")
-        return result
+        """Return raw response bytes (MessagePack). Do not use .text — it corrupts binary."""
+        req_uri = "http://" + self.ip + "/" + "api/get_chemistry"
+        req = requests.post(
+            req_uri, data=json.dumps(data), headers=self.headers, timeout=self.REQUEST_TIMEOUT
+        )
+        return req.content
 
     def reset(self):
         result = self.set_data({"secret" : 20200104}, "api/reset_charger")
@@ -95,12 +101,16 @@ class MegacellCharger:
 
     def get_data(self, data, api_addr):
         req_uri = "http://" + self.ip + "/" + api_addr
-        req = requests.post(req_uri, data=json.dumps(data), headers=self.headers)
+        req = requests.post(
+            req_uri, data=json.dumps(data), headers=self.headers, timeout=self.REQUEST_TIMEOUT,
+        )
         return req.json()
 
     def set_data(self, data, api_addr):
         req_uri = "http://" + self.ip + "/" + api_addr
-        req = requests.post(req_uri, data=json.dumps(data), headers=self.headers)
+        req = requests.post(
+            req_uri, data=json.dumps(data), headers=self.headers, timeout=self.REQUEST_TIMEOUT,
+        )
         return req.content
 
     def get_device_type(self):
@@ -108,6 +118,22 @@ class MegacellCharger:
         result = self.get_data(data, "api/who_am_i")
 
         return result
+
+    @classmethod
+    def probe_device(cls, ip, timeout=2):
+        """Quick HTTP check whether a charger responds at ip."""
+        try:
+            req = requests.post(
+                f"http://{ip}/api/who_am_i",
+                data=json.dumps({}),
+                headers={'content-type': 'application/json'},
+                timeout=timeout,
+            )
+            if req.status_code == 200:
+                return req.json()
+        except Exception:
+            pass
+        return None
 
     @staticmethod
     def send_data_api(address, api_addr, data):

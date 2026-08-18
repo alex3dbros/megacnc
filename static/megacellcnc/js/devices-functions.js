@@ -78,7 +78,11 @@ document.getElementById('scanDevicesBtn').addEventListener('click', function() {
                 const tbody = document.createElement('tbody');
                 tbody.className = 'scrollable-tbody'; // Add a class for styling
 
-                data.devices.forEach((device, index) => {
+                if (!data.devices || data.devices.length === 0) {
+                    toastr.warning('Keine Geräte im Scan gefunden. IP-Bereich prüfen oder Manual IP nutzen.', 'Scan');
+                }
+
+                (data.devices || []).forEach((device, index) => {
                     const row = document.createElement('tr');
 
                     // Checkbox for selection
@@ -241,13 +245,11 @@ document.getElementById('deleteDevicesBtn').addEventListener('click', function()
 
     // Function to show the confirmation modal
 function showDeleteConfirmation(deviceId) {
-    // Set the deviceId to a data attribute on the confirm button for later use
     document.getElementById('confirmDeleteBtn').setAttribute('data-device-id', deviceId);
-
-    // Show the modal using Bootstrap's modal method
-    var deleteConfirmationModal = new bootstrap.Modal(document.getElementById('deleteConfirmationModal'), {
-        keyboard: false
-    });
+    $('#deleteConfirmationModal .modal-footer').show();
+    var deleteConfirmationModal = bootstrap.Modal.getOrCreateInstance(
+        document.getElementById('deleteConfirmationModal')
+    );
     deleteConfirmationModal.show();
 }
 
@@ -263,8 +265,11 @@ document.querySelectorAll('.deleteDeviceBtn').forEach(btn => {
 // Add event listener to the confirmation button in the modal
 document.getElementById('confirmDeleteBtn').addEventListener('click', function() {
     const deviceId = this.getAttribute('data-device-id');
-    deleteDevice(deviceId);  // Proceed to delete the device
-    $('#deleteConfirmationModal').modal('hide');  // Hide the confirmation modal
+    const modal = bootstrap.Modal.getInstance(document.getElementById('deleteConfirmationModal'));
+    if (modal) {
+        modal.hide();
+    }
+    deleteDevice(deviceId);
 });
 
     // Delete device function
@@ -307,7 +312,7 @@ function editDevice(deviceId) {
     // Assuming '.modal-content' is your actual content container
     $('#form-mccpro').hide();
     $('#main-form').hide();
-    $('.modal-footer').hide();
+    $('#deviceSettingsModal .modal-footer').hide();
 
 
     var checkbox = document.getElementById('applyToAllSlots');
@@ -331,21 +336,23 @@ function editDevice(deviceId) {
         },
         body: JSON.stringify({ 'device_id': deviceId })  // Note that we're sending an array with a single ID
     })
-    .then(async response => {
-            let data;
-            try {
-                data = await response.json();
-            } catch (e) {
-                $('#loadingSpinner').hide();
-                toastr.error('Ungültige Server-Antwort beim Laden der Geräteeinstellungen', 'Fehler');
-                return;
-            }
-            if (!response.ok) {
-                $('#loadingSpinner').hide();
-                toastr.error(data.error || 'Geräteeinstellungen konnten nicht geladen werden', 'Fehler');
-                return;
-            }
-
+    .then(async (response) => {
+        const text = await response.text();
+        let data;
+        if (text == null || String(text).trim() === '') {
+            throw new Error('Empty response from server (HTTP ' + response.status + '). If you use a reverse proxy, check its timeout / upstream.');
+        }
+        try {
+            data = JSON.parse(text);
+        } catch (e) {
+            throw new Error(response.status + ' ' + response.statusText + ' — body is not JSON (proxy 502 HTML?). First bytes: ' + String(text).slice(0, 120));
+        }
+        if (!response.ok) {
+            throw new Error(data.error || data.detail || ('HTTP ' + response.status));
+        }
+        return data;
+    })
+    .then(data => {
             // Populate modal form fields with device data
 
             let labelForChargingCurrent = document.querySelector('label[for="chargingCurrent"]');
@@ -408,8 +415,20 @@ function editDevice(deviceId) {
 
 
 
-            // Parse the JSON string into a JavaScript object
-            var chemistries = JSON.parse(data["chems"]);
+            // chems: Django serialized JSON string, or [] — never JSON.parse(undefined)
+            var chemistries = [];
+            var chemsRaw = data.chems;
+            if (chemsRaw != null && chemsRaw !== '') {
+                try {
+                    chemistries = typeof chemsRaw === 'string' ? JSON.parse(chemsRaw) : chemsRaw;
+                } catch (e) {
+                    console.warn('editDevice: invalid chems, using empty list', e);
+                    chemistries = [];
+                }
+            }
+            if (!Array.isArray(chemistries)) {
+                chemistries = [];
+            }
 
             // Initialize the chemistryOptions array and chemistryDefaults object
             var chemistryOptions = [];
@@ -495,16 +514,25 @@ function editDevice(deviceId) {
 
             $('#loadingSpinner').hide();
             $('#main-form').show();
-            if (data["dev_type"] === "MCCPro") {
+            if (data["dev_type"] === "MCCPro" || data["dev_type"] === "MCCReg") {
                 $('#form-mccpro').show();
             }
 
 
-            $('.modal-footer').show();
+            $('#deviceSettingsModal .modal-footer').show();
             // Show the modal
 
         })
-        .catch(error => console.error('Error fetching device data:', error));
+        .catch(error => {
+            console.error('Error fetching device data:', error);
+            $('#loadingSpinner').hide();
+            $('#main-form').hide();
+            $('#form-mccpro').hide();
+            $('#deviceSettingsModal .modal-footer').hide();
+            if (typeof toastr !== 'undefined') {
+                toastr.error(String(error.message || error), 'Edit device');
+            }
+        });
 
 
 }

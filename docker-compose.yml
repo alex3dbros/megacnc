@@ -28,13 +28,12 @@ services:
   web:
     build: .
     image: ghcr.io/heinz-leiser-ai/megacnc:latest
+    network_mode: host
     command: >
       sh -c "
         python manage.py migrate --noinput &&
         gunicorn dashboard.wsgi:application --bind 0.0.0.0:8000 --timeout 600 --graceful-timeout 60
       "
-    ports:
-      - "8000:8000"
     volumes:
       - .:/app
       - app_data:/data
@@ -44,12 +43,13 @@ services:
       redis:
         condition: service_healthy
     environment:
-      - DATABASE_URL=postgres://postgres:MccAdmin@db:5432/mcccnc
-      - REDIS_URL=redis://redis:6379/0
+      - DATABASE_URL=postgres://postgres:MccAdmin@127.0.0.1:5432/mcccnc
+      - REDIS_URL=redis://127.0.0.1:6379/0
       - BACKUP_ARCHIVE_DIR=/data/backups
 
   celeryworker:
     image: ghcr.io/heinz-leiser-ai/megacnc:latest
+    network_mode: host
     command: celery -A dashboard worker --loglevel=info
     volumes:
       - .:/app
@@ -60,8 +60,8 @@ services:
       redis:
         condition: service_healthy
     environment:
-      - DATABASE_URL=postgres://postgres:MccAdmin@db:5432/mcccnc
-      - REDIS_URL=redis://redis:6379/0
+      - DATABASE_URL=postgres://postgres:MccAdmin@127.0.0.1:5432/mcccnc
+      - REDIS_URL=redis://127.0.0.1:6379/0
 
   celerybeat:
     image: ghcr.io/heinz-leiser-ai/megacnc:latest
