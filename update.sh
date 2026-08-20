@@ -59,6 +59,9 @@ echo -e "${GREEN}✓ Container gestoppt${NC}"
 # ── Step 3: Git Pull ──
 echo ""
 echo -e "${YELLOW}Step 3: Neueste Scripts/Config holen (git pull)...${NC}"
+# docker-compose.yml wird in Step 3b durch die Produktions-Datei ersetzt.
+# Lokale Aenderungen daran wuerden git pull sonst jedes Mal abbrechen.
+git checkout -- docker-compose.yml 2>/dev/null || true
 git pull origin main
 echo -e "${GREEN}✓ Repository aktualisiert${NC}"
 

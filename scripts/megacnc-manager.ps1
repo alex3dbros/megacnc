@@ -40,7 +40,7 @@ function Show-Menu {
     Write-Host "5. Restart" -ForegroundColor Yellow
     Write-Host "6. Stop" -ForegroundColor Yellow
     Write-Host "7. Start" -ForegroundColor Green
-    Write-Host "8. Repair (nur git pull)" -ForegroundColor Magenta
+    Write-Host "8. Repair (Update-Blockade loesen)" -ForegroundColor Magenta
     Write-Host "Q. Quit" -ForegroundColor Yellow
     Write-Host ""
 }
@@ -96,11 +96,9 @@ function Invoke-Start {
 }
 
 function Invoke-Repair {
-    Write-Host "[*] Repair = git pull..." -ForegroundColor Cyan
-    wsl --cd "$ProjectPath" bash -c "git pull"
-    if (OkOrErr $LASTEXITCODE) {
-        Write-Host "[OK] Jetzt Menue 1 (Update) ausfuehren." -ForegroundColor Green
-    }
+    Write-Host "[*] Repair: docker-compose.yml zuruecksetzen, dann Update..." -ForegroundColor Cyan
+    wsl --cd "$ProjectPath" bash -c "git checkout -- docker-compose.yml && ./update.sh"
+    if (OkOrErr $LASTEXITCODE) { Write-Host "[OK] Fertig." -ForegroundColor Green }
     Pause
 }
 
